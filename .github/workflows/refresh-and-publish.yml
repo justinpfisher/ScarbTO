@@ -1,0 +1,81 @@
+name: Validate, refresh DineSafe and publish
+
+on:
+  schedule:
+    - cron: '17 10 * * *'  # Once daily, UTC. Not a real-time inspection feed.
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - '.github/workflows/refresh-and-publish.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - '.github/workflows/refresh-and-publish.yml'
+
+concurrency:
+  group: scarbto-pages
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Unit tests (network-independent)
+        run: python -m unittest discover -s tests -v
+      - name: Check JavaScript syntax
+        run: |
+          node --check docs/logic.mjs
+          node --check docs/app.mjs
+      - name: JavaScript logic tests
+        run: node --test tests/logic.test.mjs
+
+  publish:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: write  # Persist validated snapshot and 365-day activity window.
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Retrieve and validate official Toronto data
+        run: python scripts/update_dinesafe.py
+      - name: Validate output is public and usable
+        run: python scripts/verify_snapshot.py
+      - name: Persist only validated data and recoverable release baseline
+        run: |
+          git config user.name "Scarb.TO data publisher"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/
+          if ! git diff --cached --quiet; then
+            git commit -m "data: refresh validated Scarborough DineSafe snapshot"
+            git push origin HEAD:main
+          fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - name: Deploy last validated snapshot
+        id: deployment
+        uses: actions/deploy-pages@v4
