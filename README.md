@@ -8,7 +8,7 @@ The importer has now been run against the live Toronto CKAN DineSafe CSV (resour
 
 Local offline tests and the live import/independent snapshot validation pass. The public staging site is live at <https://justinpfisher.github.io/ScarbTO/>. Its live page, 3,289-record snapshot and OpenFreeMap style returned HTTPS 200; a desktop browser check showed real map tiles, clustered pins, the synchronized record list, recent-inspection labelling, neighbourhood choices and working name search. No browser console errors were observed. The change-event list is correctly empty for the first baseline. Individual comparisons against the City lookup, iPhone Safari verification and custom-domain cutover remain outstanding.
 
-The public `justinpfisher/ScarbTO` repository is on `main`; GitHub Actions tests and a live refresh/deploy succeeded (run history: <https://github.com/justinpfisher/ScarbTO/actions>). One daily scheduled refresh is configured for 10:17 UTC. A failed validation stops before publication; reverting the data commit restores the previous snapshot and Pages can redeploy it. Hosting and public-repository Actions are configured without paid services (C$0 incremental target). Existing mail records for `scarb.to` were preserved; DNS is on `ns69/ns70.domaincontrol.com` with three Zoho MX records. No domain DNS was changed. A DNS administrator must finish after staging review; retain all existing mail records and add only the GitHub Pages records GitHub specifies for this repository.
+The `justinpfisher/ScarbTO` repository is public and its Pages staging site is live. Its current `main` branch has a daily hosted Actions refresh configured at 10:17 UTC. The infrastructure change in this branch moves trusted jobs to a repository-scoped GMKtec runner and removes pull-request execution from the persistent runner. GitHub currently reports **no ScarbTO runner registered**, so the change must not be merged until the runner has been provisioned and confirmed online; after merge, jobs will queue while it is offline and will not fall back to hosted compute. See [docs/infrastructure.md](docs/infrastructure.md) for verified runner state and limitations. No domain DNS was changed.
 
 The CKAN metadata currently reports “License not specified”; the public dataset page and [City Open Government Licence](https://open.toronto.ca/open-data-licence/) remain linked for attribution and terms review.
 
@@ -19,6 +19,10 @@ The CKAN metadata currently reports “License not specified”; the public data
 - **Release**: GitHub Actions (`.github/workflows/refresh-and-publish.yml`) runs offline tests then official importer then independent snapshot check, commits only valid outputs, and deploys to Pages. Failure prevents deployment, and last good snapshot remains live. Git history is rollback; source and inspection timestamps are preserved.
 - **Data products**: `docs/data/snapshot.json` current establishment records plus observed changes (up to 365 days); `docs/data/establishments.csv` machine-readable current export; `scarborough-neighbourhoods.geojson` for area narrowing. This is a start of reporting readiness, *not* a complete historical warehouse.
 
+## GitHub Actions execution policy
+
+Trusted workflows in the infrastructure change target `[self-hosted, linux, x64, scarbto-gmktec]`. They have no hosted-runner fallback; an unavailable runner leaves work queued. The workflow policy checker rejects different, missing, matrix-selected, or reusable-workflow runner declarations. Untrusted pull-request code is not run on the persistent runner. This checker is repository-level defense in depth, not a GitHub platform prohibition; the repo is currently public and `main` has no branch protection. The ScarbTO runner is not registered yet, so the configured workflow changes are not live.
+- **Data products**: `docs/data/snapshot.json` current establishment records plus observed changes (up to 365 days); `docs/data/establishments.csv` machine-readable current export; `scarborough-neighbourhoods.geojson` for area narrowing. This is a start of reporting readiness, *not* a complete historical warehouse.
 ## Local setup
 
 Python 3.11+ and Node 20+ for tests (site only requires a modern browser). No dependencies to install.
@@ -39,8 +43,8 @@ Open `http://localhost:8000`. Before first real import the map shows an explicit
 
 ## Publish staging then cut over
 
-1. Create a **public** GitHub repository, ideally `justinpfisher/ScarbTO` (first check it isn't already elsewhere), and copy these files to its `main` branch. Do not place secrets in the repository.
-2. GitHub Settings → Pages → Build and deployment → Source: **GitHub Actions**. Allow the workflow to run on main. Confirm its real importer completes before publishing.
+1. Use the existing `justinpfisher/ScarbTO` repository; preserve its history and current public Pages staging site. Do not place secrets in the repository.
+2. Before merging the GMKtec workflow configuration, provision the repository-scoped ScarbTO runner on the GMKtec and verify its labels and online state. Then confirm its actual Actions run completes before relying on scheduled publishing.
 3. Inspect the GitHub Pages preview URL on iPhone and desktop: map tiles, clustering, map/list synchronisation, date/outcome/neighbourhood filtering, stale warning, source link, CSV download and accessibility.
 4. Only then connect `scarb.to` with its existing DNS provider. Do not disrupt MX or other existing records. Take a record of the previous DNS settings for rollback. Verify HTTPS, canonical domain and production data again.
 5. Verify daily refresh and a deliberate failure scenario retaining the previous successful snapshot. For rollback, revert the data commit or re-deploy a known-good GitHub Pages workflow/artifact.

@@ -11,12 +11,6 @@ on:
       - 'scripts/**'
       - 'tests/**'
       - '.github/workflows/refresh-and-publish.yml'
-  pull_request:
-    paths:
-      - 'docs/**'
-      - 'scripts/**'
-      - 'tests/**'
-      - '.github/workflows/refresh-and-publish.yml'
 
 concurrency:
   group: scarbto-pages
@@ -24,11 +18,13 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, scarbto-gmktec]
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      - name: Enforce runner policy
+        run: python scripts/check_workflow_policy.py
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -42,9 +38,9 @@ jobs:
         run: node --test tests/logic.test.mjs
 
   publish:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, scarbto-gmktec]
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -1,0 +1,27 @@
+name: Workflow runner policy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - 'scripts/check_workflow_policy.py'
+      - 'tests/test_workflow_policy.py'
+      - 'AGENTS.md'
+
+permissions:
+  contents: read
+
+jobs:
+  policy:
+    runs-on: [self-hosted, linux, x64, scarbto-gmktec]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check all workflow runner declarations
+        run: python scripts/check_workflow_policy.py
+      - name: Test policy rejection cases
+        run: python -m unittest discover -s tests -p test_workflow_policy.py -v
