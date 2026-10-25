@@ -102,10 +102,13 @@ the plan or choose another hosting path before converting this repo to private.
 No paid plan was enabled. Review a safe migration path before changing
 repository visibility.
 Until a public-contribution security design exists, keep fork pull-request
-workflows off the persistent runner. GitHub currently reports Actions enabled,
-allowed actions set to `all`, default workflow token permissions `read`, and
-no `main` branch protection. Revisit these platform controls with the owner;
-the repository YAML checker cannot stop a repository administrator from
+workflows off the persistent runner. In the read-only settings check on
+2026-10-25, Actions were enabled; the selected-actions policy allowed
+GitHub-created actions and had Marketplace verified creators disabled; the
+default workflow token permission was read-only; and no `main` branch
+protection was configured. Recheck these provider facts before relying on
+them. Do not change platform security settings without explicit approval; the
+repository YAML checker cannot stop a repository administrator from
 rewriting a workflow.
 
 ## Troubleshooting
