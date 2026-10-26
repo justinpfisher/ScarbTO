@@ -8,6 +8,7 @@ permissions:
 
 jobs:
   diagnostic:
+    if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, x64, scarbto-gmktec]
     steps:
       - name: Report runner identity and platform
