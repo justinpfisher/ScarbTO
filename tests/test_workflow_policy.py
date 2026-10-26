@@ -19,6 +19,17 @@ class WorkflowPolicyTests(unittest.TestCase):
             [],
         )
 
+    def test_rejects_step_level_main_guard(self):
+        job = (
+            f"    runs-on: {EXPECTED_RUNNER}\n"
+            "    steps:\n"
+            "      - name: nested guard\n"
+            "        if: github.ref == 'refs/heads/main'\n"
+            "        run: echo test\n"
+        )
+        errors = validate_workflow_text(workflow(job))
+        self.assertTrue(any("restricted to refs/heads/main" in error for error in errors))
+
     def test_rejects_missing_main_ref_guard(self):
         errors = validate_workflow_text(workflow(f"    runs-on: {EXPECTED_RUNNER}\n"))
         self.assertTrue(any("restricted to refs/heads/main" in error for error in errors))
