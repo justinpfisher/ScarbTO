@@ -12,15 +12,15 @@ class WorkflowPolicyTests(unittest.TestCase):
         self.assertEqual(
             validate_workflow_text(
                 workflow(
-                    "    if: github.ref == 'refs/heads/main'\\n"
-                    f"    runs-on: {EXPECTED_RUNNER}\\n"
+                    "    if: github.ref == 'refs/heads/main'\n"
+                    f"    runs-on: {EXPECTED_RUNNER}\n"
                 )
             ),
             [],
         )
 
     def test_rejects_missing_main_ref_guard(self):
-        errors = validate_workflow_text(workflow(f"    runs-on: {EXPECTED_RUNNER}\\n"))
+        errors = validate_workflow_text(workflow(f"    runs-on: {EXPECTED_RUNNER}\n"))
         self.assertTrue(any("restricted to refs/heads/main" in error for error in errors))
 
     def test_rejects_hosted_runner(self):
