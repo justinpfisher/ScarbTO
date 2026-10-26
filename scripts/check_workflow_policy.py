@@ -16,6 +16,10 @@ from pathlib import Path
 EXPECTED_RUNNER = "[self-hosted, linux, x64, scarbto-gmktec]"
 JOB_START = re.compile(r"^  ([A-Za-z0-9_-]+):\s*(?:#.*)?$")
 RUNS_ON = re.compile(r"^\s+runs-on:\s*(.*?)\s*(?:#.*)?$", re.IGNORECASE)
+MAIN_REF_GUARD = re.compile(
+    r"^\s+if:\s*github\.ref\s*==\s*['\"]refs/heads/main['\"]\s*$",
+    re.IGNORECASE,
+)
 REUSABLE_WORKFLOW = re.compile(
     r"^\s+uses:\s*[^\s#]+/\.github/workflows/[^\s#]+@[^\s#]+\s*(?:#.*)?$",
     re.IGNORECASE,
@@ -50,6 +54,11 @@ def validate_workflow_text(text: str, source: str = "workflow") -> list[str]:
 
     errors: list[str] = []
     for name, body in jobs:
+        main_ref_guard = any(MAIN_REF_GUARD.match(line) for line in body)
+        if not main_ref_guard:
+            errors.append(
+                f"{source}: job '{name}' must be restricted to refs/heads/main"
+            )
         runner_declarations = [
             (index, match.group(1).strip())
             for index, line in enumerate(body, start=1)
