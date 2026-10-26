@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   policy:
+    if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, x64, scarbto-gmktec]
     steps:
       - uses: actions/checkout@v4
