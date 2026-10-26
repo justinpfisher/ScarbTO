@@ -23,6 +23,8 @@ repository Actions permissions endpoint exposes allowed actions and default
 individual personal repository. Do not claim that the policy script is
 equivalent to a platform-level compute restriction.
 
+A manual dispatch can select a non-main branch. Every current self-hosted job has a job-level main-ref condition, and the checker verifies that condition at the job-property indentation. These are code guards only: a workflow version changed on the selected branch can remove its guard and checker, and the checker step runs only after runner allocation and checkout. This repository has no branch protection; no platform-level restriction on selected workflow refs has been verified. Do not dispatch non-main refs or treat the checker as a substitute for a trusted platform/runner boundary.
+
 GitHub repository settings now allow only GitHub-owned Actions; third-party
 and unverified-publisher Actions are blocked. The current workflows use only
 `actions/*`. Actions remain enabled, SHA pinning is not required, and the
