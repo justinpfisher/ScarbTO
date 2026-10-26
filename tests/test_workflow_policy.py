@@ -8,10 +8,20 @@ def workflow(job: str) -> str:
 
 
 class WorkflowPolicyTests(unittest.TestCase):
-    def test_accepts_explicit_gmktec_labels(self):
+    def test_accepts_explicit_gmktec_labels_with_main_guard(self):
         self.assertEqual(
-            validate_workflow_text(workflow(f"    runs-on: {EXPECTED_RUNNER}\n")), []
+            validate_workflow_text(
+                workflow(
+                    "    if: github.ref == 'refs/heads/main'\\n"
+                    f"    runs-on: {EXPECTED_RUNNER}\\n"
+                )
+            ),
+            [],
         )
+
+    def test_rejects_missing_main_ref_guard(self):
+        errors = validate_workflow_text(workflow(f"    runs-on: {EXPECTED_RUNNER}\\n"))
+        self.assertTrue(any("restricted to refs/heads/main" in error for error in errors))
 
     def test_rejects_hosted_runner(self):
         errors = validate_workflow_text(workflow("    runs-on: ubuntu-latest\n"))
