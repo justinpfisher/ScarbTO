@@ -1,0 +1,18 @@
+name: GMKtec runner diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, linux, x64, scarbto-gmktec]
+    steps:
+      - name: Report runner identity and platform
+        run: |
+          printf 'Runner: %s\nOS: %s\nArchitecture: %s\n' \
+            "$RUNNER_NAME" "$RUNNER_OS" "$RUNNER_ARCH"
+          uname -a

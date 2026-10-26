@@ -1,0 +1,4 @@
+# Workflow and repository-policy changes require the repository owner.
+/.github/ @justinpfisher
+/AGENTS.md @justinpfisher
+/scripts/check_workflow_policy.py @justinpfisher
