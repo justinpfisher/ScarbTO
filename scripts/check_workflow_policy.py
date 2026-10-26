@@ -17,7 +17,7 @@ EXPECTED_RUNNER = "[self-hosted, linux, x64, scarbto-gmktec]"
 JOB_START = re.compile(r"^  ([A-Za-z0-9_-]+):\s*(?:#.*)?$")
 RUNS_ON = re.compile(r"^\s+runs-on:\s*(.*?)\s*(?:#.*)?$", re.IGNORECASE)
 MAIN_REF_GUARD = re.compile(
-    r"^\s+if:\s*github\.ref\s*==\s*['\"]refs/heads/main['\"]\s*$",
+    r"^ {4}if:\s*github\.ref\s*==\s*['\"]refs/heads/main['\"]\s*$",
     re.IGNORECASE,
 )
 REUSABLE_WORKFLOW = re.compile(
