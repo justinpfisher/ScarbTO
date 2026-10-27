@@ -1,0 +1,26 @@
+{
+  "metadata_status": "official ArcGIS layer metadata only; no feature rows",
+  "checked_on": "2026-10-27",
+  "service_item_id": "0a239a5563a344a3bbf8452504ed8d68",
+  "layer_id": 0,
+  "layer_name": "CSI_OPEN_DATA",
+  "last_edit_date_utc": "2026-10-08T13:23:11.683Z",
+  "max_record_count": 2000,
+  "supports_pagination": true,
+  "supports_order_by": true,
+  "date_fields_time_zone_iana": "Etc/UTC",
+  "query_field_types": {
+    "OBJECTID": "esriFieldTypeOID",
+    "EVENT_UNIQUE_ID": "esriFieldTypeString",
+    "REPORT_DATE": "esriFieldTypeDate",
+    "OCC_DATE": "esriFieldTypeDate",
+    "REPORT_YEAR": "esriFieldTypeString",
+    "REPORT_MONTH": "esriFieldTypeString",
+    "CSI_CATEGORY": "esriFieldTypeString",
+    "OFFENCE": "esriFieldTypeString",
+    "NEIGHBOURHOOD_158": "esriFieldTypeString",
+    "LONG_WGS84": "esriFieldTypeDouble",
+    "LAT_WGS84": "esriFieldTypeDouble"
+  }
+}
+
