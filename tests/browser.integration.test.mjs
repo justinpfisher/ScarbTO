@@ -97,11 +97,31 @@ async function installLocalRoutes(page, origin, {snapshotStatus = 200, snapshotB
     const url = route.request().url();
     if (url.startsWith('https://services.arcgis.com/S9th0jAJ7bqgIRjw/arcgis/rest/services/C4S_Public_NoGO/FeatureServer/0')) {
       if(!selectedCalls){await route.abort('blockedbyclient');return;}
+      assert.equal(route.request().method(),'GET','the selected-calls browser client uses read-only GET requests');
+      const parsed=new URL(url);
+      const params=parsed.searchParams;
+      const endpoint=parsed.pathname.endsWith('/FeatureServer/0');
+      if(endpoint){
+        assert.deepEqual([...params.keys()],['f'],'metadata requests contain only the JSON format selector');
+        assert.equal(params.get('f'),'json');
+      }else if(params.get('returnCountOnly')==='true'){
+        assert.deepEqual([...params.keys()],['where','f','returnCountOnly'],'control requests have only bounded count parameters');
+        assert.equal(params.get('where'),"DIVISION IN ('D41','D42','D43')");
+        assert.equal(params.get('f'),'json');
+      }else{
+        assert.deepEqual([...params.keys()],['where','f','outFields','returnGeometry','groupByFieldsForStatistics','orderByFields','outStatistics'],'grouped requests have only the reviewed fields');
+        assert.equal(params.get('where'),"DIVISION IN ('D41','D42','D43')");
+        assert.equal(params.get('f'),'json');
+        assert.equal(params.get('outFields'),'DIVISION');
+        assert.equal(params.get('returnGeometry'),'false');
+        assert.equal(params.get('groupByFieldsForStatistics'),'DIVISION');
+        assert.equal(params.get('orderByFields'),'DIVISION');
+        assert.deepEqual(JSON.parse(params.get('outStatistics')),[{statisticType:'count',onStatisticField:'OBJECTID',outStatisticFieldName:'call_count'}]);
+      }
       const requestIndex=selectedCallsRequestIndex++;onSelectedCallsRequest(url,requestIndex);
       if(selectedCallsDelayMs&&requestIndex===0)await new Promise(resolveDelay=>setTimeout(resolveDelay,selectedCallsDelayMs));
       const edit=selectedCallsEditDate;
       const metadata={fields:[{name:'OBJECTID',type:'esriFieldTypeOID'},{name:'DIVISION',type:'esriFieldTypeString'}],editingInfo:{lastEditDate:edit,dataLastEditDate:edit,schemaLastEditDate:edit}};
-      const parsed=new URL(url);
       const body=parsed.pathname.endsWith('/FeatureServer/0')?metadata:parsed.searchParams.get('returnCountOnly')==='true'?{count:16}:{features:[{attributes:{DIVISION:'D41',call_count:7}},{attributes:{DIVISION:'D42',call_count:5}},{attributes:{DIVISION:'D43',call_count:4}}]};
       await route.fulfill({status:200,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(body)});
       return;
@@ -505,6 +525,7 @@ test('selected-call mode aborts on hidden document and never renders stale count
   await page.evaluate(()=>window.__setVisibility('hidden'));
   await page.getByText(/counts are cleared while this view is hidden/i).waitFor();
   assert.equal(await page.locator('.selected-call-row').count(),0);
+  await page.waitForTimeout(3_100,'allow the delayed aborted fixture response to settle before checking later request stages');
   assert.equal(requests,1,'abort prevents later request stages');
   await page.evaluate(()=>window.__setVisibility('visible'));
   await page.getByText(/selected-call counts unavailable or stale/i).waitFor();
