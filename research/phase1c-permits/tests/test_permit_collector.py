@@ -99,13 +99,13 @@ class PermitCollectorTests(unittest.TestCase):
                 collector.TorontoCKAN(max_page_bytes=1024, retries=0)._get_json("datastore_search", {"limit": 0})
 
     def test_real_redirect_handler_rejects_before_contacting_redirect_target(self):
-        handler = collector._RejectRedirects()
+        opener = collector.build_opener(collector._RejectRedirects())
         request = Request("https://ckan0.cf.opendata.inter.prod-toronto.ca/start")
-        # Exercise urllib's real HTTPRedirectHandler 302 implementation and
-        # this handler's rejection callback, without opening a socket.
+        # Exercise urllib's real opener/error-handler chain and HTTPRedirectHandler
+        # 302 implementation, without opening a socket or contacting a target.
         with self.assertRaises(HTTPError) as raised:
-            handler.http_error_302(
-                request, BytesIO(b""), 302, "Found",
+            opener.error(
+                "http", request, BytesIO(b""), 302, "Found",
                 {"location": "https://example.invalid/target"},
             )
         self.assertEqual(raised.exception.code, 302)
