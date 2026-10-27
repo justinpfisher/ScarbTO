@@ -6,8 +6,10 @@ included. Real-data ingestion and publication remain disabled.
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date
 from hashlib import sha256
 import json
+import math
 import re
 from typing import Any
 from urllib.parse import urlparse
@@ -84,13 +86,141 @@ def _required_string(row: dict[str, Any], field: str) -> str:
     return value.strip()
 
 
+def _optional_source_text(row: dict[str, Any], field: str) -> str | None:
+    value = row.get(field)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise PermitContractError(f"{field} must remain source text")
+    return value.strip() or None
+
+
 def _date_value(row: dict[str, Any], field: str) -> str | None:
     value = row.get(field)
     if value is None or value == "":
         return None
     if not isinstance(value, str):
         raise PermitContractError(f"{field} must remain a source date string")
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError as exc:
+        raise PermitContractError(f"{field} must be an ISO calendar date") from exc
+    if parsed.isoformat() != value:
+        raise PermitContractError(f"{field} must be an ISO calendar date")
     return value
+
+
+def _point_on_segment(x: float, y: float, a: list[Any], b: list[Any]) -> bool:
+    cross = (x - a[0]) * (b[1] - a[1]) - (y - a[1]) * (b[0] - a[0])
+    if abs(cross) > 1e-10:
+        return False
+    return min(a[0], b[0]) - 1e-10 <= x <= max(a[0], b[0]) + 1e-10 and min(a[1], b[1]) - 1e-10 <= y <= max(a[1], b[1]) + 1e-10
+
+
+def _ring_contains(lon: float, lat: float, ring: list[list[float]]) -> bool:
+    if not isinstance(ring, list) or len(ring) < 4:
+        raise PermitContractError("Neighbourhood polygon ring is malformed")
+    if ring[0] != ring[-1]:
+        raise PermitContractError("Neighbourhood polygon ring must be closed")
+    for position in ring:
+        if (
+            not isinstance(position, (list, tuple)) or len(position) < 2
+            or type(position[0]) not in (int, float) or type(position[1]) not in (int, float)
+        ):
+            raise PermitContractError("Neighbourhood polygon coordinates must be numeric")
+    inside = False
+    for index, current in enumerate(ring):
+        prior = ring[index - 1]
+        if _point_on_segment(lon, lat, prior, current):
+            return True
+        if (current[1] > lat) != (prior[1] > lat):
+            crossing = (prior[0] - current[0]) * (lat - current[1]) / (prior[1] - current[1]) + current[0]
+            if lon < crossing:
+                inside = not inside
+    return inside
+
+
+def point_in_scarborough_neighbourhoods(lon: float, lat: float, features: list[dict[str, Any]]) -> bool:
+    """Test WGS84 point against the supplied authoritative neighbourhood polygons."""
+    if not isinstance(features, list) or not features:
+        raise PermitContractError("Scarborough neighbourhood polygons are required")
+    for feature in features:
+        geometry = feature.get("geometry") if isinstance(feature, dict) else None
+        if not isinstance(geometry, dict):
+            raise PermitContractError("Neighbourhood feature geometry is missing")
+        if geometry.get("type") == "Polygon":
+            polygons = [geometry.get("coordinates")]
+        elif geometry.get("type") == "MultiPolygon":
+            polygons = geometry.get("coordinates")
+        else:
+            raise PermitContractError("Neighbourhood geometry must be Polygon or MultiPolygon")
+        if not isinstance(polygons, list):
+            raise PermitContractError("Neighbourhood polygon coordinates are malformed")
+        for rings in polygons:
+            if not isinstance(rings, list) or not rings or not isinstance(rings[0], list):
+                raise PermitContractError("Neighbourhood polygon rings are malformed")
+            if _ring_contains(lon, lat, rings[0]) and not any(_ring_contains(lon, lat, hole) for hole in rings[1:]):
+                return True
+    return False
+
+
+def normalize_oar_address_points(
+    rows: list[dict[str, Any]], *, neighbourhood_features: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Map the qualified OAR4326 WARD/ADDRESS_FULL/geometry schema with explicit accounting."""
+    if not isinstance(rows, list):
+        raise PermitContractError("OAR rows must be a list")
+    points: dict[int, dict[str, Any]] = {}
+    seen_point_ids: set[int] = set()
+    unlocated = rejected = 0
+    for row in rows:
+        if not isinstance(row, dict):
+            rejected += 1
+            continue
+        point_id = row.get("ADDRESS_POINT_ID")
+        if isinstance(point_id, str) and point_id.isascii() and point_id.isdecimal():
+            point_id = int(point_id)
+        if type(point_id) is not int or point_id <= 0 or point_id in seen_point_ids:
+            rejected += 1
+            continue
+        seen_point_ids.add(point_id)
+        geometry = row.get("geometry")
+        if geometry is None:
+            unlocated += 1
+            continue
+        ward = _qualified_ward(row.get("WARD"))
+        address = row.get("ADDRESS_FULL")
+        coordinates = geometry.get("coordinates") if isinstance(geometry, dict) and geometry.get("type") == "Point" else None
+        if ward is None or not isinstance(address, str) or not address.strip():
+            rejected += 1
+            continue
+        if not isinstance(coordinates, list) or len(coordinates) != 2 or any(type(value) not in (int, float) for value in coordinates):
+            rejected += 1
+            continue
+        lon, lat = coordinates
+        if not all(math.isfinite(value) for value in (lon, lat)) or not (-180 <= lon <= 180 and -90 <= lat <= 90):
+            rejected += 1
+            continue
+        if not point_in_scarborough_neighbourhoods(float(lon), float(lat), neighbourhood_features):
+            rejected += 1
+            continue
+        points[point_id] = {
+            "ADDRESS_POINT_ID": point_id,
+            "ADDRESS_ID": row.get("ADDRESS_ID"),
+            "address": address.strip(),
+            "longitude": float(lon),
+            "latitude": float(lat),
+            "WARD_NUMBER": int(ward),
+        }
+    total = len(rows)
+    return {
+        "address_points": list(points.values()),
+        "total_count": total,
+        "located_count": len(points),
+        "unlocated_count": unlocated,
+        "rejected_count": rejected,
+        "accounted_count": len(points) + unlocated + rejected,
+    }
 
 
 def _official_url(value: Any, *, fallback: str | None = FALLBACK_PLANNING_URL) -> str | None:
@@ -194,6 +324,7 @@ def normalize_permits(
     *,
     source_collection: str,
     address_points: list[dict[str, Any]],
+    oar_accounting: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Normalize active/cleared permit rows; never infer construction from status."""
     if source_collection not in {"active", "cleared"}:
@@ -209,6 +340,7 @@ def normalize_permits(
 
     normalized_by_key: dict[tuple[str, str], dict[str, Any]] = {}
     quarantined: list[str] = []
+    unlocated_permit_count = 0
     for row in rows:
         if not isinstance(row, dict):
             raise PermitContractError("Permit row must be an object")
@@ -216,11 +348,12 @@ def normalize_permits(
         revision = _required_string(row, "REVISION_NUM")
         permit_type = _required_string(row, "PERMIT_TYPE")
         status_value = row.get("STATUS")
-        if status_value is not None and not isinstance(status_value, str):
-            raise PermitContractError("STATUS must remain source text")
+        normalized_status = _optional_source_text(row, "STATUS")
         key = (permit_number, revision)
         geo_id = row.get("GEO_ID")
         location = _address_for_geo_id(geo_id, points)
+        if location is None:
+            unlocated_permit_count += 1
         source_address = _source_address(row)
         if source_address and location and location.get("address"):
             if _address_match_key(source_address) != _address_match_key(location["address"]):
@@ -233,7 +366,8 @@ def normalize_permits(
             "revision": revision,
             "source_collection": source_collection,
             "permit_type": permit_type,
-            "status": status_value,
+            "status": normalized_status,
+            "raw_status": status_value,
             "application_date": _date_value(row, "APPLICATION_DATE"),
             "issued_date": _date_value(row, "ISSUED_DATE"),
             "completed_date": _date_value(row, "COMPLETED_DATE"),
@@ -264,6 +398,13 @@ def normalize_permits(
         "coverage_note": "Cleared-permit source begins in 2017; 2000-2016 legacy resource intentionally omitted.",
         "records": [normalized_by_key[key] for key in sorted(normalized_by_key)],
         "quarantined_record_keys": sorted(set(quarantined)),
+        "location_accounting": {
+            "address_points_total": oar_accounting.get("total_count") if oar_accounting else None,
+            "address_points_located": oar_accounting.get("located_count") if oar_accounting else len(points),
+            "address_points_unlocated": oar_accounting.get("unlocated_count") if oar_accounting else None,
+            "address_points_rejected": oar_accounting.get("rejected_count") if oar_accounting else None,
+            "permit_rows_unlocated": unlocated_permit_count,
+        },
     }
 
 
@@ -271,12 +412,21 @@ def combine_permit_collections(*collections: dict[str, Any]) -> dict[str, Any]:
     """Quarantine active/cleared conflicts rather than guessing project identity."""
     entries: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     quarantined: set[str] = set()
+    accounting: dict[str, int] = {}
     for collection in collections:
         if collection.get("source_collection") not in {"active", "cleared"}:
             raise PermitContractError("Unexpected permit collection")
         for row in collection.get("records", []):
             entries[(row["permit_number"], row["revision"])].append(row)
         quarantined.update(collection.get("quarantined_record_keys", []))
+        for name, value in collection.get("location_accounting", {}).items():
+            if type(value) is int:
+                if name == "permit_rows_unlocated":
+                    accounting[name] = accounting.get(name, 0) + value
+                elif name in accounting and accounting[name] != value:
+                    raise PermitContractError("OAR location accounting changed across permit collections")
+                else:
+                    accounting[name] = value
     records = []
     for key, matches in sorted(entries.items()):
         fingerprints = {row["fingerprint"] for row in matches}
@@ -296,6 +446,7 @@ def combine_permit_collections(*collections: dict[str, Any]) -> dict[str, Any]:
         "publication_status": "disabled_pending_source_and_privacy_review",
         "records": records,
         "quarantined_record_keys": sorted(quarantined),
+        "location_accounting": dict(accounting),
     }
 
 
@@ -303,6 +454,21 @@ def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, 
     """Group source address rows by folder/application while retaining all locations."""
     groups: dict[str, dict[str, Any]] = {}
     quarantined: set[str] = set()
+    folders_by_application: dict[str, set[str]] = defaultdict(set)
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        application_number = row.get("APPLICATION#")
+        folder = row.get("FOLDERRSN")
+        if isinstance(application_number, str) and application_number.strip() and folder not in (None, ""):
+            if isinstance(folder, bool) or not isinstance(folder, (str, int)):
+                continue
+            folder_value = str(folder).strip()
+            if folder_value:
+                folders_by_application[application_number.strip()].add(folder_value)
+    ambiguous_applications = {
+        application for application, folders in folders_by_application.items() if len(folders) > 1
+    }
     for row in rows:
         if not isinstance(row, dict):
             raise PermitContractError("Development row must be an object")
@@ -311,6 +477,13 @@ def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, 
             continue
         application_number = _required_string(row, "APPLICATION#")
         folder = row.get("FOLDERRSN")
+        if application_number in ambiguous_applications:
+            folders = folders_by_application[application_number]
+            if folders:
+                quarantined.update(f"development:folder:{value}" for value in folders)
+            else:
+                quarantined.add(f"development:application:{application_number}")
+            continue
         if folder is not None and folder != "":
             if not isinstance(folder, (str, int)) or isinstance(folder, bool):
                 raise PermitContractError("FOLDERRSN must be a string or integer")
@@ -319,17 +492,27 @@ def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, 
                 raise PermitContractError("FOLDERRSN cannot be blank")
             key = f"development:folder:{folder_value}"
             fallback = False
+            resolved_from_other_row = False
+        elif folders_by_application.get(application_number):
+            folder_value = next(iter(folders_by_application[application_number]))
+            key = f"development:folder:{folder_value}"
+            fallback = False
+            resolved_from_other_row = True
         else:
             key = f"development:application:{application_number}"
             fallback = True
+            resolved_from_other_row = False
         group = groups.get(key)
         if group and group["application_number"] != application_number:
             quarantined.add(key)
             continue
+        application_type = _optional_source_text(row, "APPLICATION_TYPE")
+        raw_status = row.get("STATUS")
+        status = _optional_source_text(row, "STATUS")
         if group and any(group[field] != value for field, value in (
-            ("application_type", row.get("APPLICATION_TYPE") if isinstance(row.get("APPLICATION_TYPE"), str) else None),
+            ("application_type", application_type),
             ("submission_date", _date_value(row, "DATE_SUBMITTED")),
-            ("status", row.get("STATUS") if isinstance(row.get("STATUS"), str) else None),
+            ("status", status),
             ("official_url", _official_url(row.get("APPLICATION_URL"))),
         )):
             quarantined.add(key)
@@ -338,17 +521,22 @@ def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, 
             group = {
                 "record_type": "development_application",
                 "record_key": key,
-                "application_type": row.get("APPLICATION_TYPE") if isinstance(row.get("APPLICATION_TYPE"), str) else None,
+                "application_type": application_type,
+                "raw_application_type": row.get("APPLICATION_TYPE"),
                 "application_number": application_number,
                 "submission_date": _date_value(row, "DATE_SUBMITTED"),
-                "status": row.get("STATUS") if isinstance(row.get("STATUS"), str) else None,
+                "status": status,
+                "raw_status": raw_status,
                 "wards": set(),
                 "official_url": _official_url(row.get("APPLICATION_URL")),
                 "locations": [],
                 "folder_fallback_used": fallback,
+                "missing_folder_resolved_from_other_row": resolved_from_other_row,
                 "construction_state": "not_inferred",
             }
             groups[key] = group
+        elif resolved_from_other_row:
+            group["missing_folder_resolved_from_other_row"] = True
         group["wards"].add(ward)
         address = _source_address(row)
         if address is not None and not isinstance(address, str):
@@ -377,6 +565,7 @@ def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, 
             k: group[k] for k in (
                 "record_key", "application_type", "application_number", "submission_date",
                 "status", "official_url", "folder_fallback_used",
+                "missing_folder_resolved_from_other_row",
             )
         }
         stable_fields["wards"] = group["wards"]
