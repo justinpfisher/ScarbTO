@@ -44,7 +44,7 @@ jobs:
       - name: Install pinned browser-test dependencies
         run: npm ci --ignore-scripts
       - name: Install Chromium for rendered regression tests
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
       - name: Unit tests (network-independent)
         run: python -m unittest discover -s tests -v
       - name: Check JavaScript syntax
@@ -105,3 +105,4 @@ jobs:
       - name: Deploy last validated snapshot
         id: deployment
         uses: actions/deploy-pages@v4
+

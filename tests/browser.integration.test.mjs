@@ -21,7 +21,7 @@ const snapshot = {
   ready: true,
   published_at: '2026-10-27T12:00:00Z',
   establishments: [
-    {id: 'fixture-a', establishment_id: 'fixture-a', name: 'Fixture Café', address: '10 Test Road', status: 'Pass', inspection_date: '2026-10-26', longitude: -79.255, latitude: 43.775, neighbourhood: 'Agincourt'},
+    {id: 'fixture-a', establishment_id: 'fixture-a', name: 'Fixture Caf�', address: '10 Test Road', status: 'Pass', inspection_date: '2026-10-26', longitude: -79.255, latitude: 43.775, neighbourhood: 'Agincourt'},
     {id: 'fixture-b', establishment_id: 'fixture-b', name: 'Fixture Bakery', address: '20 Sample Avenue', status: 'Conditional Pass', inspection_date: '2026-10-25', longitude: -79.29, latitude: 43.73, neighbourhood: 'Woburn'},
   ],
   activity: [],
@@ -118,7 +118,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await waitForMap(page);
   if (mobile) await page.getByRole('button', {name: 'Filters'}).click();
   await page.getByRole('button', {name: 'All establishments'}).click();
-  await page.getByRole('button', {name: 'Fixture Café'}).waitFor();
+  await page.getByRole('button', {name: 'Fixture Caf�'}).waitFor();
   assert.equal(await page.getByRole('button', {name: 'Fixture Bakery'}).count(), 1, `${name}: both synthetic records are listed`);
 
   const initialCenter = await page.evaluate(() => window.__scarbMap.getCenter().toArray());
@@ -133,7 +133,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   assert.equal(await page.locator('.record-item.active').getAttribute('data-id'), 'fixture-a', `${name}: clicking a real rendered MapLibre marker selects its record`);
 
   await page.getByRole('button', {name: 'Beach samples'}).click();
-  await page.getByRole('heading', {name: "Bluffer's Beach Park"}).waitFor();
+  await page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
   await page.getByText('Latest 10 catalogue rows shown', {exact: false}).waitFor();
   assert.equal(await page.locator('#search').isDisabled(), true, `${name}: DineSafe controls are disabled in beach mode`);
   await page.waitForFunction(() => Math.abs(window.__scarbMap.getCenter().lng - -79.2252) < 0.002);
@@ -142,7 +142,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   assert.equal(await page.locator('.beach-sample-preview-list li').count(), 10);
   assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /not current swimming advice/i);
   assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /reference point, not sample-site coordinates/i);
-  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /Open Government Licence\s+–\s+Toronto/i);
+  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /Open Government Licence\s+-\s+Toronto/i);
   assert.match(await page.locator('#data-status').textContent(), /Toronto sample rows checked 2026-10-27; latest sample 2026-09-16\. Not current swimming status\./);
   assert.equal(await page.locator('.beach-sample-preview a').count(), 3);
   const links = await page.locator('.beach-sample-preview a').evaluateAll(anchors => anchors.map(anchor => ({href: anchor.href, rel: anchor.rel, target: anchor.target})));
@@ -232,7 +232,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
 
   const beachSurvivesDineSafeError = await openScenario(browser, origin, {snapshotStatus: 503}, {initialMode: 'beach'});
   t.after(() => beachSurvivesDineSafeError.context.close());
-  await beachSurvivesDineSafeError.page.getByRole('heading', {name: "Bluffer's Beach Park"}).waitFor();
+  await beachSurvivesDineSafeError.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
   assert.equal(await beachSurvivesDineSafeError.page.locator('.beach-sample-preview-list li').count(), 10);
   assert.match(await beachSurvivesDineSafeError.page.locator('#data-status').textContent(), /Toronto sample rows checked/);
   await beachSurvivesDineSafeError.page.getByRole('button', {name: 'All establishments'}).click();
@@ -242,7 +242,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
 
   const dineSafeSurvivesBeachError = await openScenario(browser, origin, {beachStatus: 503}, {initialMode: 'all'});
   t.after(() => dineSafeSurvivesBeachError.context.close());
-  await dineSafeSurvivesBeachError.page.getByRole('button', {name: 'Fixture Café'}).waitFor();
+  await dineSafeSurvivesBeachError.page.getByRole('button', {name: 'Fixture Caf�'}).waitFor();
   await dineSafeSurvivesBeachError.page.getByRole('button', {name: 'Fixture Bakery'}).waitFor();
   assert.deepEqual(dineSafeSurvivesBeachError.pageErrors, []);
 
@@ -258,10 +258,11 @@ test('independent feed failures do not suppress the other rendered view', {timeo
 
   const delayedBeach = await openScenario(browser, origin, {beachDelayMs: 5_000}, {initialMode: 'all'});
   t.after(() => delayedBeach.context.close());
-  await delayedBeach.page.getByRole('button', {name: 'Fixture Café'}).waitFor({timeout: 2_000});
+  await delayedBeach.page.getByRole('button', {name: 'Fixture Caf�'}).waitFor({timeout: 2_000});
   assert.equal(delayedBeach.isBeachResponseSent(), false, 'DineSafe view is available while the independent beach request is still pending');
   await delayedBeach.page.getByRole('button', {name: 'Beach samples'}).click();
   await delayedBeach.page.getByRole('heading', {name: "Bluffer's Beach Park"}).waitFor({timeout: 8_000});
   assert.equal(delayedBeach.isBeachResponseSent(), true);
   assert.deepEqual(delayedBeach.pageErrors, []);
 });
+
