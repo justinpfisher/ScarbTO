@@ -26,6 +26,7 @@ MAX_PAGE_SIZE = 2000
 MAX_PAGE_BYTES = 16 * 1024 * 1024
 MAX_PAGES = 1000
 MAX_ROWS = 1_000_000
+MAX_SNAPSHOT_BYTES = 512 * 1024 * 1024
 RETRYABLE_HTTP = {429, 502, 503, 504}
 
 SOURCE_RESOURCES = {
@@ -54,6 +55,13 @@ SOURCE_RESOURCES = {
             "_id", "APPLICATION_TYPE", "APPLICATION#", "FOLDERRSN",
             "DATE_SUBMITTED", "STATUS", "STREET_NUM", "STREET_NAME",
             "STREET_TYPE", "STREET_DIRECTION", "APPLICATION_URL", "WARD_NUMBER",
+        }),
+    },
+    "oar_address_points": {
+        "package_id": "address-points-municipal-toronto-one-address-repository",
+        "resource_id": "0b3756af-9caf-4f0f-ac28-9c6617adede4",
+        "fields": frozenset({
+            "_id", "ADDRESS_POINT_ID", "ADDRESS_ID", "WARD", "ADDRESS_FULL", "geometry",
         }),
     },
 }
@@ -214,12 +222,17 @@ def collect_snapshot(
     page_size: int = DEFAULT_PAGE_SIZE,
     max_rows: int = MAX_ROWS,
     max_pages: int = MAX_PAGES,
+    max_snapshot_bytes: int = MAX_SNAPSHOT_BYTES,
 ) -> dict[str, Any]:
     """Stream one complete allowlisted snapshot; atomically advance its manifest pointer."""
     source = _safe_source(source_key)
     if type(page_size) is not int or not 1 <= page_size <= MAX_PAGE_SIZE:
         raise CollectionError("Page size exceeds the qualified maximum")
-    if type(max_rows) is not int or max_rows < 0 or type(max_pages) is not int or max_pages < 1:
+    if (
+        type(max_rows) is not int or max_rows < 0
+        or type(max_pages) is not int or max_pages < 1
+        or type(max_snapshot_bytes) is not int or max_snapshot_bytes < 1
+    ):
         raise CollectionError("Invalid snapshot limits")
     total_before, generation_before = metadata()
     if type(total_before) is not int or total_before < 0 or total_before > max_rows:
@@ -255,6 +268,8 @@ def collect_snapshot(
                         first_id = row_id
                     last_id = row_id
                     encoded = (json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+                    if staged.tell() + len(encoded) > max_snapshot_bytes:
+                        raise CollectionError("Snapshot exceeds the configured byte limit")
                     staged.write(encoded)
                     digest.update(encoded)
                     rows_written += 1
