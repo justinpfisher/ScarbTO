@@ -53,3 +53,4 @@ export function createBeachMeasurementHistory(document, snapshot) {
   section.append(source);
   return section;
 }
+
