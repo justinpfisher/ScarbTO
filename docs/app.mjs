@@ -1,4 +1,5 @@
-import {DEFAULTS, STATUS, filterActivity, filterEstablishments, daysSince, fitBoundsFromFeatures} from './logic.mjs';
+import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from './logic.mjs';
+import {beginListRedraw, finishListRedraw, revealSelectedRecord} from './list-focus.mjs';
 
 const $ = id => document.getElementById(id);
 const SCARB_BOUNDS = [[-79.43,43.65],[-79.09,43.89]];
@@ -12,7 +13,7 @@ try {
   if (typeof remembered.neighbourhood === 'string') state.neighbourhood = remembered.neighbourhood;
 } catch { /* Private browsing, old preferences or disabled storage must not break the map. */ }
 let snapshot = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]};
-let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = false;
+let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = false, listLimit = 80;
 
 function save() {
   try {const {mode,status,days,neighbourhood}=state;localStorage.setItem(STORAGE_KEY,JSON.stringify({mode,status,days,neighbourhood}));}catch{}
@@ -56,6 +57,7 @@ function updateSource() {
   map.getSource('places').setData({type:'FeatureCollection',features});
 }
 function performFilters() {
+  listLimit=80;
   if(!snapshot?.ready)return;
   // Outcome and neighbourhood refer to a place's *current recorded* state;
   // the recent window refers to when a change was observed, not when inspected.
@@ -74,10 +76,10 @@ function performFilters() {
   updateSource();
   renderList();
 }
-function renderList() {
+function renderList({focusMore = false, revealSelection = false} = {}) {
   const list=$('record-list');
-  list.replaceChildren();
-  if(!snapshot?.ready){list.append(els('p','empty','No validated DineSafe snapshot has been published. The map will populate after the first successful import.'));return;}
+  const previousFocus=beginListRedraw(list,document.activeElement,{focusMore});
+  if(!snapshot?.ready){list.append(els('p','empty','No validated DineSafe snapshot has been published. The map will populate after the first successful import.'));finishListRedraw(list,previousFocus);return;}
   const bounds=map?.loaded()?map.getBounds():null;
   const inView=e=>!bounds||bounds.contains([e.longitude,e.latitude]);
   const matches=visiblePlaces.filter(inView);
@@ -92,10 +94,12 @@ function renderList() {
     records=matches.sort((a,b)=>b.inspection_date.localeCompare(a.inspection_date)||a.name.localeCompare(b.name));
   }
   $('results-count').textContent=`${records.length.toLocaleString('en-CA')} in view`;
-  if(!records.length){list.append(els('p','empty','No matching places in the current map view. Widen the date or outcome filters, or choose “Show all Scarborough”.'));return;}
-  for(const entry of records.slice(0,80)) {
+  if(!records.length){list.append(els('p','empty','No matching places in the current map view. Widen the date or outcome filters, or choose "Show all Scarborough".'));finishListRedraw(list,previousFocus);return;}
+  for(const entry of pageRecords(records,listLimit,selectedId)) {
+    const card=els('div','record-card');
+    card.dataset.id=entry.id;
     const button=els('button','record-item'+(entry.id===selectedId?' active':''));
-    button.type='button';button.dataset.id=entry.id;
+    button.type='button';button.dataset.id=entry.id;button.setAttribute('aria-expanded',String(entry.id===selectedId));
     const head=els('div','record-top');head.append(els('span','record-title',entry.name));
     head.append(els('span','status-label '+outcomeClass(entry.status),entry.status));
     button.append(head,els('div','record-address',entry.address||'Address unavailable'));
@@ -108,16 +112,34 @@ function renderList() {
     }
     button.append(meta);
     button.addEventListener('click',()=>selectPlace(entry.id,true));
-    list.append(button);
+    card.append(button);
+    if(entry.id===selectedId){
+      const detailId='selected-record-details';
+      button.setAttribute('aria-controls',detailId);
+      const detail=els('div','record-details');
+      detail.id=detailId;
+      detail.append(els('p','record-detail-note',entry.type&&entry.type!=='None'?`Recorded inspection detail: ${entry.type}`:'No additional detail in this source row.'));
+      const source=els('a','record-source-link','Open the City DineSafe record');
+      source.dataset.id=entry.id;source.href=cityDineSafeRecordUrl(entry.id);source.target='_blank';source.rel='noopener noreferrer';
+      detail.append(source);card.append(detail);
+    }
+    list.append(card);
   }
-  if(records.length>80)list.append(els('p','empty',`Showing the first 80 of ${records.length.toLocaleString('en-CA')} matches in this map view. Zoom in for more.`));
+  if(records.length>listLimit){
+    const remaining=records.length-listLimit;
+    const more=els('button','more-results',`Show next ${Math.min(80,remaining).toLocaleString('en-CA')} matches`);
+    more.type='button';more.addEventListener('click',()=>{listLimit=Math.min(listLimit+80,records.length);renderList({focusMore:true});});
+    list.append(more);
+  }
+  finishListRedraw(list,previousFocus);
+  if(revealSelection)revealSelectedRecord(list,selectedId);
 }
-function selectPlace(id, move) {
+function selectPlace(id, move, revealSelection = false) {
   const item=snapshot?.establishments.find(e=>e.id===id);
   if(!item)return;
   selectedId=id;
   if(move&&map)map.easeTo({center:[item.longitude,item.latitude],zoom:Math.max(map.getZoom(),14),duration:450});
-  updateSource();renderList();
+  updateSource();renderList({revealSelection});
 }
 function fitAll() {if(map)map.fitBounds(SCARB_BOUNDS,{padding:28,duration:350,maxZoom:11.2});}
 function selectNeighbourhood(){
@@ -141,9 +163,9 @@ function initMap() {
     map.addLayer({id:'cluster-count',type:'symbol',source:'places',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-size':12},paint:{'text-color':'#fff'}});
     map.addLayer({id:'single',type:'circle',source:'places',filter:['!',['has','point_count']],paint:{'circle-color':['match',['get','status'],'Pass','#318f62','Conditional Pass','#e2a03d','Closed','#c4534c','#667d71'],'circle-radius':['case',['get','selected'],11,7],'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
     map.on('click','clusters',e=>{const geom=e.features?.[0]?.geometry;if(geom?.type==='Point')map.easeTo({center:geom.coordinates,zoom:Math.min(map.getZoom()+2,15),duration:350});});
-    map.on('click','single',e=>{const id=String(e.features?.[0]?.properties?.id||'');if(id)selectPlace(id,false);});
+    map.on('click','single',e=>{const id=String(e.features?.[0]?.properties?.id||'');if(id)selectPlace(id,false,true);});
     for(const layer of ['clusters','single']){map.on('mouseenter',layer,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',layer,()=>map.getCanvas().style.cursor='');}
-    map.on('moveend',renderList);
+    map.on('moveend',()=>{listLimit=80;renderList();});
     updateSource();renderList();
   });
   map.on('error',e=>console.warn('Map rendering issue:',e?.error?.message||e));
@@ -176,10 +198,10 @@ async function boot() {
     if(!Array.isArray(snapshot.establishments)||!snapshot.establishments.length)throw new Error('Empty published snapshot');
     try{const r=await fetch('data/scarborough-neighbourhoods.geojson',{cache:'force-cache'});if(r.ok)shapes=await r.json();}catch{}
     populateNeighbourhoods();
-    const last=daysSince(snapshot.published_at);
-    $('data-status').textContent=last>2?`Data may be stale: last validated ${publishedAt(snapshot.published_at)} · check update history`:
+    const stale=isStale(snapshot.published_at);
+    $('data-status').textContent=stale?`Data may be stale: last validated ${publishedAt(snapshot.published_at)} · check update history`:
       `City data checked ${publishedAt(snapshot.published_at)} · not live`; 
-    if(last>2)$('data-status').classList.add('warning');
+    if(stale)$('data-status').classList.add('warning');
     performFilters();
   }catch(error){
     $('data-status').textContent='City data unavailable — last verified publication retained where possible';
