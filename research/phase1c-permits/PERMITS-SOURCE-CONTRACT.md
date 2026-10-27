@@ -41,12 +41,24 @@ For permit coordinates, `GEO_ID` joins to OAR `ADDRESS_POINT_ID`, never
 `ADDRESS_ID`. Synthetic regression data covers permit 22 236652 BLD revision
 00 at 4003 Ellesmere Rd: GEO_ID 331669 maps to ADDRESS_POINT_ID 331669 and
 ADDRESS_ID 357094. Using ADDRESS_ID instead would map to a different address.
+The bounded live CKAN metadata check declares permit `GEO_ID` as text, so the
+adapter accepts only ASCII decimal text or an integer and normalizes it to an
+integer point ID. A bounded live OAR lookup confirmed
+`ADDRESS_POINT_ID=331669`, `ADDRESS_ID=357094`, `WARD=25`,
+`ADDRESS_FULL=4003 Ellesmere Rd`. The corresponding active/cleared permit
+filter requests timed out, so that permit row itself was not live-verified.
 No transformation of planning X/Y values is attempted. Those fields are NAD27
 MTM10 and require independently validated coordinate conversion; this
 prototype avoids them. OAR points must have already-qualified WGS84 fields
 before they can be passed to the normalizer. Ward values are restricted to
 current Scarborough wards 20-25; a ward-grid code such as E2532 is not a ward
 number. Polygon boundary validation is still required before map activation.
+
+The transport must map source fields explicitly before normalization: OAR
+`WARD` to normalized `WARD_NUMBER`, `ADDRESS_FULL` to `address`, and coordinates
+from the explicitly EPSG:4326 OAR resource to `longitude`/`latitude`. This
+bounded check did not fetch those coordinates or qualify permit/development
+live rows. The current CKAN OAR `geometry` field was not treated as WGS84.
 
 Development address rows are grouped by source-prefixed FOLDERRSN with an
 application-number consistency check; a missing folder uses an explicitly
@@ -69,7 +81,8 @@ verified. Absence from a replacement snapshot means only absent from that
 snapshot.
 
 Official catalogue terms: [Toronto Open Data Licence](https://open.toronto.ca/open-data-licence/).
-No source records were downloaded for this prototype.
+Only one bounded OAR address-point record was read to verify the join target;
+no permit/development records or bulk data were downloaded for this prototype.
 
 ## Tests and activation gates
 
