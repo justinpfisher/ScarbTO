@@ -21,6 +21,10 @@ records or locations are included.
 - Require a stable service item, edit timestamp, layer/schema metadata, record
   limit, coverage interval, and count across the before/after pagination
   metadata. Query time is recorded but may naturally differ.
+- Coverage is represented as inclusive Toronto calendar dates from the
+  published extract metadata (2014-01-01 through 2026-09-30 in the checked
+  metadata fixture). The candidate never substitutes observed row min/max dates
+  as completeness evidence.
 - Require contiguous pages from offset zero, honor the current source
   `maxRecordCount`, reject duplicate snapshot-local `OBJECTID`s, detect short,
   incomplete, extra, or transfer-limited pages, require `OBJECTID ASC` on every
@@ -41,10 +45,9 @@ records or locations are included.
 - Produce only an internal candidate grouped by neighbourhood, category and
   Toronto report quarter and occurrence month. Quarter assignment converts
   UTC report instants to `America/Toronto`; completeness requires source
-  coverage to include the full UTC instant interval between the quarter's
-  Toronto-local boundaries, not merely matching boundary dates. The candidate
-  uses the published source coverage interval as its completeness evidence;
-  observed row minimum/maximum dates are diagnostics only. The candidate
+  coverage to include every inclusive Toronto calendar date in the quarter.
+  The candidate uses the published source coverage interval as its completeness
+  evidence; observed row minimum/maximum dates are diagnostics only. The candidate
   contains no event IDs, `OBJECTID`, offence text, coordinates, address, or
   premises join. It is marked
   `disabled_pending_privacy_review`.
