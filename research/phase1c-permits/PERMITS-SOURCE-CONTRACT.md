@@ -47,9 +47,13 @@ The bounded live CKAN metadata check declares permit `GEO_ID` as text, so the
 adapter accepts only ASCII decimal text or an integer and normalizes it to an
 integer point ID. A bounded live OAR lookup confirmed
 `ADDRESS_POINT_ID=331669`, `ADDRESS_ID=357094`, `WARD=25`,
-`ADDRESS_FULL=4003 Ellesmere Rd`. The corresponding active/cleared permit
-filter requests timed out, so that permit row itself was not live-verified.
-No transformation of planning X/Y values is attempted. Those fields are NAD27
+`ADDRESS_FULL=4003 Ellesmere Rd`. A filtered development query for folder
+4970049 returned six rows over two pages (IDs 230-235), with stable metadata
+and matching before/after totals. It identifies application `21 191603 ESC 20
+SA` and six address rows at 1552, 1572, 1554, 1562, 1564, and 1570 Kingston
+Road. This proves only this bounded filtered query, not a full import or
+general refresh completeness. No transformation of planning X/Y values is
+attempted. Those fields are NAD27
 MTM10 and require independently validated coordinate conversion; this
 prototype avoids them. OAR points must have already-qualified WGS84 fields
 before they can be passed to the normalizer. Ward values are restricted to
