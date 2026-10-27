@@ -154,9 +154,35 @@ class PermitCollectorTests(unittest.TestCase):
                 )
         self.assertEqual(calls, [])
 
+    def test_snapshot_byte_limit_preserves_previous_good_manifest(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            previous = collector.collect_snapshot(
+                "active_permits", root,
+                metadata=lambda: (1, "g1"),
+                fetch_page=lambda offset, limit: page(1, [source_row(1)]),
+            )
+            manifest_path = Path(root) / "active_permits-manifest.json"
+            old_manifest = manifest_path.read_bytes()
+            with self.assertRaisesRegex(collector.CollectionError, "byte limit"):
+                collector.collect_snapshot(
+                    "active_permits", root,
+                    metadata=lambda: (1, "g2"),
+                    fetch_page=lambda offset, limit: page(1, [source_row(2, STATUS="X" * 100)]),
+                    max_snapshot_bytes=20,
+                )
+            self.assertEqual(manifest_path.read_bytes(), old_manifest)
+            self.assertTrue((Path(root) / previous["snapshot_file"]).is_file())
+            self.assertFalse(list(Path(root).glob(".candidate-*.tmp")))
+
     def test_unknown_source_is_rejected(self):
         with self.assertRaisesRegex(collector.CollectionError, "Unknown CKAN source"):
             collector.collect_snapshot("unreviewed_source", ".", metadata=lambda: (0, "g"), fetch_page=lambda o, l: page(0, []))
+
+    def test_oar_source_is_a_separate_allowlisted_dataset(self):
+        source = collector.SOURCE_RESOURCES["oar_address_points"]
+        self.assertEqual(source["resource_id"], "0b3756af-9caf-4f0f-ac28-9c6617adede4")
+        self.assertIn("geometry", source["fields"])
+        self.assertNotIn("CONTACT_EMAIL", source["fields"])
 
 
 if __name__ == "__main__":
