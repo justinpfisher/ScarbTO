@@ -37,6 +37,36 @@ def card(**overrides):
 
 
 class BeachStatusTests(unittest.TestCase):
+    def test_evaluation_does_not_advance_cached_retrieval_time(self):
+        fetched = datetime(2026, 7, 15, 16, 0, tzinfo=timezone.utc)
+        source_controls = {
+            "season": fetched, "last_update": fetched,
+            "maintenance": fetched, "results": fetched,
+        }
+        original = card(retrieved_at=fetched, control_retrieved_at=source_controls)
+        later = card(
+            now=fetched + timedelta(days=4), retrieved_at=fetched,
+            control_retrieved_at=source_controls,
+        )
+        self.assertEqual(original["fetched_at_utc"], later["fetched_at_utc"])
+        self.assertEqual(later["display_state"], "stale")
+        self.assertEqual(later["results_fetched_at_utc"], "2026-07-15T16:00:00Z")
+
+    def test_missing_maintenance_control_is_unknown_by_default(self):
+        values = {
+            "beach_id": BEACH_ID, "beach_name": "Synthetic Beach",
+            "in_season": "Yes", "last_update_raw": None,
+            "result_envelopes": None, "now": NOW,
+            "sample_freshness_limit": timedelta(days=2),
+        }
+        result = beach.build_status_card(**values)
+        self.assertEqual(result["display_state"], "maintenance_state_unknown")
+
+    def test_raw_city_flags_are_preserved(self):
+        value = card(result_envelopes=[envelope(statusFlag="SAFE", statusFlagPre="UNSAFE")])
+        self.assertEqual(value["raw_status_flag"], "SAFE")
+        self.assertEqual(value["raw_status_flag_pre"], "UNSAFE")
+
     def test_out_of_season_hides_last_seasons_safe_sample(self):
         value = card(in_season="No", result_envelopes=[envelope("2025-09-07")])
         self.assertEqual(value["display_state"], "out_of_season")
