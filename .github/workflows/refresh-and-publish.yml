@@ -16,6 +16,8 @@ on:
       - 'docs/**'
       - 'scripts/**'
       - 'tests/**'
+      - 'research/**'
+      - '.github/scripts/test_research_prototypes.py'
       - '.github/workflows/refresh-and-publish.yml'
 
 concurrency:
@@ -40,6 +42,8 @@ jobs:
           node --check docs/app.mjs
       - name: JavaScript logic tests
         run: node --test tests/logic.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs
+      - name: Offline research prototype tests
+        run: python .github/scripts/test_research_prototypes.py
 
   publish:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
