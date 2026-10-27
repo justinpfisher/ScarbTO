@@ -36,7 +36,7 @@ SOURCE_RESOURCES = {
         "fields": frozenset({
             "_id", "PERMIT_NUM", "REVISION_NUM", "PERMIT_TYPE", "GEO_ID",
             "APPLICATION_DATE", "ISSUED_DATE", "COMPLETED_DATE", "STATUS",
-            "APPLICATION_URL", "ADDRESS",
+            "STREET_NUM", "STREET_NAME", "STREET_TYPE", "STREET_DIRECTION",
         }),
     },
     "cleared_permits_since_2017": {
@@ -45,7 +45,7 @@ SOURCE_RESOURCES = {
         "fields": frozenset({
             "_id", "PERMIT_NUM", "REVISION_NUM", "PERMIT_TYPE", "GEO_ID",
             "APPLICATION_DATE", "ISSUED_DATE", "COMPLETED_DATE", "STATUS",
-            "APPLICATION_URL", "ADDRESS",
+            "STREET_NUM", "STREET_NAME", "STREET_TYPE", "STREET_DIRECTION",
         }),
     },
     "development_applications": {
