@@ -381,22 +381,22 @@ def build_aggregate_candidate(rows: list[dict[str, Any]], version: SourceVersion
     }
 
 
-def _quarter_for_utc(value: datetime) -> tuple[int, int]:
-    month = value.astimezone(timezone.utc).month
-    return value.astimezone(timezone.utc).year, ((month - 1) // 3) + 1
+def _quarter_for_toronto(value: datetime) -> tuple[int, int]:
+    local = value.astimezone(TORONTO)
+    return local.year, ((local.month - 1) // 3) + 1
 
 
-def _quarter_end_utc(year: int, quarter: int) -> datetime:
+def _quarter_interval_utc(year: int, quarter: int) -> tuple[datetime, datetime]:
+    """Return Toronto-calendar quarter bounds as UTC, with an exclusive end."""
     if quarter not in (1, 2, 3, 4):
         raise ContractError("Invalid report quarter")
-    month = quarter * 3
-    if month == 12:
-        next_quarter = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    first_month = (quarter - 1) * 3 + 1
+    start_local = datetime(year, first_month, 1, tzinfo=TORONTO)
+    if quarter == 4:
+        next_local = datetime(year + 1, 1, 1, tzinfo=TORONTO)
     else:
-        next_quarter = datetime(year, month + 1, 1, tzinfo=timezone.utc)
-    # Source dates can include fractional seconds; an exclusive next-quarter
-    # boundary correctly includes every instant in the completed quarter.
-    return next_quarter
+        next_local = datetime(year, first_month + 3, 1, tzinfo=TORONTO)
+    return start_local.astimezone(timezone.utc), next_local.astimezone(timezone.utc)
 
 
 def build_report_quarter_candidate(
@@ -432,11 +432,13 @@ def build_report_quarter_candidate(
             unaggregated_rows += 1
             continue
         report_dates.append(reported)
-        year, quarter = _quarter_for_utc(reported)
-        quarter_start = datetime(year, (quarter - 1) * 3 + 1, 1, tzinfo=timezone.utc)
-        quarter_end = _quarter_end_utc(year, quarter)
-        quarter_last_day = quarter_end.date() - timedelta(days=1)
-        if coverage_start.date() > quarter_start.date() or coverage_end.date() < quarter_last_day:
+        year, quarter = _quarter_for_toronto(reported)
+        quarter_start_utc, quarter_end_utc = _quarter_interval_utc(year, quarter)
+        # Coverage is an instant interval, not a pair of calendar dates. The
+        # inclusive end must reach the last representable instant before the
+        # next Toronto quarter starts; a matching date alone is insufficient.
+        quarter_last_instant = quarter_end_utc - timedelta(microseconds=1)
+        if coverage_start > quarter_start_utc or coverage_end < quarter_last_instant:
             incomplete_quarter_rows += 1
             continue
         group = groups[(neighbourhood, category, year, quarter)]
