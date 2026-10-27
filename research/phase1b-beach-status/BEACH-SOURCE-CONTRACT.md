@@ -103,9 +103,20 @@ explicit City permission establishes redistribution rights for this feed,
 public export remains disabled. This is a specific rights question, not an
 assumption that the disclaimer prohibits reuse.
 
-The view component uses text nodes for status/advisory content and links to
-the official Toronto beach-water-quality page. It does not render coordinates
-or E. coli values. Public export is disabled in `beach_status_adapter.py`.
+The operational-status view uses text nodes for status/advisory content and
+links to the official Toronto beach-water-quality page. It does not render
+coordinates or E. coli values. Operational-status export remains disabled in
+`beach_status_adapter.py`.
+
+The separate `beach_measurement_history.py` module validates fixed-resource,
+beach-10 CKAN pages, requires an exact non-estimated total, stable generation,
+complete contiguous pages and monotonically ordered IDs, and can write a
+content-addressed candidate snapshot with an atomic manifest pointer. It has
+no HTTP client or scheduler. `beach-measurement-history-view.mjs` renders a
+bounded dated-measurement list with an attribution link and explicitly says
+the measurements are not current swimming advice. Neither module is connected
+to the ScarbTO application. The bounded live CKAN probe below verified one
+page only; it did not create or qualify a complete history snapshot.
 
 Official references:
 
@@ -137,6 +148,7 @@ CKAN rows were saved or published.
 ```powershell
 python -m unittest discover -s tests -v
 node .\tests\beach-status-view.test.mjs
+node .\tests\beach-measurement-history-view.test.mjs
 ```
 
 All inputs are synthetic. The tests do not call the City API, process personal
