@@ -1,0 +1,77 @@
+{
+  "fixture_status": "synthetic; no TPS records or coordinates",
+  "source": "CSI_OPEN_DATA",
+  "rows": [
+    {
+      "OBJECTID": 101,
+      "EVENT_UNIQUE_ID": "SYNTH-EVENT-A",
+      "REPORT_DATE": "2026-01-01T00:15:00Z",
+      "OCC_DATE": "2025-12-31T23:40:00Z",
+      "REPORT_YEAR": "2026",
+      "REPORT_MONTH": "January",
+      "CSI_CATEGORY": "Assault",
+      "OFFENCE": "Synthetic offence A",
+      "NEIGHBOURHOOD_158": "Synthetic Area 1",
+      "LONG_WGS84": -79.0,
+      "LAT_WGS84": 43.7
+    },
+    {
+      "OBJECTID": 102,
+      "EVENT_UNIQUE_ID": "SYNTH-EVENT-A",
+      "REPORT_DATE": "2026-01-01T00:15:00Z",
+      "OCC_DATE": "2025-12-31T23:40:00Z",
+      "REPORT_YEAR": "2026",
+      "REPORT_MONTH": "January",
+      "CSI_CATEGORY": "Theft Over",
+      "OFFENCE": "Synthetic related offence B",
+      "NEIGHBOURHOOD_158": "Synthetic Area 1",
+      "LONG_WGS84": -79.0,
+      "LAT_WGS84": 43.7
+    },
+    {
+      "OBJECTID": 103,
+      "EVENT_UNIQUE_ID": "SYNTH-EVENT-A",
+      "REPORT_DATE": "2026-01-01T00:15:00Z",
+      "OCC_DATE": "2025-12-31T23:40:00Z",
+      "REPORT_YEAR": "2026",
+      "REPORT_MONTH": "January",
+      "CSI_CATEGORY": "Assault",
+      "OFFENCE": "Synthetic repeated offence row C",
+      "NEIGHBOURHOOD_158": "Synthetic Area 1",
+      "LONG_WGS84": -79.0,
+      "LAT_WGS84": 43.7
+    },
+    {
+      "OBJECTID": 104,
+      "EVENT_UNIQUE_ID": "SYNTH-EVENT-B",
+      "REPORT_DATE": "2026-01-01T04:30:00Z",
+      "OCC_DATE": "2025-12-31T22:00:00Z",
+      "REPORT_YEAR": "2026",
+      "REPORT_MONTH": "January",
+      "CSI_CATEGORY": "Break and Enter",
+      "OFFENCE": "Synthetic UTC boundary case",
+      "NEIGHBOURHOOD_158": "Synthetic Area 2",
+      "LONG_WGS84": -78.9,
+      "LAT_WGS84": 43.8
+    },
+    {
+      "OBJECTID": 105,
+      "EVENT_UNIQUE_ID": "SYNTH-EVENT-C",
+      "REPORT_DATE": null,
+      "REPORT_YEAR": null,
+      "REPORT_MONTH": null,
+      "OCC_DATE": null,
+      "CSI_CATEGORY": null,
+      "OFFENCE": null,
+      "NEIGHBOURHOOD_158": null,
+      "LONG_WGS84": null,
+      "LAT_WGS84": null
+    }
+  ],
+  "separate_source_example_must_not_merge": {
+    "source": "C4S_Public_NoGO",
+    "status": "synthetic placeholder; separate contract required",
+    "rows": []
+  }
+}
+
