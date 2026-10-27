@@ -1,5 +1,6 @@
 import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from './logic.mjs';
 import {beginListRedraw, finishListRedraw, revealSelectedRecord} from './list-focus.mjs';
+import {unionBoundary, boundsFromFeatures, expandBounds, responsiveMapPadding} from './geometry.mjs';
 
 const $ = id => document.getElementById(id);
 const SCARB_BOUNDS = [[-79.43,43.65],[-79.09,43.89]];
@@ -12,7 +13,7 @@ try {
   if (['7','30','90','all'].includes(remembered.days)) state.days = remembered.days;
   if (typeof remembered.neighbourhood === 'string') state.neighbourhood = remembered.neighbourhood;
 } catch { /* Private browsing, old preferences or disabled storage must not break the map. */ }
-let snapshot = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]};
+let snapshot = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]}, geographyFitApplied = false;
 let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = false, listLimit = 80;
 
 function save() {
@@ -141,7 +142,23 @@ function selectPlace(id, move, revealSelection = false) {
   if(move&&map)map.easeTo({center:[item.longitude,item.latitude],zoom:Math.max(map.getZoom(),14),duration:450});
   updateSource();renderList({revealSelection});
 }
-function fitAll() {if(map)map.fitBounds(SCARB_BOUNDS,{padding:28,duration:350,maxZoom:11.2});}
+function fitAll() {
+  if(!map)return;
+  const bounds=boundsFromFeatures(shapes.features)||SCARB_BOUNDS;
+  const container=map.getContainer?.();
+  map.fitBounds(bounds,{padding:responsiveMapPadding(container?.clientWidth||800,container?.clientHeight||600),duration:350,maxZoom:11.2});
+  geographyFitApplied=shapes.features.length>0;
+}
+function syncGeography(){
+  const source=map?.getSource('scarborough-boundary');
+  if(!source||!shapes.features.length)return;
+  try{
+    const bounds=boundsFromFeatures(shapes.features);
+    source.setData(unionBoundary(shapes.features));
+    map.setMaxBounds(expandBounds(bounds,{longitude:0.04,latitude:0.03}));
+    if(!geographyFitApplied)fitAll();
+  }catch(error){console.warn('Scarborough boundary unavailable:',error?.message||error);}
+}
 function selectNeighbourhood(){
   if(!map||!state.neighbourhood)return;
   const matched=shapes.features.filter(f=>f.properties?.AREA_NAME===state.neighbourhood);
@@ -154,11 +171,13 @@ function initMap() {
     $('fit').hidden=true;
     return;
   }
-  map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[-79.255,43.775],zoom:10.45,
-    maxBounds:[[-79.65,43.52],[-78.96,43.98]],attributionControl:true});
+   map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[-79.255,43.775],zoom:10.45,
+     maxBounds:expandBounds(SCARB_BOUNDS,{longitude:0.04,latitude:0.03}),attributionControl:true});
   map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-left');
   map.on('load',()=>{
     map.addSource('places',{type:'geojson',data:{type:'FeatureCollection',features:[]},cluster:true,clusterMaxZoom:13,clusterRadius:38});
+     map.addSource('scarborough-boundary',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+     map.addLayer({id:'scarborough-boundary-outline',type:'line',source:'scarborough-boundary',paint:{'line-color':'#c16e2f','line-width':3,'line-opacity':.92,'line-blur':.2}});
     map.addLayer({id:'clusters',type:'circle',source:'places',filter:['has','point_count'],paint:{'circle-color':'#174d43','circle-radius':['step',['get','point_count'],18,30,23,150,29],'circle-opacity':.90,'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
     map.addLayer({id:'cluster-count',type:'symbol',source:'places',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-size':12},paint:{'text-color':'#fff'}});
     map.addLayer({id:'single',type:'circle',source:'places',filter:['!',['has','point_count']],paint:{'circle-color':['match',['get','status'],'Pass','#318f62','Conditional Pass','#e2a03d','Closed','#c4534c','#667d71'],'circle-radius':['case',['get','selected'],11,7],'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
@@ -166,7 +185,9 @@ function initMap() {
     map.on('click','single',e=>{const id=String(e.features?.[0]?.properties?.id||'');if(id)selectPlace(id,false,true);});
     for(const layer of ['clusters','single']){map.on('mouseenter',layer,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',layer,()=>map.getCanvas().style.cursor='');}
     map.on('moveend',()=>{listLimit=80;renderList();});
-    updateSource();renderList();
+     syncGeography();
+     if(!geographyFitApplied)fitAll();
+     updateSource();renderList();
   });
   map.on('error',e=>console.warn('Map rendering issue:',e?.error?.message||e));
 }
@@ -196,15 +217,16 @@ async function boot() {
       $('data-status').classList.add('warning');renderList();return;
     }
     if(!Array.isArray(snapshot.establishments)||!snapshot.establishments.length)throw new Error('Empty published snapshot');
-    try{const r=await fetch('data/scarborough-neighbourhoods.geojson',{cache:'force-cache'});if(r.ok)shapes=await r.json();}catch{}
+     try{const r=await fetch('data/scarborough-neighbourhoods.geojson',{cache:'force-cache'});if(r.ok)shapes=await r.json();}catch{}
+     syncGeography();
     populateNeighbourhoods();
     const stale=isStale(snapshot.published_at);
-    $('data-status').textContent=stale?`Data may be stale: last validated ${publishedAt(snapshot.published_at)} · check update history`:
-      `City data checked ${publishedAt(snapshot.published_at)} · not live`; 
+    $('data-status').textContent=stale?`Data may be stale: last validated ${publishedAt(snapshot.published_at)} � check update history`:
+      `City data checked ${publishedAt(snapshot.published_at)} � not live`; 
     if(stale)$('data-status').classList.add('warning');
     performFilters();
   }catch(error){
-    $('data-status').textContent='City data unavailable — last verified publication retained where possible';
+    $('data-status').textContent='City data unavailable - last verified publication retained where possible';
     $('data-status').classList.add('error');
     $('record-list').replaceChildren(els('p','empty',`Could not load the published dataset (${error.message}). Check the update history link below.`));
   }
