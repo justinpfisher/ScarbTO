@@ -329,3 +329,87 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   assert.deepEqual(delayedBeach.pageErrors, []);
 });
 
+test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeout: 60_000}, async t => {
+  const {server, origin} = await startStaticServer();
+  const browser = await chromium.launch({args: ['--disable-webgl', '--disable-3d-apis']});
+  t.after(async () => {
+    await browser.close();
+    await new Promise(resolveClose => server.close(resolveClose));
+  });
+
+  const openWithoutMap = async (routeOptions = {}, mode = 'all', expectRecords = true) => {
+    const context = await browser.newContext({viewport: {width: 1280, height: 900}});
+    const page = await context.newPage();
+    const pageErrors = [];
+    page.on('pageerror', error => pageErrors.push(error.message));
+    await page.addInitScript(value => localStorage.setItem('scarbto-filters-v1', JSON.stringify({mode: value})), mode);
+    await installLocalRoutes(page, origin, routeOptions);
+    await page.goto(origin, {waitUntil: 'domcontentloaded'});
+    await page.locator('#map-fallback:not([hidden])').waitFor();
+    if(expectRecords)await page.getByRole('button', {name: 'Fixture Cafe'}).waitFor();
+    assert.match(await page.locator('#map-fallback').textContent(), /map unavailable.*searchable results list/i);
+    assert.equal(await page.locator('#map-fallback').getAttribute('aria-live'), 'polite');
+    assert.equal(await page.locator('#map').getAttribute('aria-hidden'), 'true');
+    assert.equal(await page.locator('#fit').isVisible(), false, 'map-only fit control is hidden');
+    assert.equal(await page.locator('#fit').isDisabled(), true, 'map-only fit control is also disabled');
+    assert.equal(await page.locator('#map-legend').isVisible(), false, 'map legend is hidden without a map');
+    return {context, page, pageErrors};
+  };
+
+  const feeds = await openWithoutMap();
+  t.after(() => feeds.context.close());
+  assert.equal(await feeds.page.locator('.record-item').count(), 2, 'DineSafe records render without map bounds');
+
+  const cafe = feeds.page.getByRole('button', {name: 'Fixture Cafe'});
+  await cafe.focus();
+  await feeds.page.keyboard.press('Enter');
+  assert.equal(await feeds.page.locator('.record-item.active').getAttribute('data-id'), 'fixture-a');
+  const cityLink = feeds.page.locator('#selected-record-details a');
+  assert.equal(await cityLink.count(), 1, 'record source link remains available without map selection');
+  assert.match(await cityLink.getAttribute('href'), /toronto\.ca\/community-people\/health-wellness-care\/health-programs-advice\/food-safety\/dinesafe\/#establishment\/fixture-a/);
+
+  await feeds.page.locator('#search').fill('Bakery');
+  assert.equal(await feeds.page.locator('.record-item').count(), 1, 'search filters the list without a map');
+  assert.match(await feeds.page.locator('.record-item').first().textContent(), /Fixture Bakery/);
+  await feeds.page.locator('#search').fill('');
+  await feeds.page.getByRole('button', {name: 'Beach samples'}).click();
+  await feeds.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
+  assert.equal(await feeds.page.locator('.beach-sample-preview-list li').count(), 10);
+  assert.equal(await feeds.page.locator('.beach-sample-preview a').count(), 3, 'beach provenance links render without map');
+  await feeds.page.getByRole('button', {name: 'All establishments'}).click();
+  assert.equal(await feeds.page.locator('.record-item').count(), 2, 'mode switching restores the DineSafe list');
+  assert.deepEqual(feeds.pageErrors, [], 'map fallback and feed interactions produce no uncaught errors');
+
+  const manyRecords = {
+    ...snapshot,
+    establishments: Array.from({length: 82}, (_, index) => ({
+      id: `no-map-${String(index + 1).padStart(3, '0')}`,
+      establishment_id: `no-map-${String(index + 1).padStart(3, '0')}`,
+      name: `No Map Fixture ${String(index + 1).padStart(3, '0')}`,
+      address: `${index + 1} Test Road`, status: 'Pass', inspection_date: '2026-10-27',
+      longitude: -79.255, latitude: 43.775, neighbourhood: 'Agincourt',
+    })),
+  };
+  const paging = await openWithoutMap({snapshotBody: manyRecords});
+  t.after(() => paging.context.close());
+  assert.equal(await paging.page.locator('.record-item').count(), 80);
+  await paging.page.getByRole('button', {name: 'Show next 2 matches'}).click();
+  assert.equal(await paging.page.locator('.record-item').count(), 82);
+  assert.equal(await paging.page.evaluate(() => document.activeElement?.dataset.id), 'no-map-081');
+  assert.equal(await paging.page.locator('.record-item[data-id="no-map-082"]').isVisible(), true);
+  assert.deepEqual(paging.pageErrors, []);
+
+  const rejected = {...snapshot, schema_version: 2, establishments: [{...snapshot.establishments[0], id: 'must-not-render'}]};
+  const invalid = await openWithoutMap({snapshotBody: rejected}, 'all', false);
+  t.after(() => invalid.context.close());
+  await invalid.page.getByText(/Could not load the published dataset \(Unsupported schema\)/).waitFor();
+  assert.equal(await invalid.page.locator('.record-item').count(), 0, 'unsupported payload records are not rendered');
+  await invalid.page.getByRole('button', {name: 'Beach samples'}).click();
+  assert.equal(await invalid.page.locator('.beach-sample-preview-list li').count(), 10);
+  await invalid.page.getByRole('button', {name: 'All establishments'}).click();
+  await invalid.page.getByText(/Could not load the published dataset \(Unsupported schema\)/).waitFor();
+  assert.equal(await invalid.page.locator('.record-item').count(), 0, 'mode switching cannot reveal rejected data');
+  assert.equal(await invalid.page.locator('[data-id="must-not-render"]').count(), 0);
+  assert.deepEqual(invalid.pageErrors, []);
+});
+
