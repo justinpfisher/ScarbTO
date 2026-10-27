@@ -184,6 +184,13 @@ class PermitCollectorTests(unittest.TestCase):
         self.assertIn("geometry", source["fields"])
         self.assertNotIn("CONTACT_EMAIL", source["fields"])
 
+    def test_permit_source_uses_live_street_components_not_nonexistent_address_fields(self):
+        fields = collector.SOURCE_RESOURCES["active_permits"]["fields"]
+        self.assertTrue({"STREET_NUM", "STREET_NAME", "STREET_TYPE", "STREET_DIRECTION"}.issubset(fields))
+        self.assertNotIn("ADDRESS", fields)
+        self.assertNotIn("APPLICATION_URL", fields)
+        self.assertEqual(fields, collector.SOURCE_RESOURCES["cleared_permits_since_2017"]["fields"])
+
 
 if __name__ == "__main__":
     unittest.main()
