@@ -233,6 +233,48 @@ class CsiContractTests(unittest.TestCase):
         with self.assertRaises(csi.PublicExportDisabled):
             csi.export_public(candidate)
 
+    def test_completed_report_quarter_candidate_counts_source_records(self):
+        rows = fixture_rows()
+        rows[3]["REPORT_DATE"] = "2025-12-31T23:59:59Z"
+        rows[3]["REPORT_YEAR"] = "2025"
+        rows[3]["REPORT_MONTH"] = "December"
+        source_version = version(rows)
+        candidate = csi.build_report_quarter_candidate(rows, source_version)
+
+        self.assertEqual(candidate["publication_status"], "disabled_pending_privacy_review")
+        self.assertEqual(candidate["source_record_total"], 5)
+        self.assertEqual(candidate["aggregated_source_record_total"], 4)
+        self.assertEqual(candidate["unaggregated_rows"], 1)
+        self.assertEqual(candidate["incomplete_quarter_rows"], 0)
+        by_quarter: dict[str, int] = {}
+        for cell in candidate["cells"]:
+            by_quarter[cell["report_quarter"]] = (
+                by_quarter.get(cell["report_quarter"], 0) + cell["source_record_count"]
+            )
+        self.assertEqual(by_quarter["2025-Q4"], 1)
+        self.assertEqual(by_quarter["2026-Q1"], 3)
+        self.assertEqual(candidate["observed_report_date_min_utc"], "2025-12-31")
+        self.assertEqual(candidate["observed_report_date_max_utc"], "2026-01-01")
+        serialized = json.dumps(candidate)
+        for forbidden in csi.FORBIDDEN_PUBLIC_FIELDS:
+            self.assertNotIn(forbidden, serialized)
+        self.assertNotIn("2025-12-31T23:59:59", serialized)
+        with self.assertRaises(csi.PublicExportDisabled):
+            csi.export_public(candidate)
+
+    def test_partial_report_quarter_is_excluded_not_presented_as_complete(self):
+        rows = fixture_rows()
+        rows[0]["REPORT_DATE"] = "2026-10-10T10:00:00Z"
+        rows[0]["REPORT_YEAR"] = "2026"
+        rows[0]["REPORT_MONTH"] = "October"
+        source_version = version(rows, coverage_end_utc="2026-10-10T23:59:59Z")
+        candidate = csi.build_report_quarter_candidate(rows, source_version)
+
+        self.assertEqual(candidate["source_record_total"], 5)
+        self.assertEqual(candidate["incomplete_quarter_rows"], 1)
+        self.assertEqual(candidate["aggregated_source_record_total"], 3)
+        self.assertNotIn("2026-Q4", {cell["report_quarter"] for cell in candidate["cells"]})
+
     def test_null_source_fields_are_counted_as_unaggregated_not_fabricated(self):
         rows = fixture_rows()
         candidate = csi.build_aggregate_candidate(rows, version(rows))
