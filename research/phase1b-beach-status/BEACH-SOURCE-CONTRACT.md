@@ -58,8 +58,9 @@ distinct; the rights check should resolve that specific reuse question before
 public redistribution rather than treating the CKAN metadata discrepancy as
 proof of a prohibition.
 
-The display precedence is separately verified access closure, out-of-season,
-unknown season, maintenance, unknown maintenance, missing result, freshness
+The display precedence is separately verified access closure, fresh season
+state, out-of-season, unknown season, fresh maintenance state, maintenance,
+unknown maintenance, fresh result/update controls, missing result, sample-age
 qualification, then City status. A closure must come from a separately
 verified authority; Toronto's beach list does not include Rouge, and the
 prototype does not guess a Rouge identifier or merge Parks Canada records.
@@ -68,8 +69,13 @@ is preserved and its age is compared by Toronto calendar date. The raw
 `lastUpdate` text is retained exactly; because the observed value has no
 timezone, the adapter does not append UTC or use it to claim freshness.
 Fetch time is separate from evaluation time and is a UTC timestamp captured
-when the result and each control are retrieved. Re-evaluating a cached result
-must not advance any retrieval timestamp. Preserve raw `statusFlag` and
+when the result and each control are retrieved. A conservative 24-hour
+control-freshness limit is an application choice, not a City service guarantee:
+the season, maintenance, source-update, and result retrieval times must all be
+present and within that window before the card may carry a current water-quality
+status. Missing, future, or older control times fail closed with an explicit
+stale/unknown state. Re-evaluating a cached result must not advance any
+retrieval timestamp. Preserve raw `statusFlag` and
 `statusFlagPre`; the latter is the displayed source when non-null. Missing
 maintenance state is unknown, never assumed to be `N`. The view shows sample,
 source-update, and snapshot-retrieval dates separately. The endpoint paths
@@ -129,4 +135,3 @@ last-good retention. Agree the app freshness policy and any separate closure
 source before showing current labels. Keep public export disabled until these
 gates pass. This prototype does not claim current beach conditions or actual
 source availability.
-
