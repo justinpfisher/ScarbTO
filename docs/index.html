@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#143e3e">
-  <meta name="description" content="Scarb.TO — a living map of what has changed across Scarborough, built from official local data.">
-  <title>Scarb.TO — Scarborough, as it changes</title>
+  <meta name="description" content="Scarb.TO - a living map of what has changed across Scarborough, built from official local data.">
+  <title>Scarb.TO - Scarborough, as it changes</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -21,15 +21,17 @@
     </header>
     <div class="intro-row">
       <div><h1>What's happening around Scarborough?</h1><p>See recent local changes, on the map and in one connected list.</p></div>
-      <div class="data-status" id="data-status" role="status" aria-live="polite">Checking official data…</div>
+      <div class="data-status" id="data-status" role="status" aria-live="polite">Checking official data.</div>
     </div>
     <div class="app-wrap">
       <aside class="filters" aria-label="Map filters">
-        <div class="filter-topline"><span class="eyebrow">Explore the area</span><span class="data-pill">DineSafe <span aria-hidden="true">●</span></span><button class="mobile-filter-toggle" id="toggle-filters" type="button" aria-expanded="false" aria-controls="filter-options">Filters</button></div>
+        <div class="filter-topline"><span class="eyebrow">Explore the area</span><span class="data-pill">DineSafe</span><button class="mobile-filter-toggle" id="toggle-filters" type="button" aria-expanded="false" aria-controls="filter-options">Filters</button></div>
         <div id="filter-options" class="filter-options"><div class="view-tabs" role="group" aria-label="Browse mode">
           <button class="tab active" data-mode="recent" type="button" aria-pressed="true">Recent activity</button>
           <button class="tab" data-mode="all" type="button" aria-pressed="false">All establishments</button>
+          <button class="tab" data-mode="beach" type="button" aria-pressed="false">Beach samples</button>
         </div>
+        <p id="beach-filter-note" class="filter-note" hidden>Search, time, neighbourhood, and inspection-outcome filters apply to DineSafe views only.</p>
         <label for="search">Find a place</label>
         <input id="search" type="search" placeholder="Name or address" autocomplete="off" spellcheck="false">
         <div class="control-grid">
@@ -52,8 +54,8 @@
       </aside>
       <main class="map-results">
         <div class="map-panel">
-          <div id="map" role="region" aria-label="Interactive map of DineSafe establishments"></div><p id="map-fallback" class="map-fallback" hidden>The map could not load. The searchable results remain available.</p>
-          <div class="map-legend" aria-hidden="true"><span><i class="dot pass"></i>Pass</span><span><i class="dot conditional"></i>Conditional</span><span><i class="dot closed"></i>Closed</span></div>
+          <div id="map" role="region" aria-label="Interactive map of DineSafe establishments and beach sample locations"></div><p id="map-fallback" class="map-fallback" hidden>The map could not load. The searchable results remain available.</p>
+          <div class="map-legend" aria-hidden="true"><span><i class="dot pass"></i>Pass</span><span><i class="dot conditional"></i>Conditional</span><span><i class="dot closed"></i>Closed</span><span><i class="dot beach"></i>Beach sample</span></div>
           <button class="map-fit" id="fit" type="button" title="Show all Scarborough">Show all Scarborough</button>
         </div>
         <section class="results" id="results" aria-labelledby="results-title">
@@ -65,7 +67,7 @@
     </div>
     <footer id="about">
       <div><strong>Built for Scarborough.</strong> Not a City of Toronto service. DineSafe outcomes are the last outcomes recorded in the source data, not real-time guarantees.</div>
-      <div>Source: <a href="https://open.toronto.ca/dataset/dinesafe/" rel="noopener noreferrer" target="_blank">City of Toronto DineSafe Open Data</a> · <a href="https://open.toronto.ca/open-data-licence/" rel="noopener noreferrer" target="_blank">Open Government Licence – Toronto</a> · <a id="download" href="data/establishments.csv" download>Download Scarb.TO CSV</a> · <a href="https://github.com/justinpfisher/ScarbTO/actions" target="_blank" rel="noopener noreferrer">Update history</a></div>
+      <div>Source: <a href="https://open.toronto.ca/dataset/dinesafe/" rel="noopener noreferrer" target="_blank">City of Toronto DineSafe Open Data</a> · <a href="https://open.toronto.ca/open-data-licence/" rel="noopener noreferrer" target="_blank">Open Government Licence - Toronto</a> · <a id="download" href="data/establishments.csv" download>Download Scarb.TO CSV</a> · <a href="https://github.com/justinpfisher/ScarbTO/actions" target="_blank" rel="noopener noreferrer">Update history</a></div>
       <div>Maps by OpenFreeMap and OpenStreetMap contributors, attributed on the map. New activity is identified from daily snapshots; inspection dates can be older than when records are published.</div>
     </footer>
   </div>
@@ -73,3 +75,4 @@
   <script type="module" src="./app.mjs"></script>
 </body>
 </html>
+

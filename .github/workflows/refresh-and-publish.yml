@@ -10,6 +10,8 @@ on:
       - 'docs/**'
       - 'scripts/**'
       - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/refresh-and-publish.yml'
   pull_request:
     paths:
@@ -18,6 +20,8 @@ on:
       - 'tests/**'
       - 'research/**'
       - '.github/scripts/test_research_prototypes.py'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/refresh-and-publish.yml'
 
 concurrency:
@@ -29,21 +33,43 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned browser-test dependencies
+        run: npm ci --ignore-scripts
+      - name: Install Chromium for rendered regression tests
+        run: npx playwright install chromium
       - name: Unit tests (network-independent)
         run: python -m unittest discover -s tests -v
       - name: Check JavaScript syntax
         run: |
           node --check docs/logic.mjs
           node --check docs/app.mjs
+          node --check docs/beach-history.mjs
       - name: JavaScript logic tests
         run: node --test tests/logic.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs
       - name: Offline research prototype tests
         run: python .github/scripts/test_research_prototypes.py
+      - name: Beach sample view tests
+        run: node tests/beach-history.test.mjs
+      - name: Rendered desktop and mobile browser tests
+        run: node --test tests/browser.integration.test.mjs
+      - name: Upload rendered regression screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scarbto-rendered-browser-screenshots
+          path: test-results/beach-browser/*.png
+          if-no-files-found: ignore
+          retention-days: 7
 
   publish:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -83,3 +109,4 @@ jobs:
       - name: Deploy last validated snapshot
         id: deployment
         uses: actions/deploy-pages@v4
+
