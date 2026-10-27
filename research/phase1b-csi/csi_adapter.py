@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from hashlib import sha256
 import json
 import os
@@ -377,6 +377,112 @@ def build_aggregate_candidate(rows: list[dict[str, Any]], version: SourceVersion
             "One occurrence may have multiple rows and may appear in multiple categories.",
             "Locations are deliberately offset; this candidate contains no coordinates or row identifiers.",
             "Aggregate cells are internal candidates only; no sparse-cell threshold or public release is approved.",
+        ],
+    }
+
+
+def _quarter_for_utc(value: datetime) -> tuple[int, int]:
+    month = value.astimezone(timezone.utc).month
+    return value.astimezone(timezone.utc).year, ((month - 1) // 3) + 1
+
+
+def _quarter_end_utc(year: int, quarter: int) -> datetime:
+    if quarter not in (1, 2, 3, 4):
+        raise ContractError("Invalid report quarter")
+    month = quarter * 3
+    if month == 12:
+        next_quarter = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    else:
+        next_quarter = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+    # Source dates can include fractional seconds; an exclusive next-quarter
+    # boundary correctly includes every instant in the completed quarter.
+    return next_quarter
+
+
+def build_report_quarter_candidate(
+    rows: list[dict[str, Any]], version: SourceVersion
+) -> dict[str, Any]:
+    """Build internal neighborhood/category counts by completed report quarter.
+
+    This is the qualified historical presentation grain. It counts source rows,
+    not unique events, and excludes incomplete coverage quarters. Output remains
+    private until the separately proposed suppression/coarsening policy is
+    approved; no exact row dates or event identifiers are emitted.
+    """
+    version.validate()
+    if len(rows) != version.expected_total:
+        raise ContractError("Validated rows no longer match source count")
+
+    coverage_start = parse_utc(version.coverage_start_utc, "coverage start")
+    coverage_end = parse_utc(version.coverage_end_utc, "coverage end")
+    groups: dict[tuple[str, str, int, int], dict[str, Any]] = defaultdict(
+        lambda: {"source_record_count": 0, "report_dates": []}
+    )
+    unaggregated_rows = 0
+    incomplete_quarter_rows = 0
+    report_dates: list[datetime] = []
+
+    for row in rows:
+        reported = _optional_date_utc(row.get("REPORT_DATE"), "REPORT_DATE")
+        neighbourhood = str(row.get("NEIGHBOURHOOD_158") or "").strip()
+        category = str(row.get("CSI_CATEGORY") or "").strip()
+        if reported is not None and not coverage_start <= reported <= coverage_end:
+            raise ContractError("REPORT_DATE falls outside the reported source coverage")
+        if reported is None or not neighbourhood or not category:
+            unaggregated_rows += 1
+            continue
+        report_dates.append(reported)
+        year, quarter = _quarter_for_utc(reported)
+        quarter_start = datetime(year, (quarter - 1) * 3 + 1, 1, tzinfo=timezone.utc)
+        quarter_end = _quarter_end_utc(year, quarter)
+        quarter_last_day = quarter_end.date() - timedelta(days=1)
+        if coverage_start.date() > quarter_start.date() or coverage_end.date() < quarter_last_day:
+            incomplete_quarter_rows += 1
+            continue
+        group = groups[(neighbourhood, category, year, quarter)]
+        group["source_record_count"] += 1
+        group["report_dates"].append(reported)
+
+    cells = []
+    for (neighbourhood, category, year, quarter), counts in sorted(groups.items()):
+        cells.append({
+            "neighbourhood": neighbourhood,
+            "category": category,
+            "report_quarter": f"{year}-Q{quarter}",
+            "source_record_count": counts["source_record_count"],
+        })
+    if not cells:
+        raise ContractError("No completed-quarter CSI rows; refuse an empty candidate")
+
+    return {
+        "publication_status": "disabled_pending_privacy_review",
+        "source": {
+            "name": version.layer_name,
+            "service_item_id": version.service_item_id,
+            "layer_id": version.layer_id,
+            "url": SOURCE_URL,
+            "terms_review_url": TPS_TERMS_URL,
+            "edit_date_utc": version.edit_date_utc,
+            "coverage_start_utc": version.coverage_start_utc,
+            "coverage_end_utc": version.coverage_end_utc,
+            "queried_at_utc": version.queried_at_utc,
+            "schema_sha256": version.schema_sha256,
+            "max_record_count": version.max_record_count,
+        },
+        "source_record_total": version.expected_total,
+        "aggregated_source_record_total": sum(c["source_record_count"] for c in cells),
+        "unaggregated_rows": unaggregated_rows,
+        "incomplete_quarter_rows": incomplete_quarter_rows,
+        "aggregate_cell_count": len(cells),
+        "observed_report_date_min_utc": min(report_dates).date().isoformat() if report_dates else None,
+        "observed_report_date_max_utc": max(report_dates).date().isoformat() if report_dates else None,
+        "cells": cells,
+        "limitations": [
+            "Historical/preliminary source; not live dispatch.",
+            "Counts are source records, not unique incidents or people.",
+            "No event identifiers, offence text, coordinates, address joins, or rankings are emitted.",
+            "Only fully covered report quarters are included.",
+            "Public export remains disabled; no suppression policy is selected.",
         ],
     }
 
