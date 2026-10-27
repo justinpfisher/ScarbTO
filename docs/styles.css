@@ -5,6 +5,7 @@
 @media (max-width:570px){.site-header{height:75px}.brand-mark{width:40px;height:40px}.brand-name{font-size:22px}.intro-row{padding:21px 0 17px;flex-direction:column;gap:13px}.intro-row h1{font-size:23px}.intro-row p{font-size:13px}.data-status{max-width:none;text-align:left;width:100%}.filters{padding:16px}.map-legend{bottom:8px;left:8px;gap:8px;padding:9px;font-size:10px}.map-fit{top:8px;right:8px;font-size:10px}.filter-footer{font-size:10px}.results-header h2{font-size:19px}.record-list{max-height:none}.record-item{padding:16px}.header-right{gap:8px}}
 
 .map-fallback:not([hidden]){display:block;position:absolute;z-index:3;top:40%;left:8%;right:8%;padding:23px;background:#fff;border-radius:12px;box-shadow:0 5px 35px #0002;color:#48655a;text-align:center;font-size:14px;font-weight:650;line-height:1.5}
+.map-panel.map-unavailable .map-legend{display:none}
 
 .mobile-filter-toggle{display:none}
 .dot.beach{background:#506c80}

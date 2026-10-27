@@ -54,8 +54,8 @@
       </aside>
       <main class="map-results">
         <div class="map-panel">
-          <div id="map" role="region" aria-label="Interactive map of DineSafe establishments and beach sample locations"></div><p id="map-fallback" class="map-fallback" hidden>The map could not load. The searchable results remain available.</p>
-          <div class="map-legend" aria-hidden="true"><span><i class="dot pass"></i>Pass</span><span><i class="dot conditional"></i>Conditional</span><span><i class="dot closed"></i>Closed</span><span><i class="dot beach"></i>Beach sample</span></div>
+          <div id="map" role="region" aria-label="Interactive map of DineSafe establishments and beach sample locations"></div><p id="map-fallback" class="map-fallback" role="status" aria-live="polite" hidden>Map unavailable. Use the searchable results list below; feeds, filters and record links remain available.</p>
+          <div class="map-legend" id="map-legend" aria-hidden="true"><span><i class="dot pass"></i>Pass</span><span><i class="dot conditional"></i>Conditional</span><span><i class="dot closed"></i>Closed</span><span><i class="dot beach"></i>Beach sample</span></div>
           <button class="map-fit" id="fit" type="button" title="Show all Scarborough">Show all Scarborough</button>
         </div>
         <section class="results" id="results" aria-labelledby="results-title">

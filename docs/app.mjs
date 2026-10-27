@@ -16,6 +16,7 @@ try {
 let snapshot = null, beachPreview = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]};
 let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = false, usingBeach = false, listLimit = 80;
 let dineSafeStatus={text:'Checking official data.',className:''}, dineSafeLoadState='loading', dineSafeLoadError='', beachPreviewState='loading';
+let mapUnavailable = false;
 
 function save() {
   try {const {mode,status,days,neighbourhood}=state;localStorage.setItem(STORAGE_KEY,JSON.stringify({mode,status,days,neighbourhood}));}catch{}
@@ -202,27 +203,58 @@ function selectNeighbourhood(){
   const bounds=fitBoundsFromFeatures(matched);
   if(bounds)map.fitBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]],{padding:35,maxZoom:13,duration:350});
 }
+function setMapUnavailable(error) {
+  if(mapUnavailable)return;
+  mapUnavailable=true;
+  const failedMap=map;
+  map=null;
+  try{failedMap?.remove();}catch{}
+  const panel=document.querySelector('.map-panel');
+  panel?.classList.add('map-unavailable');
+  const fallback=$('map-fallback');
+  fallback.hidden=false;
+  fallback.textContent='Map unavailable. Use the searchable results list below; feeds, filters and record links remain available.';
+  $('map').setAttribute('aria-hidden','true');
+  $('fit').hidden=true;
+  $('fit').disabled=true;
+  const legend=$('map-legend');
+  if(legend)legend.hidden=true;
+  const hint=document.querySelector('.mobile-hint');
+  if(hint)hint.textContent='Filters affect the matching records. The map is unavailable.';
+  if(error)console.warn('Interactive map unavailable:',error?.message||error);
+  performFilters();
+}
 function initMap() {
   if(typeof maplibregl==='undefined'){
-    $('map-fallback').hidden=false;
-    $('fit').hidden=true;
+    setMapUnavailable();
     return;
   }
-  map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[-79.255,43.775],zoom:10.45,
-    maxBounds:[[-79.65,43.52],[-78.96,43.98]],attributionControl:true});
-  map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-left');
-  map.on('load',()=>{
-    map.addSource('places',{type:'geojson',data:{type:'FeatureCollection',features:[]},cluster:true,clusterMaxZoom:13,clusterRadius:38});
-    map.addLayer({id:'clusters',type:'circle',source:'places',filter:['has','point_count'],paint:{'circle-color':'#174d43','circle-radius':['step',['get','point_count'],18,30,23,150,29],'circle-opacity':.90,'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
-    map.addLayer({id:'cluster-count',type:'symbol',source:'places',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-size':12},paint:{'text-color':'#fff'}});
-    map.addLayer({id:'single',type:'circle',source:'places',filter:['!',['has','point_count']],paint:{'circle-color':['match',['get','status'],'Pass','#318f62','Conditional Pass','#e2a03d','Closed','#c4534c','Beach sample','#506c80','#667d71'],'circle-radius':['case',['get','selected'],11,7],'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
-    map.on('click','clusters',e=>{const geom=e.features?.[0]?.geometry;if(geom?.type==='Point')map.easeTo({center:geom.coordinates,zoom:Math.min(map.getZoom()+2,15),duration:350});});
-    map.on('click','single',e=>{const id=String(e.features?.[0]?.properties?.id||'');if(id)selectPlace(id,false,true);});
-    for(const layer of ['clusters','single']){map.on('mouseenter',layer,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',layer,()=>map.getCanvas().style.cursor='');}
-    map.on('moveend',()=>{listLimit=80;renderList();});
-    updateSource();renderList();
-  });
-  map.on('error',e=>console.warn('Map rendering issue:',e?.error?.message||e));
+  try{
+    map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[-79.255,43.775],zoom:10.45,
+      maxBounds:[[-79.65,43.52],[-78.96,43.98]],attributionControl:true});
+    map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-left');
+    map.getCanvas().addEventListener('webglcontextlost',event=>{event.preventDefault();setMapUnavailable(new Error('WebGL context lost'));},{once:true});
+    map.on('load',()=>{
+      try{
+        if(!map)return;
+        map.addSource('places',{type:'geojson',data:{type:'FeatureCollection',features:[]},cluster:true,clusterMaxZoom:13,clusterRadius:38});
+        map.addLayer({id:'clusters',type:'circle',source:'places',filter:['has','point_count'],paint:{'circle-color':'#174d43','circle-radius':['step',['get','point_count'],18,30,23,150,29],'circle-opacity':.90,'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
+        map.addLayer({id:'cluster-count',type:'symbol',source:'places',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-size':12},paint:{'text-color':'#fff'}});
+        map.addLayer({id:'single',type:'circle',source:'places',filter:['!',['has','point_count']],paint:{'circle-color':['match',['get','status'],'Pass','#318f62','Conditional Pass','#e2a03d','Closed','#c4534c','Beach sample','#506c80','#667d71'],'circle-radius':['case',['get','selected'],11,7],'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
+        map.on('click','clusters',e=>{const geom=e.features?.[0]?.geometry;if(geom?.type==='Point')map.easeTo({center:geom.coordinates,zoom:Math.min(map.getZoom()+2,15),duration:350});});
+        map.on('click','single',e=>{const id=String(e.features?.[0]?.properties?.id||'');if(id)selectPlace(id,false,true);});
+        for(const layer of ['clusters','single']){map.on('mouseenter',layer,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',layer,()=>map.getCanvas().style.cursor='');}
+        map.on('moveend',()=>{listLimit=80;renderList();});
+        updateSource();renderList();
+      }catch(error){setMapUnavailable(error);}
+    });
+    map.on('error',e=>{
+      const error=e?.error||e;
+      const message=String(error?.message||error);
+      console.warn('Map rendering issue:',message);
+      if(/webgl|context lost|failed to initialize/i.test(message))setMapUnavailable(error);
+    });
+  }catch(error){setMapUnavailable(error);}
 }
 function bindControls(){
   document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{const next=b.dataset.mode;state.mode=next;if(next==='all')state.days='all';else if(next==='recent'&&state.days==='all')state.days='30';save();syncControls();performFilters();if(next==='beach'&&map&&beachPreview)map.easeTo({center:beachPreview.coordinates,zoom:Math.max(map.getZoom(),13),duration:350});}));
