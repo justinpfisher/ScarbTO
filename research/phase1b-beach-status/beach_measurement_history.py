@@ -114,7 +114,7 @@ def build_complete_snapshot(
     """Build only after exact, contiguous pages and unchanged source metadata."""
     if type(total_before) is not int or not 0 <= total_before <= MAX_ROWS:
         raise BeachHistoryError("initial exact total exceeds snapshot bound")
-    if total_after != total_before:
+    if type(total_after) is not int or total_after != total_before:
         raise BeachHistoryError("source total changed during pagination")
     if _validate_generation(generation_before, "initial") != _validate_generation(generation_after, "final"):
         raise BeachHistoryError("source generation changed during pagination")
@@ -185,6 +185,8 @@ def collect_and_store_snapshot(
         raise BeachHistoryError("initial exact total exceeds snapshot bound")
     if total_before == 0:
         raise BeachHistoryError("empty historical source result is not accepted")
+    if type(page_size) is not int or not 1 <= page_size <= MAX_PAGE_SIZE:
+        raise BeachHistoryError("page size exceeds configured maximum")
     expected_pages = (total_before + page_size - 1) // page_size
     if expected_pages > MAX_PAGES:
         raise BeachHistoryError("snapshot exceeds configured page count")
