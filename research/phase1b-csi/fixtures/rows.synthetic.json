@@ -13,7 +13,8 @@
       "OFFENCE": "Synthetic offence A",
       "NEIGHBOURHOOD_158": "Synthetic Area 1",
       "LONG_WGS84": -79.0,
-      "LAT_WGS84": 43.7
+      "LAT_WGS84": 43.7,
+      "HOOD_158": "001"
     },
     {
       "OBJECTID": 102,
@@ -26,7 +27,8 @@
       "OFFENCE": "Synthetic related offence B",
       "NEIGHBOURHOOD_158": "Synthetic Area 1",
       "LONG_WGS84": -79.0,
-      "LAT_WGS84": 43.7
+      "LAT_WGS84": 43.7,
+      "HOOD_158": "001"
     },
     {
       "OBJECTID": 103,
@@ -39,7 +41,8 @@
       "OFFENCE": "Synthetic repeated offence row C",
       "NEIGHBOURHOOD_158": "Synthetic Area 1",
       "LONG_WGS84": -79.0,
-      "LAT_WGS84": 43.7
+      "LAT_WGS84": 43.7,
+      "HOOD_158": "001"
     },
     {
       "OBJECTID": 104,
@@ -52,7 +55,8 @@
       "OFFENCE": "Synthetic UTC boundary case",
       "NEIGHBOURHOOD_158": "Synthetic Area 2",
       "LONG_WGS84": -78.9,
-      "LAT_WGS84": 43.8
+      "LAT_WGS84": 43.8,
+      "HOOD_158": "002"
     },
     {
       "OBJECTID": 105,
@@ -65,7 +69,8 @@
       "OFFENCE": null,
       "NEIGHBOURHOOD_158": null,
       "LONG_WGS84": null,
-      "LAT_WGS84": null
+      "LAT_WGS84": null,
+      "HOOD_158": null
     }
   ],
   "separate_source_example_must_not_merge": {
