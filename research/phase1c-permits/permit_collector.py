@@ -16,7 +16,7 @@ import time
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
 API_BASE = "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/"
@@ -69,7 +69,7 @@ SOURCE_RESOURCES = {
             "STREET_TYPE", "STREET_DIRECTION", "APPLICATION_URL", "WARD_NUMBER",
         }),
         "required_fields": frozenset({
-            "_id", "APPLICATION_TYPE", "APPLICATION#", "DATE_SUBMITTED",
+            "_id", "APPLICATION_TYPE", "APPLICATION#", "FOLDERRSN", "DATE_SUBMITTED",
             "STATUS", "STREET_NUM", "STREET_NAME", "STREET_TYPE",
             "STREET_DIRECTION", "WARD_NUMBER",
         }),
@@ -93,6 +93,17 @@ class CollectionError(RuntimeError):
     """A source response or candidate snapshot did not qualify."""
 
 
+class _RejectRedirects(HTTPRedirectHandler):
+    """Never follow a redirect, even briefly to an unqualified host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise HTTPError(req.full_url, code, "CKAN redirect rejected", headers, fp)
+
+
+def _open_no_redirect(request: Request, *, timeout: float):
+    return build_opener(_RejectRedirects()).open(request, timeout=timeout)
+
+
 def _safe_source(source_key: str) -> dict[str, Any]:
     try:
         source = SOURCE_RESOURCES[source_key]
@@ -110,7 +121,10 @@ def _validate_response(
     if not isinstance(result, dict):
         raise CollectionError("CKAN result object is missing")
     total = result.get("total")
+    total_was_estimated = result.get("total_was_estimated")
     records = result.get("records")
+    if total_was_estimated is not False:
+        raise CollectionError("CKAN total is estimated or lacks an exactness flag")
     if type(total) is not int or total < 0 or not isinstance(records, list) or len(records) > limit:
         raise CollectionError("CKAN total or records are malformed")
     for row in records:
@@ -150,14 +164,16 @@ class TorontoCKAN:
     def _get_json(self, action: str, params: dict[str, Any]) -> dict[str, Any]:
         query = dict(params)
         if isinstance(query.get("fields"), (list, tuple)):
-            query["fields"] = json.dumps(list(query["fields"]))
+            # CKAN datastore_search expects this as a comma-separated list.
+            # JSON-encoding the array is rejected by CKAN's validator.
+            query["fields"] = ",".join(str(field) for field in query["fields"])
         url = API_BASE + action + "?" + urlencode(query)
         if urlparse(url).hostname != API_HOST or not url.startswith("https://"):
             raise CollectionError("CKAN request target is not the qualified HTTPS host")
         request = Request(url, headers={"Accept": "application/json", "User-Agent": "ScarbTO-open-data-client/1.0"})
         for attempt in range(self.retries + 1):
             try:
-                with urlopen(request, timeout=self.timeout_seconds) as response:
+                with _open_no_redirect(request, timeout=self.timeout_seconds) as response:
                     if urlparse(response.geturl()).hostname != API_HOST or urlparse(response.geturl()).scheme != "https":
                         raise CollectionError("CKAN redirected outside the qualified host")
                     length = response.headers.get("Content-Length")
@@ -179,6 +195,8 @@ class TorontoCKAN:
                         raise CollectionError("CKAN response root must be an object")
                     return payload
             except HTTPError as exc:
+                if 300 <= exc.code < 400:
+                    raise CollectionError(f"CKAN redirect rejected (HTTP {exc.code})") from exc
                 if exc.code not in RETRYABLE_HTTP or attempt >= self.retries:
                     raise CollectionError(f"CKAN returned HTTP {exc.code}") from exc
                 retry_after = exc.headers.get("Retry-After")
@@ -387,4 +405,3 @@ def collect_snapshot(
         except OSError:
             pass
         raise
-
