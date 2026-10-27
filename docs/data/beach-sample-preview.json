@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "source": "Toronto Open Data: Toronto Beaches Water Quality",
+  "source_url": "https://open.toronto.ca/dataset/toronto-beaches-water-quality/",
+  "licence_url": "https://open.toronto.ca/open-data-licence/",
+  "resource_id": "8102bd4c-83cd-4354-9788-eecc0c7a09b4",
+  "beach_id": 10,
+  "beach_name": "Bluffer's Beach Park",
+  "coordinates": [-79.2252, 43.7141],
+  "selection": "latest 10 rows ordered by collectionDate descending, then source-local _id descending",
+  "total_rows_in_source_filter": 10300,
+  "total_was_estimated": false,
+  "rows_included": 10,
+  "retrieved_on": "2026-10-27",
+  "coverage_note": "Latest 10 source rows only; not a complete history. Measurements are dated catalogue samples, not current swimming advice.",
+  "records": [
+    {"beachId":10,"beachName":"Bluffer's Beach Park","siteName":"50E","collectionDate":"2026-09-16","eColi":null},
+    {"beachId":10,"beachName":"Bluffer's Beach Park","siteName":"49E","collectionDate":"2026-09-16","eColi":null},
+    {"beachId":10,"beachName":"Bluffer's Beach Park","siteName":"48E","collectionDate":"2026-09-16","eColi":null},
+    {"beachId":10,"beachName":"Bluffer's Beach Park","siteName":"47E","collectionDate":"2026-09-16","eColi":null},
+    {"beachId":10,"beachName":"Bluffer's Beach Park","siteName":"51E","collectionDate":"2026-09-16","eColi":null},
+    {"beachId":10,"beachName":"Bluffer's Beach Park","siteName":"50E","collectionDate":"2026-09-08","eColi":null},
+    {"beachId":10,"beachName":"Bluffer's Beach Park","siteName":"49E","collectionDate":"2026-09-08","eColi":null},
+    {"beachId":10,"beachName":"Bluffer's Beach Park","siteName":"48E","collectionDate":"2026-09-08","eColi":null},
+    {"beachId":10,"beachName":"Bluffer's Beach Park","siteName":"47E","collectionDate":"2026-09-08","eColi":null},
+    {"beachId":10,"beachName":"Bluffer's Beach Park","siteName":"51E","collectionDate":"2026-09-08","eColi":null}
+  ]
+}
+
