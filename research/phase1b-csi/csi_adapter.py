@@ -82,8 +82,9 @@ class SourceVersion:
     supports_pagination: bool
     supports_order_by: bool
     date_fields_time_zone_iana: str
-    coverage_start_utc: str
-    coverage_end_utc: str
+    coverage_start_date: str
+    coverage_end_date: str
+    coverage_basis: str
     queried_at_utc: str
     expected_total: int
 
@@ -119,16 +120,13 @@ class SourceVersion:
         }
         if mismatched:
             raise ContractError(f"CSI field type mismatch: {mismatched}")
-        for label, value in (
-            ("edit date", self.edit_date_utc),
-            ("coverage start", self.coverage_start_utc),
-            ("coverage end", self.coverage_end_utc),
-            ("query time", self.queried_at_utc),
-        ):
+        for label, value in (("edit date", self.edit_date_utc), ("query time", self.queried_at_utc)):
             parse_utc(value, label)
-        if parse_utc(self.coverage_start_utc, "coverage start") > parse_utc(
-            self.coverage_end_utc, "coverage end"
-        ):
+        coverage_start = parse_source_coverage_date(self.coverage_start_date, "coverage start")
+        coverage_end = parse_source_coverage_date(self.coverage_end_date, "coverage end")
+        if self.coverage_basis != "published_extract_metadata":
+            raise ContractError("Report-quarter coverage must come from published extract metadata")
+        if coverage_start > coverage_end:
             raise ContractError("Source coverage starts after it ends")
         if len(self.schema_sha256) != 64 or any(
             c not in "0123456789abcdef" for c in self.schema_sha256.lower()
@@ -148,8 +146,9 @@ class SourceVersion:
             self.supports_pagination,
             self.supports_order_by,
             self.date_fields_time_zone_iana,
-            self.coverage_start_utc,
-            self.coverage_end_utc,
+            self.coverage_start_date,
+            self.coverage_end_date,
+            self.coverage_basis,
             self.expected_total,
         )
 
@@ -177,6 +176,19 @@ def parse_utc(value: str, label: str) -> datetime:
     if parsed.utcoffset().total_seconds() != 0:
         raise ContractError(f"{label} must be UTC")
     return parsed.astimezone(timezone.utc)
+
+
+def parse_source_coverage_date(value: str, label: str) -> date:
+    """Parse an inclusive Toronto calendar date from published extract metadata."""
+    if not isinstance(value, str):
+        raise ContractError(f"{label} must be an inclusive ISO calendar date")
+    try:
+        parsed = date.fromisoformat(value)
+    except ValueError as exc:
+        raise ContractError(f"{label} must be an inclusive ISO calendar date") from exc
+    if parsed.isoformat() != value:
+        raise ContractError(f"{label} must be an inclusive ISO calendar date")
+    return parsed
 
 
 def schema_signature(field_names: Iterable[str]) -> str:
@@ -327,12 +339,13 @@ def build_aggregate_candidate(rows: list[dict[str, Any]], version: SourceVersion
     # These bounds come from the published extract's declared coverage
     # metadata. Observed row min/max dates are reported for QA only and never
     # establish that a quarter is complete.
-    coverage_start = parse_utc(version.coverage_start_utc, "coverage start")
-    coverage_end = parse_utc(version.coverage_end_utc, "coverage end")
+    coverage_start = parse_source_coverage_date(version.coverage_start_date, "coverage start")
+    coverage_end = parse_source_coverage_date(version.coverage_end_date, "coverage end")
     for row in rows:
         occurred = _optional_date_utc(row.get("OCC_DATE"), "OCC_DATE")
         reported = _optional_date_utc(row.get("REPORT_DATE"), "REPORT_DATE")
-        if reported is not None and not coverage_start <= reported <= coverage_end:
+        reported_local_date = reported.astimezone(TORONTO).date() if reported is not None else None
+        if reported_local_date is not None and not coverage_start <= reported_local_date <= coverage_end:
             raise ContractError("REPORT_DATE falls outside the reported source coverage")
         if occurred is not None:
             occurred_days.append(occurred.date())
@@ -378,8 +391,9 @@ def build_aggregate_candidate(rows: list[dict[str, Any]], version: SourceVersion
             "url": SOURCE_URL,
             "terms_review_url": TPS_TERMS_URL,
             "edit_date_utc": version.edit_date_utc,
-            "coverage_start_utc": version.coverage_start_utc,
-            "coverage_end_utc": version.coverage_end_utc,
+            "coverage_start_date": version.coverage_start_date,
+            "coverage_end_date": version.coverage_end_date,
+            "coverage_basis": version.coverage_basis,
             "queried_at_utc": version.queried_at_utc,
             "schema_sha256": version.schema_sha256,
             "max_record_count": version.max_record_count,
@@ -406,17 +420,17 @@ def _quarter_for_toronto(value: datetime) -> tuple[int, int]:
     return local.year, ((local.month - 1) // 3) + 1
 
 
-def _quarter_interval_utc(year: int, quarter: int) -> tuple[datetime, datetime]:
-    """Return Toronto-calendar quarter bounds as UTC, with an exclusive end."""
+def _quarter_interval_toronto(year: int, quarter: int) -> tuple[date, date]:
+    """Return inclusive Toronto-local calendar dates for a report quarter."""
     if quarter not in (1, 2, 3, 4):
         raise ContractError("Invalid report quarter")
     first_month = (quarter - 1) * 3 + 1
-    start_local = datetime(year, first_month, 1, tzinfo=TORONTO)
+    start_local = date(year, first_month, 1)
     if quarter == 4:
-        next_local = datetime(year + 1, 1, 1, tzinfo=TORONTO)
+        next_local = date(year + 1, 1, 1)
     else:
-        next_local = datetime(year, first_month + 3, 1, tzinfo=TORONTO)
-    return start_local.astimezone(timezone.utc), next_local.astimezone(timezone.utc)
+        next_local = date(year, first_month + 3, 1)
+    return start_local, next_local - timedelta(days=1)
 
 
 def build_report_quarter_candidate(
@@ -456,8 +470,8 @@ def build_report_quarter_candidate(
         seen_object_ids.add(object_id)
         previous_object_id = object_id
 
-    coverage_start = parse_utc(version.coverage_start_utc, "coverage start")
-    coverage_end = parse_utc(version.coverage_end_utc, "coverage end")
+    coverage_start = parse_source_coverage_date(version.coverage_start_date, "coverage start")
+    coverage_end = parse_source_coverage_date(version.coverage_end_date, "coverage end")
     groups: dict[tuple[str, str, int, int], dict[str, Any]] = defaultdict(
         lambda: {"source_record_count": 0, "report_dates": []}
     )
@@ -471,7 +485,8 @@ def build_report_quarter_candidate(
         category = str(row.get("CSI_CATEGORY") or "").strip()
         if category and category not in KNOWN_CSI_CATEGORIES:
             raise ContractError("Unknown CSI category value")
-        if reported is not None and not coverage_start <= reported <= coverage_end:
+        reported_local_date = reported.astimezone(TORONTO).date() if reported is not None else None
+        if reported_local_date is not None and not coverage_start <= reported_local_date <= coverage_end:
             raise ContractError("REPORT_DATE falls outside the reported source coverage")
         if (
             reported is None or not neighbourhood or not category
@@ -481,12 +496,10 @@ def build_report_quarter_candidate(
             continue
         report_dates.append(reported)
         year, quarter = _quarter_for_toronto(reported)
-        quarter_start_utc, quarter_end_utc = _quarter_interval_utc(year, quarter)
-        # Coverage is an instant interval, not a pair of calendar dates. The
-        # inclusive end must reach the last representable instant before the
-        # next Toronto quarter starts; a matching date alone is insufficient.
-        quarter_last_instant = quarter_end_utc - timedelta(microseconds=1)
-        if coverage_start > quarter_start_utc or coverage_end < quarter_last_instant:
+        quarter_start_date, quarter_end_date = _quarter_interval_toronto(year, quarter)
+        # Coverage fields are inclusive Toronto calendar dates copied from
+        # published extract metadata. Observed row dates cannot prove coverage.
+        if coverage_start > quarter_start_date or coverage_end < quarter_end_date:
             incomplete_quarter_rows += 1
             continue
         group = groups[(neighbourhood, category, year, quarter)]
@@ -513,8 +526,9 @@ def build_report_quarter_candidate(
             "url": SOURCE_URL,
             "terms_review_url": TPS_TERMS_URL,
             "edit_date_utc": version.edit_date_utc,
-            "coverage_start_utc": version.coverage_start_utc,
-            "coverage_end_utc": version.coverage_end_utc,
+            "coverage_start_date": version.coverage_start_date,
+            "coverage_end_date": version.coverage_end_date,
+            "coverage_basis": version.coverage_basis,
             "queried_at_utc": version.queried_at_utc,
             "schema_sha256": version.schema_sha256,
             "max_record_count": version.max_record_count,
