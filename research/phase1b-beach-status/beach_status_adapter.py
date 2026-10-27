@@ -135,7 +135,9 @@ def build_status_card(
     result_envelopes: list[dict[str, Any]] | None,
     now: datetime,
     sample_freshness_limit: timedelta | None,
-    maintenance_enabled: Any = "N",
+    maintenance_enabled: Any = None,
+    retrieved_at: datetime | None = None,
+    control_retrieved_at: dict[str, datetime | None] | None = None,
     access_closure: str | None = None,
 ) -> dict[str, Any]:
     """Normalize operational controls/results; never infer safety from E. coli.
@@ -157,6 +159,21 @@ def build_status_card(
     maintenance = _maintenance(maintenance_enabled)
     source_updated = _parse_source_date(last_update_raw)
     latest_date, result = _result_for_beach(result_envelopes, beach_id)
+    if retrieved_at is not None:
+        retrieved_at_utc = _aware_utc(retrieved_at, "retrieved_at")
+        fetched_at = retrieved_at_utc.isoformat().replace("+00:00", "Z")
+    else:
+        # Evaluation may happen long after retrieval (for example, on a cached
+        # snapshot). Never move the source fetch time forward by evaluating it.
+        fetched_at = None
+    control_retrieved_at = control_retrieved_at or {}
+    control_timestamps = {}
+    for name in ("season", "last_update", "maintenance", "results"):
+        value = control_retrieved_at.get(name)
+        control_timestamps[f"{name}_fetched_at_utc"] = (
+            _aware_utc(value, f"{name} retrieval time").isoformat().replace("+00:00", "Z")
+            if value is not None else None
+        )
 
     card: dict[str, Any] = {
         "beach_id": beach_id,
@@ -164,7 +181,10 @@ def build_status_card(
         "sample_date": latest_date.isoformat() if latest_date else None,
         "source_update_raw": last_update_raw if isinstance(last_update_raw, str) else None,
         "source_updated_at_utc": source_updated.isoformat().replace("+00:00", "Z") if source_updated else None,
-        "fetched_at_utc": now_utc.isoformat().replace("+00:00", "Z"),
+        "fetched_at_utc": fetched_at,
+        **control_timestamps,
+        "raw_status_flag": result.get("statusFlag") if isinstance(result, dict) else None,
+        "raw_status_flag_pre": result.get("statusFlagPre") if isinstance(result, dict) else None,
         "source_view_url": OFFICIAL_VIEW_URL,
         "catalogue_licence_url": CATALOGUE_LICENCE_URL,
         "terms_url": TERMS_URL,
