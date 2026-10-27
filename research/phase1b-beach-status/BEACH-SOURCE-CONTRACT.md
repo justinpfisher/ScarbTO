@@ -11,8 +11,8 @@ sampling data is not used to assign a health status.
 The future transport may query the City endpoints on `secure.toronto.ca`:
 
 - `/opendata/adv/beach_list/v1?format=json`
-- `/in_season/v1?format=json`
-- `/last_update/v1?format=json`
+- `/opendata/adv/in_season/v1?format=json`
+- `/opendata/adv/last_update/v1?format=json`
 - `/opendata/ss/maint_beach/v1?format=json`
 - `/opendata/adv/beach_results/v1?format=json&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&beachId=10`
 
@@ -67,7 +67,13 @@ Out-of-season status hides last season's result. The date-only collection date
 is preserved and its age is compared by Toronto calendar date. The raw
 `lastUpdate` text is retained exactly; because the observed value has no
 timezone, the adapter does not append UTC or use it to claim freshness.
-Fetch time is a separate UTC timestamp.
+Fetch time is separate from evaluation time and is a UTC timestamp captured
+when the result and each control are retrieved. Re-evaluating a cached result
+must not advance any retrieval timestamp. Preserve raw `statusFlag` and
+`statusFlagPre`; the latter is the displayed source when non-null. Missing
+maintenance state is unknown, never assumed to be `N`. The view shows sample,
+source-update, and snapshot-retrieval dates separately. The endpoint paths
+above include the required `/opendata/adv/` prefix.
 
 A two-day sample-age limit is only a proposed application setting, not a City
 service-level guarantee or a health threshold. Query-window, timeout, byte
@@ -82,8 +88,14 @@ Toronto's catalogue displays the Toronto Open Data Licence, while CKAN's
 licence metadata for the related historical sampling dataset was observed as
 unspecified. Preserve that discrepancy and attribution; it is not resolved by
 this prototype. No CKAN sample rows are copied here. The operational status
-is sourced from the public Toronto SwimSafe API/page, but public redistribution
-still requires review of the current applicable terms.
+is sourced from the public Toronto SwimSafe API/page. The specific SwimSafe
+Terms of Use describe this as public information and disclaim accuracy,
+completeness, and currency guarantees, but contain no express data reuse grant.
+The catalogue's licence listing for related data does not automatically prove
+that it applies to the operational API. Until a matching catalogue dataset or
+explicit City permission establishes redistribution rights for this feed,
+public export remains disabled. This is a specific rights question, not an
+assumption that the disclaimer prohibits reuse.
 
 The view component uses text nodes for status/advisory content and links to
 the official Toronto beach-water-quality page. It does not render coordinates
@@ -109,8 +121,8 @@ data, deploy, or publish.
 
 ## Activation gates
 
-Before integrating a live feed, independently review source terms and
-redistribution rights; implement a bounded transport with control-first
+Before integrating a live feed, resolve the specific operational-feed
+redistribution basis; implement a bounded transport with control-first
 validation, one in-flight request, timeouts and byte limits; verify source
 response schemas and Toronto date handling; and implement atomic validated
 last-good retention. Agree the app freshness policy and any separate closure
