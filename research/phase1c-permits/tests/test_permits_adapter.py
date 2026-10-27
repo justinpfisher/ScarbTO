@@ -47,7 +47,7 @@ def permit_row(**overrides):
 def dev_row(**overrides):
     row = {
         "APPLICATION_TYPE": "Site Plan",
-        "APPLICATION#": "20 191603 ESC 20 SA",
+        "APPLICATION#": "21 191603 ESC 20 SA",
         "FOLDERRSN": "4970049",
         "address": "1552 Kingston Rd",
         "DATE_SUBMITTED": "2021-01-14",
@@ -237,7 +237,7 @@ class PermitContractTests(unittest.TestCase):
         ]
         record = permits.normalize_development_applications(rows)["records"][0]
         self.assertEqual(record["record_key"], "development:folder:4970049")
-        self.assertEqual(record["application_number"], "20 191603 ESC 20 SA")
+        self.assertEqual(record["application_number"], "21 191603 ESC 20 SA")
         self.assertEqual(
             [location["address"] for location in record["locations"]],
             ["1552 Kingston Rd", "1572 Kingston Rd"],
@@ -279,7 +279,7 @@ class PermitContractTests(unittest.TestCase):
         record = permits.normalize_development_applications([
             dev_row(FOLDERRSN=None)
         ])["records"][0]
-        self.assertEqual(record["record_key"], "development:application:20 191603 ESC 20 SA")
+        self.assertEqual(record["record_key"], "development:application:21 191603 ESC 20 SA")
         self.assertTrue(record["folder_fallback_used"])
 
     def test_non_ward_grid_codes_are_not_treated_as_ward_numbers(self):
