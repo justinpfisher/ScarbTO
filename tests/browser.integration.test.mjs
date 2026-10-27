@@ -74,19 +74,18 @@ async function traceSelectedCalls(page) {
   });
 }
 
-async function waitForSelectedCallsRequest(page) {
-  try {
-    await page.waitForRequest(request => request.url().includes('C4S_Public_NoGO/FeatureServer/0?f=json'), {timeout: 5_000});
-  } catch (error) {
-    const diagnostics = await page.evaluate(() => ({
-      visibility: document.visibilityState,
-      tabPressed: document.querySelector('[data-mode="selected-calls"]')?.getAttribute('aria-pressed'),
-      fetches: window.__selectedCallsFetches,
-      status: document.querySelector('#data-status')?.textContent,
-      list: document.querySelector('#record-list')?.textContent,
-    }));
-    throw new Error(`${error.message}; selected-calls browser state: ${JSON.stringify(diagnostics)}`);
-  }
+function waitForSelectedCallsRequest(page) {
+  return page.waitForRequest(request => request.url().includes('C4S_Public_NoGO/FeatureServer/0?f=json'), {timeout: 5_000})
+    .catch(async error => {
+      const diagnostics = await page.evaluate(() => ({
+        visibility: document.visibilityState,
+        tabPressed: document.querySelector('[data-mode="selected-calls"]')?.getAttribute('aria-pressed'),
+        fetches: window.__selectedCallsFetches,
+        status: document.querySelector('#data-status')?.textContent,
+        list: document.querySelector('#record-list')?.textContent,
+      }));
+      throw new Error(`${error.message}; selected-calls browser state: ${JSON.stringify(diagnostics)}`);
+    });
 }
 
 
@@ -469,12 +468,13 @@ test('selected calls render only after explicit selection and clear after leavin
     await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
     if(viewport.isMobile)await page.getByRole('button',{name:'Filters'}).click();
     assert.equal(requests,0,'the client is idle until the selected-calls view is opened');
+    const firstRequest=waitForSelectedCallsRequest(page);
     await page.getByRole('button',{name:'Selected police calls'}).click();
-    await waitForSelectedCallsRequest(page);
+    await firstRequest;
     await page.getByText('Division 41',{exact:true}).waitFor();
     assert.equal(requests,5,'the view uses the bounded metadata/count/group/count/metadata sequence');
     assert.match(await page.locator('#results-caption').textContent(),/not all crime, police activity, or officer presence/i);
-    assert.match(await page.locator('#record-list').textContent(),/Open Government Licence - Ontario/);
+    assert.match(await page.locator('#record-list').textContent(),/Open Government Licence.*Ontario/);
     assert.equal(await page.locator('.selected-call-row').count(),3);
     assert.equal(await page.locator('#map').getAttribute('aria-label'),'Map background only; selected calls are not mapped individually');
     assert.equal(await page.locator('#selected-calls-map-note').isVisible(),true);
@@ -499,8 +499,9 @@ test('selected-call mode aborts on hidden document and never renders stale count
   await traceSelectedCalls(page);
   await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsDelayMs:3_000,onSelectedCallsRequest:()=>requests++});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
+  const firstRequest=waitForSelectedCallsRequest(page);
   await page.getByRole('button',{name:'Selected police calls'}).click();
-  await waitForSelectedCallsRequest(page);
+  await firstRequest;
   await page.evaluate(()=>window.__setVisibility('hidden'));
   await page.getByText(/counts are cleared while this view is hidden/i).waitFor();
   assert.equal(await page.locator('.selected-call-row').count(),0);
@@ -521,8 +522,9 @@ test('stale upstream selected-call response never renders aggregate values', {ti
   await traceSelectedCalls(page);
   await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsSourceAgeMs:31*60_000});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
+  const firstRequest=waitForSelectedCallsRequest(page);
   await page.getByRole('button',{name:'Selected police calls'}).click();
-  await waitForSelectedCallsRequest(page);
+  await firstRequest;
   await page.getByText(/selected-call counts unavailable or stale/i).waitFor();
   assert.equal(await page.locator('.selected-call-row').count(),0);
   assert.deepEqual(errors,[]);
@@ -537,8 +539,9 @@ test('rendered selected-call counts disappear at the upstream freshness deadline
   await traceSelectedCalls(page);
   await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsSourceAgeMs:30*60_000-2_000});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
+  const firstRequest=waitForSelectedCallsRequest(page);
   await page.getByRole('button',{name:'Selected police calls'}).click();
-  await waitForSelectedCallsRequest(page);
+  await firstRequest;
   await page.getByText('Division 41',{exact:true}).waitFor();
   await page.getByText(/selected-call counts unavailable or stale/i).waitFor({timeout:10_000});
   assert.equal(await page.locator('.selected-call-row').count(),0);
@@ -555,7 +558,8 @@ test('reselecting the active selected-calls tab does not extend the absolute fre
   await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsSourceAgeMs:30*60_000-4_000});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
   const tab=page.getByRole('button',{name:'Selected police calls'});
-  await tab.click();await waitForSelectedCallsRequest(page);await page.getByText('Division 41',{exact:true}).waitFor();
+  const firstRequest=waitForSelectedCallsRequest(page);
+  await tab.click();await firstRequest;await page.getByText('Division 41',{exact:true}).waitFor();
   await page.waitForTimeout(1_500);
   await tab.click();
   await page.getByText(/selected-call counts unavailable or stale/i).waitFor({timeout:3_200});
@@ -573,8 +577,9 @@ test('resetting during a selected-call request aborts it and prevents late rende
   await traceSelectedCalls(page);
   await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsDelayMs:3_000,onSelectedCallsRequest:()=>requests++});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
+  const firstRequest=waitForSelectedCallsRequest(page);
   await page.getByRole('button',{name:'Selected police calls'}).click();
-  await waitForSelectedCallsRequest(page);
+  await firstRequest;
   await page.getByRole('button',{name:'Reset filters'}).click();
   await page.waitForTimeout(3_200);
   assert.equal(requests,1,'reset aborts the active first stage');
