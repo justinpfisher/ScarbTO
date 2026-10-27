@@ -43,6 +43,22 @@ export function createBeachStatusCard(document, card) {
   source.textContent = "Open the official Toronto beach-status source";
 
   section.append(heading, message);
+  const dates = document.createElement("dl");
+  dates.className = "beach-status-dates";
+  const dateRows = [
+    ["Sample date", card?.sample_date],
+    ["Toronto source update time (timezone not specified)", card?.source_update_raw],
+    ["Snapshot retrieved", card?.fetched_at_utc],
+  ];
+  for (const [label, value] of dateRows) {
+    if (typeof value !== "string" || !value.trim()) continue;
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const description = document.createElement("dd");
+    description.textContent = value;
+    dates.append(term, description);
+  }
+  if (dateRows.some(([, value]) => typeof value === "string" && value.trim())) section.append(dates);
   if (typeof card?.advisory === "string" && card.advisory.trim()) {
     const advisory = document.createElement("p");
     advisory.className = "beach-advisory";
