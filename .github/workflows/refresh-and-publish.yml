@@ -38,8 +38,11 @@ jobs:
         run: |
           node --check docs/logic.mjs
           node --check docs/app.mjs
+          node --check docs/beach-history.mjs
       - name: JavaScript logic tests
         run: node --test tests/logic.test.mjs
+      - name: Beach sample view tests
+        run: node tests/beach-history.test.mjs
 
   publish:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -79,3 +82,4 @@ jobs:
       - name: Deploy last validated snapshot
         id: deployment
         uses: actions/deploy-pages@v4
+
