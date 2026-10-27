@@ -1,4 +1,5 @@
 import json
+from hashlib import sha256
 from pathlib import Path
 import tempfile
 import unittest
@@ -9,7 +10,22 @@ import permit_collector as collector
 
 
 def source_row(row_id, **extra):
-    return {"_id": row_id, "PERMIT_NUM": f"synthetic-{row_id}", **extra}
+    return {
+        "_id": row_id,
+        "PERMIT_NUM": f"synthetic-{row_id}",
+        "REVISION_NUM": "00",
+        "PERMIT_TYPE": "BLD",
+        "GEO_ID": None,
+        "APPLICATION_DATE": None,
+        "ISSUED_DATE": None,
+        "COMPLETED_DATE": None,
+        "STATUS": "Issued",
+        "STREET_NUM": "1",
+        "STREET_NAME": "Synthetic",
+        "STREET_TYPE": "Rd",
+        "STREET_DIRECTION": None,
+        **extra,
+    }
 
 
 def page(total, rows):
@@ -88,6 +104,102 @@ class PermitCollectorTests(unittest.TestCase):
             rows = [json.loads(line) for line in snapshot.read_text(encoding="utf-8").splitlines()]
             self.assertEqual([row["_id"] for row in rows], [17, 18, 19])
             self.assertFalse(list(Path(root).glob("*.tmp")))
+
+    def test_actual_client_page_shape_composes_with_snapshot_collector(self):
+        source = collector.SOURCE_RESOURCES["active_permits"]
+        package = {"success": True, "result": {
+            "metadata_modified": "2026-10-27T00:00:00",
+            "resources": [{"id": source["resource_id"], "last_modified": "2026-10-26T00:00:00"}],
+        }}
+        count = page(1, [])
+        records = page(1, [source_row(12)])
+        client = collector.TorontoCKAN(retries=0)
+        with patch.object(client, "_get_json", side_effect=[package, count, records, package, count]):
+            with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+                manifest = collector.collect_snapshot(
+                    "active_permits", root,
+                    metadata=lambda: client.metadata("active_permits"),
+                    fetch_page=lambda offset, limit: client.page("active_permits", offset=offset, limit=limit),
+                )
+        self.assertEqual(manifest["row_count"], 1)
+        self.assertEqual(manifest["first_id"], 12)
+
+    def test_required_source_schema_rejects_id_only_page(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            with self.assertRaisesRegex(collector.CollectionError, "required source fields"):
+                collector.collect_snapshot(
+                    "active_permits", root,
+                    metadata=lambda: (1, "generation-1"),
+                    fetch_page=lambda offset, limit: page(1, [{"_id": 1}]),
+                )
+            self.assertFalse((Path(root) / "active_permits-manifest.json").exists())
+
+    def test_empty_generation_is_rejected(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            with self.assertRaisesRegex(collector.CollectionError, "generation marker is empty"):
+                collector.collect_snapshot(
+                    "active_permits", root, metadata=lambda: (1, " "),
+                    fetch_page=lambda offset, limit: page(1, [source_row(1)]),
+                )
+
+    def test_empty_result_cannot_replace_nonempty_last_good_snapshot(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            previous = collector.collect_snapshot(
+                "active_permits", root,
+                metadata=lambda: (1, "g1"),
+                fetch_page=lambda offset, limit: page(1, [source_row(9)]),
+            )
+            manifest_path = Path(root) / "active_permits-manifest.json"
+            previous_bytes = manifest_path.read_bytes()
+            with self.assertRaisesRegex(collector.CollectionError, "not accepted without a qualified"):
+                collector.collect_snapshot(
+                    "active_permits", root, metadata=lambda: (0, "g2"),
+                    fetch_page=lambda offset, limit: page(0, []),
+                )
+            self.assertEqual(manifest_path.read_bytes(), previous_bytes)
+            self.assertTrue((Path(root) / previous["snapshot_file"]).is_file())
+
+    def test_large_source_count_drop_preserves_last_good_snapshot(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            previous = collector.collect_snapshot(
+                "active_permits", root,
+                metadata=lambda: (4, "g1"),
+                fetch_page=lambda offset, limit: page(4, [source_row(i) for i in range(1, 5)]),
+                page_size=4,
+            )
+            manifest_path = Path(root) / "active_permits-manifest.json"
+            previous_bytes = manifest_path.read_bytes()
+            with self.assertRaisesRegex(collector.CollectionError, "retention floor"):
+                collector.collect_snapshot(
+                    "active_permits", root, metadata=lambda: (1, "g2"),
+                    fetch_page=lambda offset, limit: page(1, [source_row(5)]),
+                )
+            self.assertEqual(manifest_path.read_bytes(), previous_bytes)
+            self.assertTrue((Path(root) / previous["snapshot_file"]).is_file())
+
+    def test_corrupt_content_addressed_file_is_not_reused_or_promoted(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            row = source_row(33)
+            encoded = (json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+            digest = sha256(encoded).hexdigest()
+            corrupt = Path(root) / f"active_permits-{digest}.jsonl"
+            corrupt.write_bytes(b"corrupt existing snapshot")
+            with self.assertRaisesRegex(collector.CollectionError, "content-addressed snapshot is corrupt"):
+                collector.collect_snapshot(
+                    "active_permits", root, metadata=lambda: (1, "g1"),
+                    fetch_page=lambda offset, limit: page(1, [row]),
+                )
+            self.assertEqual(corrupt.read_bytes(), b"corrupt existing snapshot")
+            self.assertFalse((Path(root) / "active_permits-manifest.json").exists())
+            self.assertFalse(list(Path(root).glob(".candidate-*.tmp")))
+
+    def test_initial_empty_source_is_not_assumed_valid(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            with self.assertRaisesRegex(collector.CollectionError, "Empty source result"):
+                collector.collect_snapshot(
+                    "active_permits", root, metadata=lambda: (0, "g1"),
+                    fetch_page=lambda offset, limit: page(0, []),
+                )
 
     def test_partial_page_preserves_previous_manifest_and_snapshot(self):
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
