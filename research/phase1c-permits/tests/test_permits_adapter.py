@@ -294,6 +294,10 @@ class PermitContractTests(unittest.TestCase):
             permits.point_in_scarborough_neighbourhoods(-79.2, 43.8, [{
                 "geometry": {"type": "Polygon", "coordinates": [[[-79.3, 43.7], [-79.1, 43.7], [-79.1, 43.9], [-79.3, 43.9]]]}
             }])
+        with self.assertRaisesRegex(permits.PermitContractError, "closed"):
+            permits.point_in_scarborough_neighbourhoods(-79.2, 43.8, SQUARE + [{
+                "geometry": {"type": "Polygon", "coordinates": [[[-79.3, 43.7], [-79.1, 43.7], [-79.1, 43.9], [-79.3, 43.9]]]}
+            }])
 
     def test_non_finite_oar_coordinates_are_rejected(self):
         result = permits.normalize_oar_address_points([
@@ -306,13 +310,20 @@ class PermitContractTests(unittest.TestCase):
         result = permits.normalize_permits(
             [permit_row(STATUS=" Issued ", GEO_ID=None)],
             source_collection="active", address_points=[],
-            oar_accounting={"total_count": 3, "located_count": 2, "unlocated_count": 1, "rejected_count": 0},
+            oar_accounting={"total_count": 1, "located_count": 0, "unlocated_count": 1, "rejected_count": 0, "accounted_count": 1},
         )
         row = result["records"][0]
         self.assertEqual(row["status"], "Issued")
         self.assertEqual(row["raw_status"], " Issued ")
-        self.assertEqual(result["location_accounting"]["address_points_total"], 3)
+        self.assertEqual(result["location_accounting"]["address_points_total"], 1)
         self.assertEqual(result["location_accounting"]["permit_rows_unlocated"], 1)
+
+    def test_permit_normalizer_rejects_inconsistent_oar_accounting(self):
+        with self.assertRaisesRegex(permits.PermitContractError, "does not reconcile"):
+            permits.normalize_permits(
+                [], source_collection="active", address_points=[],
+                oar_accounting={"total_count": 2, "located_count": 1, "unlocated_count": 1, "rejected_count": 0, "accounted_count": 2},
+            )
 
     def test_permit_dates_require_iso_calendar_format(self):
         for value in ("2022-6-01", "2022-02-30", "2022-06-01T00:00:00Z"):
