@@ -102,6 +102,27 @@ class PermitContractTests(unittest.TestCase):
         self.assertEqual(row["locations"][0]["address_point_id"], 331669)
         self.assertNotEqual(row["address"], "347 Beechgrove Dr")
 
+    def test_text_geo_id_from_live_ckan_schema_joins_verified_oar_point_id(self):
+        # CKAN declares GEO_ID as text. The bounded live OAR lookup for point
+        # 331669 returned ADDRESS_ID 357094 and 4003 Ellesmere Rd, ward 25.
+        row = permits.normalize_permits(
+            [permit_row(GEO_ID="331669")],
+            source_collection="active",
+            address_points=POINTS,
+        )["records"][0]
+        self.assertEqual(row["locations"][0]["address_point_id"], 331669)
+        self.assertEqual(row["address"], "4003 Ellesmere Rd")
+        self.assertNotEqual(row["address"], "347 Beechgrove Dr")
+
+    def test_geo_id_rejects_non_numeric_and_non_positive_values(self):
+        for value in ("331669x", " 331669 ", 0, -1, True):
+            with self.subTest(value=value), self.assertRaises(permits.PermitContractError):
+                permits.normalize_permits(
+                    [permit_row(GEO_ID=value)],
+                    source_collection="active",
+                    address_points=POINTS,
+                )
+
     def test_revision_zeroes_and_full_permit_number_are_preserved(self):
         row = permits.normalize_permits(
             [permit_row()], source_collection="cleared", address_points=POINTS
