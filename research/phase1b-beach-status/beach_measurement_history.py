@@ -1,8 +1,9 @@
-"""Bounded validator for Toronto's licensed beach-sample history dataset.
+"""Bounded reader and validator for Toronto's licensed beach-sample history.
 
 This module is deliberately separate from the SwimSafe advisory adapter:
-numeric measurements never become current safety labels. It has no scheduler,
-network access, or public publisher. Callers provide bounded CKAN pages.
+numeric measurements never become current safety labels. Its optional client
+performs fixed-host, GET-only, bounded CKAN requests; there is no scheduler or
+public publisher.
 """
 from __future__ import annotations
 
@@ -14,6 +15,8 @@ from pathlib import Path
 import tempfile
 from typing import Any, Iterable
 from urllib.parse import urlencode
+from urllib.error import HTTPError, URLError
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 
 API_BASE = "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/"
@@ -31,6 +34,98 @@ MAX_SNAPSHOT_BYTES = 16 * 1024 * 1024
 
 class BeachHistoryError(ValueError):
     """A catalogue response did not qualify as a complete sample snapshot."""
+
+
+class _RejectRedirects(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise BeachHistoryError(f"CKAN redirect rejected (HTTP {code})")
+
+
+class TorontoBeachHistoryClient:
+    """Single-flight, read-only client for the fixed public CKAN resource."""
+
+    def __init__(self, *, timeout_seconds: float = 15, max_response_bytes: int = MAX_PAGE_BYTES):
+        if (timeout_seconds <= 0 or type(max_response_bytes) is not int
+                or not 1024 <= max_response_bytes <= MAX_PAGE_BYTES):
+            raise ValueError("Invalid bounded CKAN client limits")
+        self.timeout_seconds = timeout_seconds
+        self.max_response_bytes = max_response_bytes
+
+    def _get_json(self, url: str) -> dict[str, Any]:
+        if not url.startswith(API_BASE) or url.split("/", 3)[2] != API_HOST:
+            raise BeachHistoryError("CKAN request target is outside the fixed HTTPS host")
+        request = Request(url, headers={
+            "Accept": "application/json",
+            "User-Agent": "ScarbTO-beach-history-reader/1.0",
+        })
+        try:
+            with build_opener(_RejectRedirects()).open(request, timeout=self.timeout_seconds) as response:
+                if response.geturl() != url:
+                    raise BeachHistoryError("CKAN response URL changed unexpectedly")
+                length = response.headers.get("Content-Length")
+                if length:
+                    try:
+                        declared = int(length)
+                    except ValueError as exc:
+                        raise BeachHistoryError("CKAN Content-Length is malformed") from exc
+                    if declared < 0 or declared > self.max_response_bytes:
+                        raise BeachHistoryError("CKAN response exceeds byte limit")
+                raw = response.read(self.max_response_bytes + 1)
+                if len(raw) > self.max_response_bytes:
+                    raise BeachHistoryError("CKAN response exceeds byte limit")
+                try:
+                    payload = json.loads(raw)
+                except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                    raise BeachHistoryError("CKAN response is not valid JSON") from exc
+                if not isinstance(payload, dict):
+                    raise BeachHistoryError("CKAN JSON root is not an object")
+                return payload
+        except BeachHistoryError:
+            raise
+        except HTTPError as exc:
+            raise BeachHistoryError(f"CKAN returned HTTP {exc.code}") from exc
+        except (TimeoutError, URLError) as exc:
+            raise BeachHistoryError("CKAN request timed out or failed at transport") from exc
+
+    def _search_url(self, *, limit: int, offset: int = 0) -> str:
+        params = {
+            "resource_id": RESOURCE_ID,
+            "limit": limit,
+            "offset": offset,
+            "fields": ",".join(FIELDS),
+            "filters": json.dumps({"beachId": BEACH_ID}, separators=(",", ":")),
+            "sort": "_id asc",
+        }
+        return API_BASE + "datastore_search?" + urlencode(params)
+
+    def metadata(self) -> tuple[int, str]:
+        package_payload = self._get_json(API_BASE + "package_show?" + urlencode({"id": PACKAGE_ID}))
+        package = package_payload.get("result") if package_payload.get("success") is True else None
+        if not isinstance(package, dict) or package.get("id") != PACKAGE_ID:
+            raise BeachHistoryError("CKAN package metadata does not match the fixed package")
+        resources = package.get("resources")
+        if not isinstance(resources, list):
+            raise BeachHistoryError("CKAN package resource list is malformed")
+        resource = next((item for item in resources if isinstance(item, dict) and item.get("id") == RESOURCE_ID), None)
+        if not isinstance(resource, dict) or resource.get("datastore_active") is not True:
+            raise BeachHistoryError("Fixed beach datastore is missing or inactive")
+        resource_generation = resource.get("last_modified") or resource.get("metadata_modified")
+        package_generation = package.get("metadata_modified")
+        if not isinstance(resource_generation, str) or not resource_generation.strip():
+            raise BeachHistoryError("Beach resource generation marker is missing")
+        if not isinstance(package_generation, str) or not package_generation.strip():
+            raise BeachHistoryError("Beach package generation marker is missing")
+        generation = f"package:{package_generation}|resource:{resource_generation}"
+        count_payload = self._get_json(self._search_url(limit=0))
+        result = validate_page(count_payload, limit=0)
+        return result["total"], generation
+
+    def page(self, offset: int, limit: int) -> dict[str, Any]:
+        if type(offset) is not int or offset < 0:
+            raise BeachHistoryError("offset must be a nonnegative integer")
+        if type(limit) is not int or not 1 <= limit <= MAX_PAGE_SIZE:
+            raise BeachHistoryError("limit exceeds the bounded page size")
+        return self._get_json(self._search_url(limit=limit, offset=offset))
 
 
 def query_url(*, offset: int, limit: int) -> str:
@@ -199,9 +294,12 @@ def collect_and_store_snapshot(
         if result["total"] != total_before:
             raise BeachHistoryError("page total changed during pagination")
         pages.append(payload)
-    if not isinstance(metadata_after, tuple) or len(metadata_after) != 2:
+    if not callable(metadata_after):
+        raise BeachHistoryError("final metadata callback is required")
+    final_metadata = metadata_after()
+    if not isinstance(final_metadata, tuple) or len(final_metadata) != 2:
         raise BeachHistoryError("final metadata must be an exact count and generation")
-    total_after, generation_after = metadata_after
+    total_after, generation_after = final_metadata
     snapshot = build_complete_snapshot(
         pages,
         total_before=total_before,
@@ -259,6 +357,26 @@ def collect_and_store_snapshot(
     return manifest
 
 
+def collect_from_toronto(
+    destination: str | Path,
+    *,
+    client: TorontoBeachHistoryClient | None = None,
+    page_size: int = 1000,
+    retrieved_at: datetime | None = None,
+) -> dict[str, Any]:
+    """Collect and store one complete exact-total snapshot from the fixed source."""
+    source = client or TorontoBeachHistoryClient()
+    before = source.metadata()
+    return collect_and_store_snapshot(
+        metadata_before=before,
+        fetch_page=source.page,
+        metadata_after=source.metadata,
+        destination=destination,
+        page_size=page_size,
+        retrieved_at=retrieved_at or datetime.now(timezone.utc),
+    )
+
+
 def _file_sha256(path: Path) -> str:
     digest = sha256()
     with path.open("rb") as stream:
@@ -285,3 +403,4 @@ def _atomic_write_bytes(path: Path, content: bytes, root: Path) -> None:
 
 def _atomic_write_text(path: Path, content: str, root: Path) -> None:
     _atomic_write_bytes(path, content.encode("utf-8"), root)
+
