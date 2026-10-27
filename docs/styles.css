@@ -7,6 +7,17 @@
 .map-fallback:not([hidden]){display:block;position:absolute;z-index:3;top:40%;left:8%;right:8%;padding:23px;background:#fff;border-radius:12px;box-shadow:0 5px 35px #0002;color:#48655a;text-align:center;font-size:14px;font-weight:650;line-height:1.5}
 
 .mobile-filter-toggle{display:none}
+.dot.beach{background:#506c80}
+.filter-note{margin:0 0 14px;color:#5d7168;font-size:11px;line-height:1.45}
+.beach-sample-preview{padding:14px 20px 22px;display:flex;flex-direction:column;gap:12px;color:#334f46}
+.beach-sample-preview h3{font-size:16px;line-height:1.3}
+.beach-sample-preview>p{font-size:12px;line-height:1.55;color:#5b7168}
+.beach-sample-preview-list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.beach-sample-preview-list li{display:grid;grid-template-columns:1fr auto;gap:5px 10px;padding:12px 2px;border-bottom:1px solid #e7ece7;font-size:12px}
+.beach-sample-preview-list li time{font-weight:750;color:#2b5144}
+.beach-sample-preview-list li span:last-child{grid-column:1/-1;color:#667b72}
+.beach-sample-preview-meta{color:#7a8880!important;font-size:11px!important}
+.beach-sample-preview a{font-size:12px;font-weight:700;width:max-content}
 @media(max-width:950px){
   .map-results{display:contents}
   .map-panel{order:0;flex:0 0 52vh}
@@ -19,3 +30,4 @@
   .filters .mobile-hint{display:none}
 }
 @media(max-width:570px){.map-panel{height:51vh;min-height:300px;flex-basis:51vh}.filters{padding:12px 15px}.filter-topline .eyebrow{letter-spacing:1px;font-size:9px}}
+
