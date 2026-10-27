@@ -129,7 +129,7 @@ class PermitContractTests(unittest.TestCase):
         )["records"][0]
         self.assertEqual(row["permit_number"], "22 236652 BLD")
         self.assertEqual(row["revision"], "00")
-        self.assertEqual(row["record_key"], "cleared:22 236652 BLD:00")
+        self.assertEqual(row["record_key"], "permit:22 236652 BLD:00")
 
     def test_permit_types_at_same_address_remain_separate(self):
         values = permits.normalize_permits(
@@ -170,9 +170,9 @@ class PermitContractTests(unittest.TestCase):
             source_collection="active", address_points=POINTS,
         )
         self.assertEqual(result["records"], [])
-        self.assertEqual(result["quarantined_record_keys"], ["active:22 236652 BLD:00"])
+        self.assertEqual(result["quarantined_record_keys"], ["permit:22 236652 BLD:00"])
 
-    def test_active_cleared_duplicate_is_quarantined(self):
+    def test_identical_active_cleared_duplicate_is_deduplicated_with_stable_key(self):
         active = permits.normalize_permits(
             [permit_row()], source_collection="active", address_points=POINTS
         )
@@ -180,15 +180,55 @@ class PermitContractTests(unittest.TestCase):
             [permit_row()], source_collection="cleared", address_points=POINTS
         )
         combined = permits.combine_permit_collections(active, cleared)
-        self.assertEqual(combined["records"], [])
-        self.assertEqual(len(combined["quarantined_record_keys"]), 2)
+        self.assertEqual(len(combined["records"]), 1)
+        self.assertEqual(combined["records"][0]["record_key"], "permit:22 236652 BLD:00")
+        self.assertEqual(combined["records"][0]["source_collection"], "active")
+        self.assertEqual(combined["quarantined_record_keys"], [])
+        reversed_combined = permits.combine_permit_collections(cleared, active)
+        self.assertEqual(reversed_combined, combined)
 
-    def test_untrusted_url_uses_official_fallback(self):
+    def test_conflicting_active_cleared_duplicate_is_quarantined(self):
+        active = permits.normalize_permits(
+            [permit_row()], source_collection="active", address_points=POINTS
+        )
+        cleared = permits.normalize_permits(
+            [permit_row(STATUS="Cancelled")], source_collection="cleared", address_points=POINTS
+        )
+        combined = permits.combine_permit_collections(active, cleared)
+        self.assertEqual(combined["records"], [])
+        self.assertEqual(combined["quarantined_record_keys"], ["permit:22 236652 BLD:00"])
+
+    def test_upstream_quarantine_is_preserved_when_combining(self):
+        conflicted = permits.normalize_permits(
+            [permit_row(), permit_row(STATUS="Closed")],
+            source_collection="active", address_points=POINTS,
+        )
+        cleared = permits.normalize_permits(
+            [permit_row(PERMIT_NUM="22 999999 BLD")],
+            source_collection="cleared", address_points=POINTS,
+        )
+        combined = permits.combine_permit_collections(conflicted, cleared)
+        self.assertIn("permit:22 236652 BLD:00", combined["quarantined_record_keys"])
+
+    def test_untrusted_permit_url_is_omitted_not_replaced_with_planning_link(self):
         row = permits.normalize_permits(
             [permit_row(APPLICATION_URL="javascript:alert(1)")],
             source_collection="active", address_points=POINTS,
         )["records"][0]
-        self.assertEqual(row["official_url"], permits.FALLBACK_PLANNING_URL)
+        self.assertIsNone(row["official_url"])
+
+    def test_permit_without_record_url_does_not_link_to_planning_applications(self):
+        row = permits.normalize_permits(
+            [permit_row(APPLICATION_URL=None)], source_collection="active", address_points=POINTS
+        )["records"][0]
+        self.assertIsNone(row["official_url"])
+
+    def test_permit_source_address_must_match_joined_oar_address(self):
+        with self.assertRaisesRegex(permits.PermitContractError, "disagrees with its OAR point"):
+            permits.normalize_permits(
+                [permit_row(ADDRESS="347 Beechgrove Dr")],
+                source_collection="active", address_points=POINTS,
+            )
 
     def test_development_rows_group_by_folder_and_keep_all_locations(self):
         rows = [
@@ -204,6 +244,28 @@ class PermitContractTests(unittest.TestCase):
         )
         reverse = permits.normalize_development_applications(list(reversed(rows)))["records"][0]
         self.assertEqual(record["fingerprint"], reverse["fingerprint"])
+
+    def test_live_street_component_schema_builds_development_addresses(self):
+        record = permits.normalize_development_applications([
+            dev_row(
+                address=None, STREET_NUM="1552", STREET_NAME="Kingston",
+                STREET_TYPE="Rd", STREET_DIRECTION=None,
+            ),
+            dev_row(
+                address=None, STREET_NUM="1572", STREET_NAME="Kingston",
+                STREET_TYPE="Rd", STREET_DIRECTION=None,
+            ),
+        ])["records"][0]
+        self.assertEqual(
+            [loc["address"] for loc in record["locations"]],
+            ["1552 Kingston Rd", "1572 Kingston Rd"],
+        )
+
+    def test_development_application_uses_planning_fallback_when_url_missing(self):
+        record = permits.normalize_development_applications([
+            dev_row(APPLICATION_URL=None)
+        ])["records"][0]
+        self.assertEqual(record["official_url"], permits.FALLBACK_PLANNING_URL)
 
     def test_folder_collision_with_different_application_is_quarantined(self):
         result = permits.normalize_development_applications([
@@ -254,6 +316,11 @@ class PermitContractTests(unittest.TestCase):
             permits.normalize_permits(
                 [permit_row()], source_collection="active",
                 address_points=[dict(POINTS[0], longitude=400)],
+            )
+        with self.assertRaisesRegex(permits.PermitContractError, "Toronto-area envelope"):
+            permits.normalize_permits(
+                [permit_row()], source_collection="active",
+                address_points=[dict(POINTS[0], longitude=0, latitude=0)],
             )
 
     def test_public_export_is_disabled(self):
