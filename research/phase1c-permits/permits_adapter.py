@@ -128,12 +128,21 @@ def _address_for_geo_id(
 ) -> dict[str, Any] | None:
     if geo_id is None or geo_id == "":
         return None
-    if type(geo_id) is not int:
-        raise PermitContractError("GEO_ID must be an integer when present")
-    point = address_points_by_point_id.get(geo_id)
+    # CKAN declares GEO_ID as text although its values identify numeric OAR
+    # ADDRESS_POINT_IDs. Accept integers from normalized sources and strict
+    # decimal strings from the live datastore; reject lossy/coercive forms.
+    if type(geo_id) is int:
+        point_id = geo_id
+    elif isinstance(geo_id, str) and geo_id.isascii() and geo_id.isdecimal():
+        point_id = int(geo_id)
+    else:
+        raise PermitContractError("GEO_ID must be a numeric string or integer when present")
+    if point_id <= 0:
+        raise PermitContractError("GEO_ID must be positive when present")
+    point = address_points_by_point_id.get(point_id)
     if point is None:
         return None
-    if type(point.get("ADDRESS_POINT_ID")) is not int or point["ADDRESS_POINT_ID"] != geo_id:
+    if type(point.get("ADDRESS_POINT_ID")) is not int or point["ADDRESS_POINT_ID"] != point_id:
         raise PermitContractError("Address join must use OAR ADDRESS_POINT_ID")
     lon, lat = point.get("longitude"), point.get("latitude")
     ward = _qualified_ward(point.get("WARD_NUMBER"))
@@ -144,7 +153,7 @@ def _address_for_geo_id(
     if not (-180 <= lon <= 180 and -90 <= lat <= 90):
         raise PermitContractError("OAR coordinates are outside WGS84 ranges")
     return {
-        "address_point_id": geo_id,
+        "address_point_id": point_id,
         "address": point.get("address") if isinstance(point.get("address"), str) else None,
         "longitude": float(lon),
         "latitude": float(lat),
