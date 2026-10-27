@@ -30,9 +30,11 @@ snapshot intact.
 ## Record and geography rules
 
 Permit identity is the full `PERMIT_NUM` including its type suffix plus the
-string `REVISION_NUM` (preserve `00`). BLD and HVA permits at one address
-remain separate records. Active and cleared source collection and raw status
-are preserved. Application, issuance, and completion dates remain separate.
+string `REVISION_NUM` (preserve `00`), independent of whether the same row
+appears in active or cleared collections. An identical overlap is deduplicated;
+conflicting values for the same identity are quarantined. Active and cleared
+source collection and raw status are preserved. Application, issuance, and
+completion dates remain separate.
 No status, cleared-source membership, disappearance, or completion date alone
 is converted to a claim that construction occurred. Conflicting active/cleared
 or same-key records are quarantined.
@@ -64,7 +66,7 @@ Development address rows are grouped by source-prefixed FOLDERRSN with an
 application-number consistency check; a missing folder uses an explicitly
 marked application-number fallback. All qualified address locations are
 retained and fingerprinted independent of input order. Example synthetic
-contract coverage includes folder 4970049/application 20 191603 ESC 20 SA at
+contract coverage includes folder 4970049/application 21 191603 ESC 20 SA at
 1552 and 1572 Kingston Rd. Those are two locations for one application. Other
 development coordinates remain unused unless separately qualified by exact
 address joining. Application status is an internal planning-review state:
@@ -72,8 +74,14 @@ Under Review, Appeal Received, NOAC Issued, and Closed do not mean construction
 approval.
 
 The normalizers intentionally exclude builder names, contact details, and
-unreviewed free text. They validate official links against Toronto HTTPS hosts
-and fall back to the City application-information page. They do not expose raw
+unreviewed free text. They validate official links against Toronto HTTPS hosts.
+Development applications with no record URL use the City application-information
+page as a general fallback; permits without a record URL expose no link rather
+than implying that a planning page is a permit detail. The development adapter
+accepts source `STREET_*` address components as well as already-normalized
+addresses. Permit source addresses, when present, must agree with the joined OAR
+address. OAR coordinates are checked against a broad Toronto-area sanity
+envelope; this is not ward polygon validation. They do not expose raw
 source rows, contact fields, X/Y, or guessed construction states. They mark
 publication disabled. The first import must be labelled recent applications or
 issuances, never newly observed changes: no delta/tombstone contract has been
@@ -81,8 +89,12 @@ verified. Absence from a replacement snapshot means only absent from that
 snapshot.
 
 Official catalogue terms: [Toronto Open Data Licence](https://open.toronto.ca/open-data-licence/).
-Only one bounded OAR address-point record was read to verify the join target;
-no permit/development records or bulk data were downloaded for this prototype.
+Bounded live qualification confirmed OAR point 331669 and a filtered planning
+query for folder 4970049. A six-row filtered completeness check returned IDs
+230-235 across two pages with matching totals and unchanged metadata; the source
+application number is `21 191603 ESC 20 SA`, with six address rows. This is a
+small filtered check only, not a full import. No large CSV or bulk snapshot was
+downloaded.
 
 ## Tests and activation gates
 
