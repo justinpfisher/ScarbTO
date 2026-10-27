@@ -301,6 +301,10 @@ class PermitContractTests(unittest.TestCase):
             permits.point_in_scarborough_neighbourhoods(-79.2, 43.8, [{
                 "geometry": {"type": "Polygon", "coordinates": [[[-79.3, 43.7], [-79.1, 43.7], [-79.1, 43.9], [-79.3, 43.9]]]}
             }])
+        with self.assertRaisesRegex(permits.PermitContractError, "no polygon"):
+            permits.point_in_scarborough_neighbourhoods(-79.2, 43.8, [{
+                "geometry": {"type": "MultiPolygon", "coordinates": []}
+            }])
         with self.assertRaisesRegex(permits.PermitContractError, "closed"):
             permits.point_in_scarborough_neighbourhoods(-79.2, 43.8, SQUARE + [{
                 "geometry": {"type": "Polygon", "coordinates": [[[-79.3, 43.7], [-79.1, 43.7], [-79.1, 43.9], [-79.3, 43.9]]]}
