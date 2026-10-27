@@ -87,6 +87,20 @@ class BeachMeasurementHistoryTests(unittest.TestCase):
                 total_after=1, generation_after="g2", page_size=2,
                 retrieved_at=datetime.now(timezone.utc),
             )
+
+    def test_invalid_page_size_and_boolean_final_total_fail_closed(self):
+        with self.assertRaisesRegex(history.BeachHistoryError, "page size"):
+            history.collect_and_store_snapshot(
+                metadata_before=(1, "g1"), fetch_page=lambda offset, limit: page(1, [row(1)]),
+                metadata_after=(1, "g1"), destination=".", page_size=0,
+                retrieved_at=datetime.now(timezone.utc),
+            )
+        with self.assertRaisesRegex(history.BeachHistoryError, "source total changed"):
+            history.build_complete_snapshot(
+                [page(1, [row(1)])], total_before=1, generation_before="g1",
+                total_after=True, generation_after="g1", page_size=1,
+                retrieved_at=datetime.now(timezone.utc),
+            )
         with self.assertRaisesRegex(history.BeachHistoryError, "unordered"):
             history.build_complete_snapshot(
                 [page(2, [row(2), row(1)])], total_before=2, generation_before="g1",
