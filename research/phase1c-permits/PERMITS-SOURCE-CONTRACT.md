@@ -1,18 +1,26 @@
 # Toronto permits and development application prototype
 
-This worktree is a synthetic-only, offline source-contract prototype. No CKAN
-network client, large CSV download, geocoder, CRS converter, schedule, or public
-export is included. ScarbTO public export remains disabled.
+This prototype includes synthetic adapter tests and a bounded, GET-only CKAN
+snapshot collector. It has not completed a live full-dataset run. No large CSV
+download, geocoder, CRS converter, schedule, or public exporter is included.
+ScarbTO public export remains disabled.
 
 ## Researched source packages
 
-The future CKAN transport uses the Toronto CKAN API base
+The CKAN transport uses the Toronto CKAN API base
 `https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/` and
 `datastore_search` with explicit field allowlists, bounded pages, stable
 `_id ASC`, and source-generation/count checks before and after pagination.
 SQL search returned 404 in source qualification and is not used. Large CSVs
 must be streamed with strict limits; the existing whole-file/read-all path is
 not suitable. Observed row counts/resource sizes are not fixed expectations.
+The collector requests only reviewed source-field allowlists, caps each JSON
+page at 16 MiB, retries only bounded transient errors, requires stable resource
+generation and row counts before and after pagination, writes content-addressed
+JSONL candidates, and advances one manifest pointer atomically. It does not
+schedule refreshes or enable public output. The current bounded request to the
+official CKAN host returned an HTML 403/404 page, so live collection remains
+unverified; no alternate host or bulk CSV route was tried.
 
 | Dataset | Datastore ID | Resource ID | Qualified scope |
 | --- | --- | --- | --- |
@@ -65,7 +73,8 @@ The transport must map source fields explicitly before normalization: OAR
 from the explicitly EPSG:4326 OAR resource to `longitude`/`latitude`. This
 bounded check did not fetch those coordinates or qualify permit/development
 live rows. `normalize_oar_address_points` now accepts that explicit shape
-(`ADDRESS_POINT_ID`, `WARD`, `ADDRESS_FULL`, and GeoJSON `Point` geometry),
+(`ADDRESS_POINT_ID`, `WARD`, `ADDRESS_FULL`, and JSON `Point` geometry,
+including JSON-text CSV values and singleton `MultiPoint` values),
 checks finite WGS84 coordinates and membership in caller-supplied authoritative
 Scarborough neighbourhood polygons, and reports total, located, unlocated, and
 rejected row counts. Missing geometry is counted as unlocated; malformed,
@@ -74,7 +83,9 @@ The accounting must reconcile before a caller uses the mapping. Polygon and
 MultiPolygon rings are validated as closed, and holes are excluded. This
 synthetic test path does not establish that the real OAR geometry field is
 WGS84 or qualify a live full-boundary membership check; the current CKAN OAR
-`geometry` field was not treated as WGS84.
+`geometry` field was not treated as WGS84. The mapper requires the caller to
+pass `geometry_crs="EPSG:4326"` explicitly and validate the complete supplied
+polygon set before mapping rows.
 
 Development address rows are grouped by source-prefixed FOLDERRSN with an
 application-number consistency check; a missing folder uses an explicitly
