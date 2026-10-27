@@ -37,6 +37,11 @@ records or locations are included.
   Toronto occurrence month. It contains no event IDs, `OBJECTID`, offence text,
   coordinates, address, or premises join. It is marked
   `disabled_pending_privacy_review`.
+- Also produce an internal candidate grouped by neighbourhood, CSI category,
+  and completed report quarter, counting source records rather than unique
+  incidents. Incomplete coverage quarters are omitted; exact report dates,
+  event identifiers, coordinates, addresses, and joins are not emitted. This
+  remains disabled pending the unresolved suppression/differencing policy.
 - Public export always raises `PublicExportDisabled`. No sparse-cell threshold
   is invented. Public use remains blocked until a privacy policy and source
   terms are requalified.
