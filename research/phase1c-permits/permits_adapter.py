@@ -117,7 +117,7 @@ def _point_on_segment(x: float, y: float, a: list[Any], b: list[Any]) -> bool:
     return min(a[0], b[0]) - 1e-10 <= x <= max(a[0], b[0]) + 1e-10 and min(a[1], b[1]) - 1e-10 <= y <= max(a[1], b[1]) + 1e-10
 
 
-def _ring_contains(lon: float, lat: float, ring: list[list[float]]) -> bool:
+def _validate_ring(ring: list[list[float]]) -> None:
     if not isinstance(ring, list) or len(ring) < 4:
         raise PermitContractError("Neighbourhood polygon ring is malformed")
     if ring[0] != ring[-1]:
@@ -126,8 +126,13 @@ def _ring_contains(lon: float, lat: float, ring: list[list[float]]) -> bool:
         if (
             not isinstance(position, (list, tuple)) or len(position) < 2
             or type(position[0]) not in (int, float) or type(position[1]) not in (int, float)
+            or not math.isfinite(position[0]) or not math.isfinite(position[1])
         ):
             raise PermitContractError("Neighbourhood polygon coordinates must be numeric")
+
+
+def _ring_contains(lon: float, lat: float, ring: list[list[float]]) -> bool:
+    _validate_ring(ring)
     inside = False
     for index, current in enumerate(ring):
         prior = ring[index - 1]
@@ -144,6 +149,7 @@ def point_in_scarborough_neighbourhoods(lon: float, lat: float, features: list[d
     """Test WGS84 point against the supplied authoritative neighbourhood polygons."""
     if not isinstance(features, list) or not features:
         raise PermitContractError("Scarborough neighbourhood polygons are required")
+    normalized_polygons: list[list[list[list[float]]]] = []
     for feature in features:
         geometry = feature.get("geometry") if isinstance(feature, dict) else None
         if not isinstance(geometry, dict):
@@ -159,8 +165,12 @@ def point_in_scarborough_neighbourhoods(lon: float, lat: float, features: list[d
         for rings in polygons:
             if not isinstance(rings, list) or not rings or not isinstance(rings[0], list):
                 raise PermitContractError("Neighbourhood polygon rings are malformed")
-            if _ring_contains(lon, lat, rings[0]) and not any(_ring_contains(lon, lat, hole) for hole in rings[1:]):
-                return True
+            for ring in rings:
+                _validate_ring(ring)
+            normalized_polygons.append(rings)
+    for rings in normalized_polygons:
+        if _ring_contains(lon, lat, rings[0]) and not any(_ring_contains(lon, lat, hole) for hole in rings[1:]):
+            return True
     return False
 
 
@@ -337,6 +347,16 @@ def normalize_permits(
         if point_id in points:
             raise PermitContractError("Duplicate OAR ADDRESS_POINT_ID")
         points[point_id] = point
+    if oar_accounting is not None:
+        names = ("total_count", "located_count", "unlocated_count", "rejected_count", "accounted_count")
+        if any(type(oar_accounting.get(name)) is not int or oar_accounting[name] < 0 for name in names):
+            raise PermitContractError("OAR mapper accounting must contain nonnegative integer counts")
+        if (
+            oar_accounting["located_count"] != len(points)
+            or oar_accounting["accounted_count"] != oar_accounting["total_count"]
+            or oar_accounting["located_count"] + oar_accounting["unlocated_count"] + oar_accounting["rejected_count"] != oar_accounting["total_count"]
+        ):
+            raise PermitContractError("OAR mapper accounting does not reconcile with mapped points")
 
     normalized_by_key: dict[tuple[str, str], dict[str, Any]] = {}
     quarantined: list[str] = []
