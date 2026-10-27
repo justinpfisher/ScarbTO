@@ -64,11 +64,24 @@ The transport must map source fields explicitly before normalization: OAR
 `WARD` to normalized `WARD_NUMBER`, `ADDRESS_FULL` to `address`, and coordinates
 from the explicitly EPSG:4326 OAR resource to `longitude`/`latitude`. This
 bounded check did not fetch those coordinates or qualify permit/development
-live rows. The current CKAN OAR `geometry` field was not treated as WGS84.
+live rows. `normalize_oar_address_points` now accepts that explicit shape
+(`ADDRESS_POINT_ID`, `WARD`, `ADDRESS_FULL`, and GeoJSON `Point` geometry),
+checks finite WGS84 coordinates and membership in caller-supplied authoritative
+Scarborough neighbourhood polygons, and reports total, located, unlocated, and
+rejected row counts. Missing geometry is counted as unlocated; malformed,
+duplicate-ID, wrong-ward, out-of-range, or outside-boundary rows are rejected.
+The accounting must reconcile before a caller uses the mapping. Polygon and
+MultiPolygon rings are validated as closed, and holes are excluded. This
+synthetic test path does not establish that the real OAR geometry field is
+WGS84 or qualify a live full-boundary membership check; the current CKAN OAR
+`geometry` field was not treated as WGS84.
 
 Development address rows are grouped by source-prefixed FOLDERRSN with an
 application-number consistency check; a missing folder uses an explicitly
-marked application-number fallback. All qualified address locations are
+marked application-number fallback only when no matching application row
+provides a folder. A unique matching folder may resolve a missing folder; if
+the application maps to multiple folders, all candidate folder records are
+quarantined. All qualified address locations are
 retained and fingerprinted independent of input order. Example synthetic
 contract coverage includes folder 4970049/application 21 191603 ESC 20 SA at
 1552 and 1572 Kingston Rd. Those are two locations for one application. Other
@@ -84,8 +97,12 @@ page as a general fallback; permits without a record URL expose no link rather
 than implying that a planning page is a permit detail. The development adapter
 accepts source `STREET_*` address components as well as already-normalized
 addresses. Permit source addresses, when present, must agree with the joined OAR
-address. OAR coordinates are checked against a broad Toronto-area sanity
-envelope; this is not ward polygon validation. They do not expose raw
+address. Permit-to-OAR normalization still checks coordinates against a broad
+Toronto-area sanity envelope; it does not itself apply the polygon validator.
+The new OAR mapper provides explicit polygon-based filtering when supplied
+qualified boundary data. Status text is trimmed for comparisons/display while
+its raw source value is retained. Date fields accept only ISO calendar dates;
+malformed date strings fail closed. They do not expose raw
 source rows, contact fields, X/Y, or guessed construction states. They mark
 publication disabled. The first import must be labelled recent applications or
 issuances, never newly observed changes: no delta/tombstone contract has been
