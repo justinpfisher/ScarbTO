@@ -1,10 +1,13 @@
 import json
+from io import BytesIO
 from hashlib import sha256
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlparse
+from urllib.request import Request
 
 import permit_collector as collector
 
@@ -29,7 +32,9 @@ def source_row(row_id, **extra):
 
 
 def page(total, rows):
-    return {"success": True, "result": {"total": total, "records": rows}}
+    return {"success": True, "result": {
+        "total": total, "total_was_estimated": False, "records": rows,
+    }}
 
 
 class PermitCollectorTests(unittest.TestCase):
@@ -51,9 +56,9 @@ class PermitCollectorTests(unittest.TestCase):
         def read(self, size=-1):
             return self.body[:size]
 
-    def test_client_uses_fixed_https_host_and_json_field_allowlist(self):
+    def test_client_uses_fixed_https_host_and_ckan_comma_field_allowlist(self):
         response_body = json.dumps(page(0, [])).encode()
-        with patch.object(collector, "urlopen", return_value=self.Response(response_body)) as open_url:
+        with patch.object(collector, "_open_no_redirect", return_value=self.Response(response_body)) as open_url:
             client = collector.TorontoCKAN(retries=0)
             response = client._get_json("datastore_search", {
                 "resource_id": "synthetic-resource",
@@ -65,21 +70,115 @@ class PermitCollectorTests(unittest.TestCase):
         query = parse_qs(parsed.query)
         self.assertEqual(parsed.scheme, "https")
         self.assertEqual(parsed.hostname, collector.API_HOST)
-        self.assertEqual(json.loads(query["fields"][0]), ["_id", "STATUS"])
+        self.assertEqual(query["fields"], ["_id,STATUS"])
         self.assertEqual(response["result"]["records"], [])
+
+    def test_client_url_encodes_ckan_field_list_and_resource_id(self):
+        response_body = json.dumps(page(0, [])).encode()
+        with patch.object(collector, "_open_no_redirect", return_value=self.Response(response_body)) as open_url:
+            collector.TorontoCKAN(retries=0)._get_json("datastore_search", {
+                "resource_id": "8102bd4c-83cd-4354-9788-eecc0c7a09b4",
+                "limit": 10,
+                "fields": ["_id", "beachId", "collectionDate"],
+            })
+        query = parse_qs(urlparse(open_url.call_args.args[0].full_url).query)
+        self.assertEqual(query["resource_id"], ["8102bd4c-83cd-4354-9788-eecc0c7a09b4"])
+        self.assertEqual(query["fields"], ["_id,beachId,collectionDate"])
 
     def test_client_rejects_redirect_outside_fixed_host(self):
         response_body = json.dumps(page(0, [])).encode()
         response = self.Response(response_body, "https://example.invalid/data")
-        with patch.object(collector, "urlopen", return_value=response):
+        with patch.object(collector, "_open_no_redirect", return_value=response):
             with self.assertRaisesRegex(collector.CollectionError, "redirected outside"):
                 collector.TorontoCKAN(retries=0)._get_json("datastore_search", {"limit": 0})
 
     def test_client_rejects_response_over_byte_limit(self):
         body = json.dumps(page(0, [])).encode() + (b" " * 1100)
-        with patch.object(collector, "urlopen", return_value=self.Response(body)):
+        with patch.object(collector, "_open_no_redirect", return_value=self.Response(body)):
             with self.assertRaisesRegex(collector.CollectionError, "byte limit"):
                 collector.TorontoCKAN(max_page_bytes=1024, retries=0)._get_json("datastore_search", {"limit": 0})
+
+    def test_real_redirect_handler_rejects_before_contacting_redirect_target(self):
+        handler = collector._RejectRedirects()
+        request = Request("https://ckan0.cf.opendata.inter.prod-toronto.ca/start")
+        # Exercise urllib's real HTTPRedirectHandler 302 implementation and
+        # this handler's rejection callback, without opening a socket.
+        with self.assertRaises(HTTPError) as raised:
+            handler.http_error_302(
+                request, BytesIO(b""), 302, "Found",
+                {"location": "https://example.invalid/target"},
+            )
+        self.assertEqual(raised.exception.code, 302)
+        self.assertEqual(raised.exception.reason, "CKAN redirect rejected")
+
+    def test_client_rejects_estimated_total_before_collector_can_promote(self):
+        source = collector.SOURCE_RESOURCES["active_permits"]
+        package = {"success": True, "result": {
+            "metadata_modified": "2026-10-27T00:00:00",
+            "resources": [{"id": source["resource_id"], "last_modified": "2026-10-26T00:00:00"}],
+        }}
+        estimated_count = {"success": True, "result": {
+            "total": 2, "total_was_estimated": True, "records": [],
+        }}
+        client = collector.TorontoCKAN(retries=0)
+        with patch.object(client, "_get_json", side_effect=[package, estimated_count]):
+            with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+                with self.assertRaisesRegex(collector.CollectionError, "estimated or lacks an exactness flag"):
+                    collector.collect_snapshot(
+                        "active_permits", root,
+                        metadata=lambda: client.metadata("active_permits"),
+                        fetch_page=lambda offset, limit: client.page("active_permits", offset=offset, limit=limit),
+                    )
+                self.assertFalse((Path(root) / "active_permits-manifest.json").exists())
+
+    def test_estimated_page_total_preserves_last_good_manifest(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            previous = collector.collect_snapshot(
+                "active_permits", root,
+                metadata=lambda: (1, "g1"),
+                fetch_page=lambda offset, limit: page(1, [source_row(41)]),
+            )
+            manifest_path = Path(root) / "active_permits-manifest.json"
+            previous_manifest = manifest_path.read_bytes()
+            estimated = {"success": True, "result": {
+                "total": 1, "total_was_estimated": True,
+                "records": [source_row(42)],
+            }}
+            client = collector.TorontoCKAN(retries=0)
+            with patch.object(client, "_get_json", return_value=estimated):
+                with self.assertRaisesRegex(collector.CollectionError, "estimated or lacks an exactness flag"):
+                    collector.collect_snapshot(
+                        "active_permits", root,
+                        metadata=lambda: (1, "g2"),
+                        fetch_page=lambda offset, limit: client.page("active_permits", offset=offset, limit=limit),
+                    )
+            self.assertEqual(manifest_path.read_bytes(), previous_manifest)
+            self.assertTrue((Path(root) / previous["snapshot_file"]).is_file())
+
+    def test_development_folder_column_is_required_but_null_value_is_allowed(self):
+        source = collector.SOURCE_RESOURCES["development_applications"]
+        row = {
+            "_id": 101,
+            "APPLICATION_TYPE": "Site Plan",
+            "APPLICATION#": "21 191603 ESC 20 SA",
+            "FOLDERRSN": None,
+            "DATE_SUBMITTED": "2021-07-29T00:00:00",
+            "STATUS": "Under Review",
+            "STREET_NUM": "1552",
+            "STREET_NAME": "Kingston",
+            "STREET_TYPE": "Rd",
+            "STREET_DIRECTION": None,
+            "WARD_NUMBER": 20,
+        }
+        client = collector.TorontoCKAN(retries=0)
+        with patch.object(client, "_get_json", return_value=page(1, [row])):
+            self.assertEqual(client.page("development_applications", offset=0, limit=1)["result"]["records"][0]["FOLDERRSN"], None)
+
+        missing_column = dict(row)
+        del missing_column["FOLDERRSN"]
+        with patch.object(client, "_get_json", return_value=page(1, [missing_column])):
+            with self.assertRaisesRegex(collector.CollectionError, "missing required source fields"):
+                client.page("development_applications", offset=0, limit=1)
 
     def test_streams_allowlisted_pages_then_atomically_advances_manifest(self):
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
@@ -306,4 +405,3 @@ class PermitCollectorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
