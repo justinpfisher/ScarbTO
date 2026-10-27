@@ -21,6 +21,11 @@ JSONL candidates, and advances one manifest pointer atomically. It does not
 schedule refreshes or enable public output. The current bounded request to the
 official CKAN host returned an HTML 403/404 page, so live collection remains
 unverified; no alternate host or bulk CSV route was tried.
+Each snapshot is also capped at 512 MiB on disk. OAR uses its separately
+allowlisted datastore ID `0b3756af-9caf-4f0f-ac28-9c6617adede4`; the explicit
+4326 CSV resource in the table is not downloaded by this collector. Geometry
+is still passed through the caller's explicit-CRS mapper before any address
+join.
 
 | Dataset | Datastore ID | Resource ID | Qualified scope |
 | --- | --- | --- | --- |
