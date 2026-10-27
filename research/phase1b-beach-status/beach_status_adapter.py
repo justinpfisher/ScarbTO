@@ -21,6 +21,7 @@ STATUS_LABELS = {
     "UNSAFE": "caution",
     "NO_DATA": "unavailable",
 }
+DEFAULT_CONTROL_FRESHNESS_LIMIT = timedelta(hours=24)
 
 
 class BeachContractError(ValueError):
@@ -138,6 +139,7 @@ def build_status_card(
     maintenance_enabled: Any = None,
     retrieved_at: datetime | None = None,
     control_retrieved_at: dict[str, datetime | None] | None = None,
+    control_freshness_limit: timedelta | None = DEFAULT_CONTROL_FRESHNESS_LIMIT,
     access_closure: str | None = None,
 ) -> dict[str, Any]:
     """Normalize operational controls/results; never infer safety from E. coli.
@@ -145,6 +147,8 @@ def build_status_card(
     Freshness uses the sample's Toronto calendar date, not the timezone-less
     lastUpdate text. The caller must explicitly supply a proposed sample-age
     limit. That threshold is an application policy, not a City guarantee.
+    Current status also requires all control/result responses to have been
+    retrieved within the proposed control-freshness limit.
     """
     if type(beach_id) is not int or beach_id < 1:
         raise BeachContractError("beach_id must be a positive integer")
@@ -155,6 +159,8 @@ def build_status_card(
         raise BeachContractError("lastUpdate must be a string or null")
     if sample_freshness_limit is not None and sample_freshness_limit <= timedelta(0):
         raise BeachContractError("sample_freshness_limit must be positive")
+    if control_freshness_limit is not None and control_freshness_limit <= timedelta(0):
+        raise BeachContractError("control_freshness_limit must be positive")
     season = _season(in_season)
     maintenance = _maintenance(maintenance_enabled)
     source_updated = _parse_source_date(last_update_raw)
@@ -168,11 +174,19 @@ def build_status_card(
         fetched_at = None
     control_retrieved_at = control_retrieved_at or {}
     control_timestamps = {}
+    control_age_ok: dict[str, bool] = {}
     for name in ("season", "last_update", "maintenance", "results"):
         value = control_retrieved_at.get(name)
+        parsed_time = _aware_utc(value, f"{name} retrieval time") if value is not None else None
+        age = now_utc - parsed_time if parsed_time is not None else None
+        if age is not None and age < timedelta(0):
+            raise BeachContractError(f"{name} retrieval time cannot be in the future")
+        control_age_ok[name] = (
+            parsed_time is not None
+            and (control_freshness_limit is None or age <= control_freshness_limit)
+        )
         control_timestamps[f"{name}_fetched_at_utc"] = (
-            _aware_utc(value, f"{name} retrieval time").isoformat().replace("+00:00", "Z")
-            if value is not None else None
+            parsed_time.isoformat().replace("+00:00", "Z") if parsed_time is not None else None
         )
 
     card: dict[str, Any] = {
@@ -193,6 +207,10 @@ def build_status_card(
         "water_quality_status": None,
         "advisory": None,
         "publication_status": "disabled_pending_source_rights_review",
+        "control_freshness_limit_hours": (
+            control_freshness_limit.total_seconds() / 3600
+            if control_freshness_limit is not None else None
+        ),
     }
 
     # Closure is shown only when supplied from a separately verified authority.
@@ -202,17 +220,26 @@ def build_status_card(
         card["display_state"] = "access_closed"
         card["advisory"] = access_closure.strip()
         return card
+    if not control_age_ok["season"]:
+        card["display_state"] = "season_state_stale"
+        return card
     if season is False:
         card["display_state"] = "out_of_season"
         return card
     if season is None:
         card["display_state"] = "season_state_unknown"
         return card
+    if not control_age_ok["maintenance"]:
+        card["display_state"] = "maintenance_state_stale"
+        return card
     if maintenance is True:
         card["display_state"] = "maintenance"
         return card
     if maintenance is None:
         card["display_state"] = "maintenance_state_unknown"
+        return card
+    if not control_age_ok["last_update"] or not control_age_ok["results"]:
+        card["display_state"] = "source_controls_stale"
         return card
     if latest_date is None or result is None:
         card["display_state"] = "no_current_result"
@@ -248,4 +275,3 @@ def export_public(*_args: Any, **_kwargs: Any) -> None:
     raise BeachExportDisabled(
         "Public beach export is disabled pending source-rights and privacy review"
     )
-
