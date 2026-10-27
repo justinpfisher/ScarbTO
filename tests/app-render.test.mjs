@@ -154,7 +154,12 @@ async function loadApp(snapshot) {
     maplibregl:globalThis.maplibregl,
   };
   globalThis.document = document;
-  globalThis.localStorage = {getItem:() => null, setItem:() => {}};
+  globalThis.localStorage = {
+    getItem:key => key === 'scarbto-filters-v1'
+      ? JSON.stringify({mode:'all',status:'all',days:'all',neighbourhood:''})
+      : null,
+    setItem:() => {},
+  };
   globalThis.fetch = async url => url.includes('snapshot.json')
     ? {ok:true,json:async()=>snapshot}
     : {ok:false};
