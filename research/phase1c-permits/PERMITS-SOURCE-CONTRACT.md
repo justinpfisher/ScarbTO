@@ -19,8 +19,10 @@ page at 16 MiB, retries only bounded transient errors, requires stable resource
 generation and row counts before and after pagination, writes content-addressed
 JSONL candidates, and advances one manifest pointer atomically. It does not
 schedule refreshes or enable public output. The current bounded request to the
-official CKAN host returned an HTML 403/404 page, so live collection remains
-unverified; no alternate host or bulk CSV route was tried.
+permit collector has not completed a full live snapshot. A separate beach-data
+request returned an HTML 403/404 response; that result does not establish a
+permit-source failure. A later minimal permit query succeeded, but it did not
+qualify full-source pagination or the collector's full field mappings.
 Each snapshot is also capped at 512 MiB on disk. OAR uses its separately
 allowlisted datastore ID `0b3756af-9caf-4f0f-ac28-9c6617adede4`; the explicit
 4326 CSV resource in the table is not downloaded by this collector. Geometry
@@ -92,7 +94,10 @@ WGS84 or qualify a live full-boundary membership check; the current CKAN OAR
 pass `geometry_crs="EPSG:4326"` explicitly and validate the complete supplied
 polygon set before mapping rows.
 
-Development address rows are grouped by source-prefixed FOLDERRSN with an
+Permit street addresses are assembled only from the qualified `STREET_NUM`,
+`STREET_NAME`, `STREET_TYPE`, and `STREET_DIRECTION` fields; the collector does
+not request the nonexistent `ADDRESS` or `APPLICATION_URL` fields from those
+permit resources. Development address rows are grouped by source-prefixed FOLDERRSN with an
 application-number consistency check; a missing folder uses an explicitly
 marked application-number fallback only when no matching application row
 provides a folder. A unique matching folder may resolve a missing folder; if
