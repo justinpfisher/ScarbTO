@@ -346,7 +346,7 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
     await installLocalRoutes(page, origin, routeOptions);
     await page.goto(origin, {waitUntil: 'domcontentloaded'});
     await page.locator('#map-fallback:not([hidden])').waitFor();
-    if(expectRecords)await page.getByRole('button', {name: 'Fixture Cafe'}).waitFor();
+    if(expectRecords)await page.locator('.record-item').first().waitFor();
     assert.match(await page.locator('#map-fallback').textContent(), /map unavailable.*searchable results list/i);
     assert.equal(await page.locator('#map-fallback').getAttribute('aria-live'), 'polite');
     assert.equal(await page.locator('#map').getAttribute('aria-hidden'), 'true');
