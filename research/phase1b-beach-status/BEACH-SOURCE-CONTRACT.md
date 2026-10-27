@@ -43,14 +43,14 @@ Bluffer's Beach Park, `inSeason: No`, `lastUpdate: 2026-09-09 10:19:11`, and
 four-day historical query returned two envelopes, dated 2026-09-07 and
 2026-09-06, with the expected six row keys. The observed status code was
 `SAFE`, not the human-readable label; the official City UI maps `SAFE` to
-"Safe to swim", `UNSAFE` to "Caution is advised", and `NO_DATA` to "Data
-unavailable". The adapter now maps those exact codes. No measurements,
+“Safe to swim”, `UNSAFE` to “Caution is advised”, and `NO_DATA` to “Data
+unavailable”. The adapter now maps those exact codes. No measurements,
 coordinates, or source rows were saved or published. This confirms endpoint
 shape and mapping only; it does not establish current conditions, refresh
 reliability, complete source rights, or a safe-to-swim claim.
 
 The [City's SwimSafe terms](https://www.toronto.ca/community-people/health-wellness-care/health-inspections-monitoring/swimsafe/swimsafe-terms-of-use/)
-say results are usually posted 24-36 hours after inspection, disclaim accuracy,
+say results are usually posted 24–36 hours after inspection, disclaim accuracy,
 completeness, and currency guarantees, and say the webpages are not a guarantee
 of facility conditions. The terms page contains no express data reuse grant.
 Catalogue licensing for related data and these operational-page terms are
@@ -114,6 +114,23 @@ Official references:
 - [Toronto Open Data Licence](https://open.toronto.ca/open-data-licence/)
 - [Toronto operational UI source](https://www.toronto.ca/resources/tph_beaches/scripts/main0.0.0.js)
 - [Parks Canada Rouge beach status](https://parks.canada.ca/pn-np/on/rouge/visit/infrastructure/plage-beach)
+
+## CKAN resource lookup diagnostic (2026-10-27)
+
+The verified water-quality datastore identifier is
+`8102bd4c-83cd-4354-9788-eecc0c7a09b4` (`bd4c`). An earlier attempted request
+used the mistyped identifier `8102bdc4-83cd-4354-9788-eecc0c7a09b4`; that
+response is not evidence of an access restriction. A bounded query to the
+corrected ID using a JSON-encoded field array returned HTTP 409 with CKAN's
+validation error `invalid value "["_id"` for `fields`. The field list was then
+corrected to CKAN's comma-separated form in one bounded request to the same
+official host. It returned HTTP 200, `application/json; charset=utf-8`, 2,420
+bytes, ten allowlisted records for `beachId=10`, `total=10300`, and
+`total_was_estimated=false`. The response identifies the records as Bluffer's
+Beach Park; the ten returned sample rows have date-only collection dates and
+null `eColi` values. This verifies a small page's schema and exact-total flag,
+not a complete snapshot, current swimming status, or refresh reliability. No
+CKAN rows were saved or published.
 
 ## Run tests
 
