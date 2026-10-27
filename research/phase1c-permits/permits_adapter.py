@@ -170,12 +170,16 @@ def point_in_scarborough_neighbourhoods(lon: float, lat: float, features: list[d
             raise PermitContractError("Neighbourhood geometry must be Polygon or MultiPolygon")
         if not isinstance(polygons, list):
             raise PermitContractError("Neighbourhood polygon coordinates are malformed")
+        if not polygons:
+            raise PermitContractError("Neighbourhood feature has no polygon geometry")
         for rings in polygons:
             if not isinstance(rings, list) or not rings or not isinstance(rings[0], list):
                 raise PermitContractError("Neighbourhood polygon rings are malformed")
             for ring in rings:
                 _validate_ring(ring)
             normalized_polygons.append(rings)
+    if not normalized_polygons:
+        raise PermitContractError("Scarborough neighbourhood polygon set is empty")
     for rings in normalized_polygons:
         if _ring_contains(lon, lat, rings[0]) and not any(_ring_contains(lon, lat, hole) for hole in rings[1:]):
             return True
