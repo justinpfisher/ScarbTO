@@ -1,5 +1,5 @@
 import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from './logic.mjs';
-import {captureListFocus, restoreListFocus, revealSelectedRecord} from './list-focus.mjs';
+import {beginListRedraw, finishListRedraw, revealSelectedRecord} from './list-focus.mjs';
 
 const $ = id => document.getElementById(id);
 const SCARB_BOUNDS = [[-79.43,43.65],[-79.09,43.89]];
@@ -78,8 +78,7 @@ function performFilters() {
 }
 function renderList({focusMore = false, revealSelection = false} = {}) {
   const list=$('record-list');
-  const previousFocus=focusMore?{kind:'more'}:captureListFocus(list,document.activeElement);
-  list.replaceChildren();
+  const previousFocus=beginListRedraw(list,document.activeElement,{focusMore});
   if(!snapshot?.ready){list.append(els('p','empty','No validated DineSafe snapshot has been published. The map will populate after the first successful import.'));restoreListFocus(list,previousFocus);return;}
   const bounds=map?.loaded()?map.getBounds():null;
   const inView=e=>!bounds||bounds.contains([e.longitude,e.latitude]);
@@ -132,7 +131,7 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
     more.type='button';more.addEventListener('click',()=>{listLimit=Math.min(listLimit+80,records.length);renderList({focusMore:true});});
     list.append(more);
   }
-  restoreListFocus(list,previousFocus);
+  finishListRedraw(list,previousFocus);
   if(revealSelection)revealSelectedRecord(list,selectedId);
 }
 function selectPlace(id, move, revealSelection = false) {

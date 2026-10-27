@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {captureListFocus, restoreListFocus, revealSelectedRecord} from '../docs/list-focus.mjs';
+import {beginListRedraw, finishListRedraw, revealSelectedRecord} from '../docs/list-focus.mjs';
 
 class FakeElement {
   constructor(className = '', id = null) {
@@ -58,49 +58,49 @@ function listWith({recordIds = [], sourceIds = [], hasMore = false} = {}) {
 test('paging keeps keyboard focus on the next pager, then moves to the final record', () => {
   const before = listWith({recordIds:['record-1','record-2'], hasMore:true});
   const priorPager = before.querySelector('.more-results');
-  const focus = captureListFocus(before, priorPager);
-
+  const focus = beginListRedraw(before, priorPager,{focusMore:true});
   const afterFirstPage = listWith({recordIds:['record-1','record-2','record-3'], hasMore:true});
-  assert.equal(restoreListFocus(afterFirstPage, focus), afterFirstPage.querySelector('.more-results'));
+  assert.equal(finishListRedraw(afterFirstPage, focus), afterFirstPage.querySelector('.more-results'));
 
   const afterLastPage = listWith({recordIds:['record-1','record-2','record-3']});
-  assert.equal(restoreListFocus(afterLastPage, focus), afterLastPage.querySelectorAll('.record-item').at(-1));
+  assert.equal(finishListRedraw(afterLastPage, focus), afterLastPage.querySelectorAll('.record-item').at(-1));
 });
 
 test('selecting a record restores focus to its replacement button after list redraw', () => {
   const before = listWith({recordIds:['record-1','record-2']});
-  const focus = captureListFocus(before, before.querySelectorAll('.record-item')[1]);
+  const focus = beginListRedraw(before, before.querySelectorAll('.record-item')[1]);
   const afterSelection = listWith({recordIds:['record-1','record-2']});
   const replacement = afterSelection.querySelectorAll('.record-item')[1];
 
-  assert.equal(restoreListFocus(afterSelection, focus), replacement);
+  assert.equal(finishListRedraw(afterSelection, focus), replacement);
   assert.deepEqual(replacement.focusCalls, [{preventScroll:true}]);
 });
 
 test('map-driven redraw preserves focus on the selected record source link', () => {
   const before = listWith({recordIds:['record-9'], sourceIds:['record-9']});
-  const focus = captureListFocus(before, before.querySelector('.record-source-link'));
+  const focus = beginListRedraw(before, before.querySelector('.record-source-link'));
   const afterMapMove = listWith({recordIds:['record-9'], sourceIds:['record-9']});
 
-  assert.equal(restoreListFocus(afterMapMove, focus), afterMapMove.querySelector('.record-source-link'));
+  assert.equal(finishListRedraw(afterMapMove, focus), afterMapMove.querySelector('.record-source-link'));
 });
 
 test('map selection scrolls an off-page selected card into view without focusing it', () => {
-  const list = listWith({recordIds:['record-1','record-2','map-selected']});
-  const selectedCard = list.querySelectorAll('.record-card').find(card => card.dataset.id === 'map-selected');
+  const listBeforeSelection = listWith({recordIds:['record-1','record-2']});
   const outsideListControl = new FakeElement('map-canvas');
-  const focus = captureListFocus(list, outsideListControl);
+  const focus = beginListRedraw(listBeforeSelection, outsideListControl);
 
   assert.equal(focus, null);
-  assert.equal(revealSelectedRecord(list, 'map-selected'), selectedCard);
+  const listAfterSelection = listWith({recordIds:['record-1','record-2','map-selected']});
+  const selectedCard = listAfterSelection.querySelectorAll('.record-card').find(card => card.dataset.id === 'map-selected');
+  assert.equal(revealSelectedRecord(listAfterSelection, 'map-selected'), selectedCard);
   assert.deepEqual(selectedCard.scrollCalls, [{block:'nearest'}]);
   assert.equal(selectedCard.querySelectorAll('.record-item')[0].focusCalls.length, 0);
 });
 
 test('a removed focused record moves focus to the first remaining result', () => {
   const before = listWith({recordIds:['outside-view']});
-  const focus = captureListFocus(before, before.querySelector('.record-item'));
+  const focus = beginListRedraw(before, before.querySelector('.record-item'));
   const afterMapMove = listWith({recordIds:['inside-view']});
 
-  assert.equal(restoreListFocus(afterMapMove, focus), afterMapMove.querySelector('.record-item'));
+  assert.equal(finishListRedraw(afterMapMove, focus), afterMapMove.querySelector('.record-item'));
 });

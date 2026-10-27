@@ -10,6 +10,12 @@ export function captureListFocus(list, activeElement) {
   return null;
 }
 
+export function beginListRedraw(list, activeElement, {focusMore = false} = {}) {
+  const previous = focusMore ? {kind:'more'} : captureListFocus(list, activeElement);
+  list.replaceChildren();
+  return previous;
+}
+
 export function restoreListFocus(list, previous) {
   if (!previous) return null;
   const records = [...list.querySelectorAll('.record-item')];
@@ -22,6 +28,10 @@ export function restoreListFocus(list, previous) {
   target ||= records[0] || list;
   target.focus({preventScroll:true});
   return target;
+}
+
+export function finishListRedraw(list, previous) {
+  return restoreListFocus(list, previous);
 }
 
 export function revealSelectedRecord(list, selectedId) {
