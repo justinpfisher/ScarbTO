@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections import defaultdict
 from hashlib import sha256
 import json
+import re
 from typing import Any
 from urllib.parse import urlparse
 
@@ -92,16 +93,39 @@ def _date_value(row: dict[str, Any], field: str) -> str | None:
     return value
 
 
-def _official_url(value: Any) -> str:
+def _official_url(value: Any, *, fallback: str | None = FALLBACK_PLANNING_URL) -> str | None:
     if not isinstance(value, str) or not value.strip():
-        return FALLBACK_PLANNING_URL
+        return fallback
     candidate = value.strip()
     parsed = urlparse(candidate)
     if parsed.scheme != "https" or parsed.hostname not in ALLOWED_TORONTO_HOSTS:
-        return FALLBACK_PLANNING_URL
+        return fallback
     if parsed.username or parsed.password:
-        return FALLBACK_PLANNING_URL
+        return fallback
     return candidate
+
+
+def _source_address(row: dict[str, Any]) -> str | None:
+    for field in ("ADDRESS", "STREET_ADDRESS", "address"):
+        value = row.get(field)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    number = row.get("STREET_NUM")
+    name = row.get("STREET_NAME")
+    if number is None and not name:
+        return None
+    if number is None or not isinstance(name, str) or not name.strip():
+        raise PermitContractError("Incomplete source street address components")
+    components = [str(number).strip(), name.strip()]
+    for field in ("STREET_TYPE", "STREET_DIRECTION"):
+        value = row.get(field)
+        if value is not None and str(value).strip():
+            components.append(str(value).strip())
+    return " ".join(components)
+
+
+def _address_match_key(value: str) -> str:
+    return re.sub(r"[^A-Z0-9]+", " ", value.upper()).strip()
 
 
 def _qualified_ward(value: Any) -> str | None:
@@ -152,6 +176,10 @@ def _address_for_geo_id(
         raise PermitContractError("OAR coordinates must be prequalified WGS84 values")
     if not (-180 <= lon <= 180 and -90 <= lat <= 90):
         raise PermitContractError("OAR coordinates are outside WGS84 ranges")
+    # Broad Toronto-area sanity bounds only; ward polygon membership remains a
+    # separate activation check.
+    if not (-79.9 <= lon <= -78.8 and 43.4 <= lat <= 44.1):
+        raise PermitContractError("OAR point is outside the qualified Toronto-area envelope")
     return {
         "address_point_id": point_id,
         "address": point.get("address") if isinstance(point.get("address"), str) else None,
@@ -193,9 +221,14 @@ def normalize_permits(
         key = (permit_number, revision)
         geo_id = row.get("GEO_ID")
         location = _address_for_geo_id(geo_id, points)
+        source_address = _source_address(row)
+        if source_address and location and location.get("address"):
+            if _address_match_key(source_address) != _address_match_key(location["address"]):
+                raise PermitContractError("Source permit address disagrees with its OAR point")
+        display_address = location["address"] if location else source_address
         item = {
             "record_type": "permit",
-            "record_key": f"{source_collection}:{permit_number}:{revision}",
+            "record_key": f"permit:{permit_number}:{revision}",
             "permit_number": permit_number,
             "revision": revision,
             "source_collection": source_collection,
@@ -204,10 +237,10 @@ def normalize_permits(
             "application_date": _date_value(row, "APPLICATION_DATE"),
             "issued_date": _date_value(row, "ISSUED_DATE"),
             "completed_date": _date_value(row, "COMPLETED_DATE"),
-            "address": location["address"] if location else None,
+            "address": display_address,
             "ward": location["ward"] if location else None,
             "locations": [location] if location else [],
-            "official_url": _official_url(row.get("APPLICATION_URL")),
+            "official_url": _official_url(row.get("APPLICATION_URL"), fallback=None),
             "construction_state": "not_inferred",
         }
         stable = {
@@ -237,21 +270,28 @@ def normalize_permits(
 def combine_permit_collections(*collections: dict[str, Any]) -> dict[str, Any]:
     """Quarantine active/cleared conflicts rather than guessing project identity."""
     entries: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    quarantined: set[str] = set()
     for collection in collections:
         if collection.get("source_collection") not in {"active", "cleared"}:
             raise PermitContractError("Unexpected permit collection")
         for row in collection.get("records", []):
             entries[(row["permit_number"], row["revision"])].append(row)
+        quarantined.update(collection.get("quarantined_record_keys", []))
     records = []
-    quarantined = []
     for key, matches in sorted(entries.items()):
         fingerprints = {row["fingerprint"] for row in matches}
-        if len(matches) > 1 and (
-            len(fingerprints) > 1 or len({row["source_collection"] for row in matches}) > 1
-        ):
-            quarantined.extend(row["record_key"] for row in matches)
+        if len(fingerprints) > 1:
+            quarantined.update(row["record_key"] for row in matches)
+        elif matches[0]["record_key"] in quarantined:
+            continue
         else:
-            records.append(matches[0])
+            # Prefer the current active collection when an identical row is
+            # present in both snapshots; output must not depend on argument
+            # ordering.
+            records.append(sorted(
+                matches,
+                key=lambda row: (row["source_collection"] != "active", row["source_collection"]),
+            )[0])
     return {
         "publication_status": "disabled_pending_source_and_privacy_review",
         "records": records,
@@ -310,7 +350,7 @@ def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, 
             }
             groups[key] = group
         group["wards"].add(ward)
-        address = row.get("address")
+        address = _source_address(row)
         if address is not None and not isinstance(address, str):
             raise PermitContractError("address must be source text when present")
         if address and address.strip():
