@@ -27,6 +27,11 @@ records or locations are included.
   page, enforce strictly ascending IDs, and match the expected total.
   `OBJECTID` is used only for snapshot pagination integrity, never as a durable
   record or aggregate key.
+- Accept only the five currently qualified `CSI_CATEGORY` values. `NSA` is an
+  unassigned neighbourhood code and remains unaggregated rather than becoming
+  a named map cell. The report-quarter builder requires a version-matched
+  validated snapshot and rechecks row schema, ordered unique `OBJECTID`s, and
+  count at the aggregation boundary.
 - Parse `REPORT_DATE` and `OCC_DATE` only with explicit UTC information (or
   ArcGIS epoch milliseconds). Check report dates against source coverage and
   use `America/Toronto` when assigning occurrence months.
@@ -38,6 +43,8 @@ records or locations are included.
   UTC report instants to `America/Toronto`; completeness requires source
   coverage to include the full UTC instant interval between the quarter's
   Toronto-local boundaries, not merely matching boundary dates. The candidate
+  uses the published source coverage interval as its completeness evidence;
+  observed row minimum/maximum dates are diagnostics only. The candidate
   contains no event IDs, `OBJECTID`, offence text, coordinates, address, or
   premises join. It is marked
   `disabled_pending_privacy_review`.
