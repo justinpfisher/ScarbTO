@@ -129,6 +129,8 @@ def _validate_ring(ring: list[list[float]]) -> None:
             or not math.isfinite(position[0]) or not math.isfinite(position[1])
         ):
             raise PermitContractError("Neighbourhood polygon coordinates must be numeric")
+        if not (-180 <= position[0] <= 180 and -90 <= position[1] <= 90):
+            raise PermitContractError("Neighbourhood polygon coordinates must be WGS84")
 
 
 def _ring_contains(lon: float, lat: float, ring: list[list[float]]) -> bool:
@@ -149,6 +151,12 @@ def point_in_scarborough_neighbourhoods(lon: float, lat: float, features: list[d
     """Test WGS84 point against the supplied authoritative neighbourhood polygons."""
     if not isinstance(features, list) or not features:
         raise PermitContractError("Scarborough neighbourhood polygons are required")
+    if (
+        type(lon) not in (int, float) or type(lat) not in (int, float)
+        or not math.isfinite(lon) or not math.isfinite(lat)
+        or not (-180 <= lon <= 180 and -90 <= lat <= 90)
+    ):
+        raise PermitContractError("Point must be finite WGS84 coordinates")
     normalized_polygons: list[list[list[list[float]]]] = []
     for feature in features:
         geometry = feature.get("geometry") if isinstance(feature, dict) else None
@@ -194,12 +202,15 @@ def normalize_oar_address_points(
             rejected += 1
             continue
         seen_point_ids.add(point_id)
+        ward = _qualified_ward(row.get("WARD"))
+        address = row.get("ADDRESS_FULL")
+        if ward is None or not isinstance(address, str) or not address.strip():
+            rejected += 1
+            continue
         geometry = row.get("geometry")
         if geometry is None:
             unlocated += 1
             continue
-        ward = _qualified_ward(row.get("WARD"))
-        address = row.get("ADDRESS_FULL")
         coordinates = geometry.get("coordinates") if isinstance(geometry, dict) and geometry.get("type") == "Point" else None
         if ward is None or not isinstance(address, str) or not address.strip():
             rejected += 1
