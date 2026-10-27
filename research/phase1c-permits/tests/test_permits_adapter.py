@@ -272,6 +272,13 @@ class PermitContractTests(unittest.TestCase):
         self.assertEqual(result["address_points"][0]["WARD_NUMBER"], 25)
         self.assertEqual(result["address_points"][0]["address"], "4003 Ellesmere Rd")
 
+    def test_oar_mapper_does_not_classify_invalid_attributes_as_unlocated(self):
+        result = permits.normalize_oar_address_points([
+            oar_row(1, ward="E2532", coordinates=None),
+        ], neighbourhood_features=SQUARE)
+        self.assertEqual(result["unlocated_count"], 0)
+        self.assertEqual(result["rejected_count"], 1)
+
     def test_oar_mapper_rejects_duplicate_id_even_after_unlocated_row(self):
         result = permits.normalize_oar_address_points([
             oar_row(9), oar_row(9, coordinates=[-79.2, 43.8]),
@@ -305,6 +312,10 @@ class PermitContractTests(unittest.TestCase):
         ], neighbourhood_features=SQUARE)
         self.assertEqual(result["rejected_count"], 1)
         self.assertEqual(result["accounted_count"], 1)
+
+    def test_polygon_validator_rejects_non_finite_input_coordinates(self):
+        with self.assertRaisesRegex(permits.PermitContractError, "finite WGS84"):
+            permits.point_in_scarborough_neighbourhoods(float("nan"), 43.8, SQUARE)
 
     def test_permit_status_is_trimmed_but_raw_text_and_unlocated_count_are_retained(self):
         result = permits.normalize_permits(
