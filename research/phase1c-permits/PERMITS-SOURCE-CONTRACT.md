@@ -15,14 +15,21 @@ SQL search returned 404 in source qualification and is not used. Large CSVs
 must be streamed with strict limits; the existing whole-file/read-all path is
 not suitable. Observed row counts/resource sizes are not fixed expectations.
 The collector requests only reviewed source-field allowlists, caps each JSON
-page at 16 MiB, retries only bounded transient errors, requires stable resource
-generation and row counts before and after pagination, writes content-addressed
-JSONL candidates, and advances one manifest pointer atomically. It does not
+page at 16 MiB, retries only bounded transient errors, validates required
+source-specific fields and a nonempty generation marker, and requires stable
+resource generation and row counts before and after pagination. It writes
+content-addressed JSONL candidates, verifies an existing file before reuse,
+and advances one manifest pointer atomically. It does not
 schedule refreshes or enable public output. The current bounded request to the
 permit collector has not completed a full live snapshot. A separate beach-data
 request returned an HTML 403/404 response; that result does not establish a
 permit-source failure. A later minimal permit query succeeded, but it did not
 qualify full-source pagination or the collector's full field mappings.
+Each source currently fails closed on a zero-row initial result, a zero-row
+replacement of nonempty data, or a count falling below half of its prior
+last-good count. The half-count retention floor is a conservative candidate
+guard, not a measured source acceptance range; it must be tuned from complete
+source history before any scheduled refresh is enabled.
 Each snapshot is also capped at 512 MiB on disk. OAR uses its separately
 allowlisted datastore ID `0b3756af-9caf-4f0f-ac28-9c6617adede4`; the explicit
 4326 CSV resource in the table is not downloaded by this collector. Geometry
