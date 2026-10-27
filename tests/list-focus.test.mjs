@@ -55,15 +55,18 @@ function listWith({recordIds = [], sourceIds = [], hasMore = false} = {}) {
   return list;
 }
 
-test('paging keeps keyboard focus on the next pager, then moves to the final record', () => {
-  const before = listWith({recordIds:['record-1','record-2'], hasMore:true});
+test('paging moves focus to the first newly added result at the 80-to-160 boundary', () => {
+  const ids=Array.from({length:200},(_,index)=>`record-${index}`);
+  const before = listWith({recordIds:ids.slice(0,80), hasMore:true});
   const priorPager = before.querySelector('.more-results');
   const focus = beginListRedraw(before, priorPager,{focusMore:true});
-  const afterFirstPage = listWith({recordIds:['record-1','record-2','record-3'], hasMore:true});
-  assert.equal(finishListRedraw(afterFirstPage, focus), afterFirstPage.querySelector('.more-results'));
+  const afterFirstPage = listWith({recordIds:ids.slice(0,160), hasMore:true});
+  assert.equal(finishListRedraw(afterFirstPage, focus), afterFirstPage.querySelectorAll('.record-item')[80]);
 
-  const afterLastPage = listWith({recordIds:['record-1','record-2','record-3']});
-  assert.equal(finishListRedraw(afterLastPage, focus), afterLastPage.querySelectorAll('.record-item').at(-1));
+  const secondPager=afterFirstPage.querySelector('.more-results');
+  const secondPageFocus=beginListRedraw(afterFirstPage,secondPager,{focusMore:true});
+  const afterLastPage = listWith({recordIds:ids});
+  assert.equal(finishListRedraw(afterLastPage, secondPageFocus), afterLastPage.querySelectorAll('.record-item')[160]);
 });
 
 test('selecting a record restores focus to its replacement button after list redraw', () => {

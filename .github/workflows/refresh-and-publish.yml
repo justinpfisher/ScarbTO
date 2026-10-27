@@ -39,7 +39,7 @@ jobs:
           node --check docs/logic.mjs
           node --check docs/app.mjs
       - name: JavaScript logic tests
-        run: node --test tests/logic.test.mjs tests/list-focus.test.mjs
+        run: node --test tests/logic.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs
 
   publish:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

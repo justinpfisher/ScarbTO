@@ -79,7 +79,7 @@ function performFilters() {
 function renderList({focusMore = false, revealSelection = false} = {}) {
   const list=$('record-list');
   const previousFocus=beginListRedraw(list,document.activeElement,{focusMore});
-  if(!snapshot?.ready){list.append(els('p','empty','No validated DineSafe snapshot has been published. The map will populate after the first successful import.'));restoreListFocus(list,previousFocus);return;}
+  if(!snapshot?.ready){list.append(els('p','empty','No validated DineSafe snapshot has been published. The map will populate after the first successful import.'));finishListRedraw(list,previousFocus);return;}
   const bounds=map?.loaded()?map.getBounds():null;
   const inView=e=>!bounds||bounds.contains([e.longitude,e.latitude]);
   const matches=visiblePlaces.filter(inView);
@@ -94,7 +94,7 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
     records=matches.sort((a,b)=>b.inspection_date.localeCompare(a.inspection_date)||a.name.localeCompare(b.name));
   }
   $('results-count').textContent=`${records.length.toLocaleString('en-CA')} in view`;
-  if(!records.length){list.append(els('p','empty','No matching places in the current map view. Widen the date or outcome filters, or choose "Show all Scarborough".'));restoreListFocus(list,previousFocus);return;}
+  if(!records.length){list.append(els('p','empty','No matching places in the current map view. Widen the date or outcome filters, or choose "Show all Scarborough".'));finishListRedraw(list,previousFocus);return;}
   for(const entry of pageRecords(records,listLimit,selectedId)) {
     const card=els('div','record-card');
     card.dataset.id=entry.id;

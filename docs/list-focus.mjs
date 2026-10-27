@@ -11,7 +11,10 @@ export function captureListFocus(list, activeElement) {
 }
 
 export function beginListRedraw(list, activeElement, {focusMore = false} = {}) {
-  const previous = focusMore ? {kind:'more'} : captureListFocus(list, activeElement);
+  const previous = focusMore ? {
+    kind:'more',
+    recordIds:[...list.querySelectorAll('.record-item')].map(element => element.dataset.id),
+  } : captureListFocus(list, activeElement);
   list.replaceChildren();
   return previous;
 }
@@ -24,9 +27,13 @@ export function restoreListFocus(list, previous) {
   let target;
   if (previous.kind === 'record') target = records.find(element => element.dataset.id === previous.id);
   if (previous.kind === 'source') target = sources.find(element => element.dataset.id === previous.id);
-  if (previous.kind === 'more') target = more || records.at(-1);
+  if (previous.kind === 'more') {
+    const priorIds = new Set(previous.recordIds || []);
+    target = records.find(element => !priorIds.has(element.dataset.id)) || more || records.at(-1);
+  }
   target ||= records[0] || list;
-  target.focus({preventScroll:true});
+  if (previous.kind === 'more') target.focus();
+  else target.focus({preventScroll:true});
   return target;
 }
 
