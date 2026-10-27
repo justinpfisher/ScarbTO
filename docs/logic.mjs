@@ -34,9 +34,9 @@ export function filterActivity(items, state, now = new Date()) {
   );
 }
 
-export function daysSince(iso, now = new Date()) {
+export function isStale(iso, now = new Date()) {
   const parsed = Date.parse(iso);
-  return Number.isFinite(parsed) ? Math.floor((now.valueOf() - parsed) / 86400000) : Infinity;
+  return !Number.isFinite(parsed) || now.valueOf() - parsed > 48 * 60 * 60 * 1000;
 }
 
 export function fitBoundsFromFeatures(features) {
@@ -49,4 +49,18 @@ export function fitBoundsFromFeatures(features) {
   }
   if (!coords.length) return null;
   return coords.reduce(([west,south,east,north],[lon,lat])=>[Math.min(west,lon),Math.min(south,lat),Math.max(east,lon),Math.max(north,lat)], [180,90,-180,-90]);
+}
+
+
+export function cityDineSafeRecordUrl(id) {
+  return `https://www.toronto.ca/community-people/health-wellness-care/health-programs-advice/food-safety/dinesafe/#establishment/${encodeURIComponent(String(id))}`;
+}
+
+export function pageRecords(records, limit = 80, selectedId = null) {
+  const page = records.slice(0, limit);
+  if (selectedId !== null && !page.some(entry => String(entry.id) === String(selectedId))) {
+    const selected = records.find(entry => String(entry.id) === String(selectedId));
+    if (selected) page.push(selected);
+  }
+  return page;
 }

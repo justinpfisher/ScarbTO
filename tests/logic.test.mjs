@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dayInWindow, filterEstablishments, filterActivity, daysSince, fitBoundsFromFeatures} from '../docs/logic.mjs';
+import {dayInWindow, filterEstablishments, filterActivity, isStale, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from '../docs/logic.mjs';
 const now = new Date('2026-10-24T15:00:00Z');
 const data = [
  {name:'Alpha Café',address:'123 Main',status:'Pass',neighbourhood:'Agincourt',inspection_date:'2026-10-21'},
@@ -25,7 +25,24 @@ test('new activity filter measures observation dates, not source inspection date
  const events=[{...data[1],detected_at:'2026-10-23T14:00:00+00:00'}, {...data[0],detected_at:'2026-01-01T12:00:00+00:00'}];
  assert.deepEqual(filterActivity(events,state,now).map(x=>x.name),['Beta Diner']);
 });
-test('publication age and geometry bounds are deterministic',()=>{
- assert.equal(daysSince('2026-10-21T12:00:00Z', now),3);
+test('staleness warning starts only after 48 hours',()=>{
+ assert.equal(isStale('2026-10-22T15:01:00Z', now),false);
+ assert.equal(isStale('2026-10-22T15:00:00Z', now),false);
+ assert.equal(isStale('2026-10-22T14:59:59.999Z', now),true);
+ assert.equal(isStale('not-a-date', now),true);
+});
+test('geometry bounds are deterministic',()=>{
  assert.deepEqual(fitBoundsFromFeatures([{geometry:{type:'Polygon',coordinates:[[[0,1],[2,1],[2,4],[0,1]]]}}]),[0,1,2,4]);
+});
+
+
+test('record links use the official City lookup and encode the identifier',()=>{
+ assert.equal(cityDineSafeRecordUrl('001Vo000013Qj6QIAS'),'https://www.toronto.ca/community-people/health-wellness-care/health-programs-advice/food-safety/dinesafe/#establishment/001Vo000013Qj6QIAS');
+ assert.equal(cityDineSafeRecordUrl('id/with spaces'),'https://www.toronto.ca/community-people/health-wellness-care/health-programs-advice/food-safety/dinesafe/#establishment/id%2Fwith%20spaces');
+});
+test('record paging reveals additional matches and keeps a map-selected record visible',()=>{
+ const records=Array.from({length:81},(_,i)=>({id:`id-${i}`}));
+ assert.equal(pageRecords(records,80).length,80);
+ assert.equal(pageRecords(records,81).length,81);
+ assert.equal(pageRecords(records,80,'id-80').at(-1).id,'id-80');
 });
