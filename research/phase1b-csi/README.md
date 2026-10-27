@@ -1,110 +1,69 @@
 # Phase 1B CSI adapter prototype
 
-This directory is an offline, synthetic-only research prototype. It is not
-wired into the ScarbTO application, production data, site, workflow, or DNS.
-It has no network client, source scheduler, or public export. All proposed
-public-output policy remains unapproved.
+This directory remains a synthetic-only research prototype. It is not wired
+into ScarbTO's application, production data, scheduled workflow, site or DNS.
+The publisher remains disabled for CSI. Fixtures contain fabricated records
+and public metadata only.
 
-`fixtures/rows.synthetic.json` contains only fabricated records.
-`fixtures/layer-metadata.checked.json` records public layer metadata only,
-checked 2026-10-27; no Toronto Police feature rows were retrieved. No source
-records or locations are included.
+The row adapter validates the version-bound paginated source contract. It
+requires both the source identifier `HOOD_158` and the separate display label
+`NEIGHBOURHOOD_158`; their association must match a supplied registry. The
+source identifier is a padded string and must be validated by membership in a
+versioned registry, not by assuming codes form a consecutive numeric range.
+The synthetic fixture uses fictional mappings; it is not the official
+registry.
 
-## Implemented contract
+The public-projection candidate does not consume row snapshots. It accepts an
+ArcGIS grouped-statistics response envelope with `features[].attributes` keyed
+by `HOOD_158` and `CSI_CATEGORY`,
+checks stable source metadata and before/after count controls, and requires
+the group sum to reconcile. NSA remains unassigned and contributes only to a
+qualitative note. It produces a fixed category grid for a complete Toronto
+report quarter, bands zero through four as `0-4`, preserves counts of five or
+more, and rejects unknown groups or extra schema fields. The recursively
+allowlisted candidate contains required Ontario Open Government Licence
+attribution, but is still marked disabled. It exposes no marginal totals,
+rankings, individual rows, event dates, offence text, coordinates, addresses,
+or joins.
 
-- Accept only the researched layer identity `CSI_OPEN_DATA`, layer 0, and the
-  current `CSI_CATEGORY` schema; compare every row's exact field set and its
-  field-name signature with source metadata before accepting rows. Validate
-  metadata types for the selected fields and validate their non-null row values.
-  The official metadata confirms `REPORT_YEAR` is a string, so the copied
-  synthetic records were corrected from integer years to strings.
-- Require a stable service item, edit timestamp, layer/schema metadata, record
-  limit, coverage interval, and count across the before/after pagination
-  metadata. Query time is recorded but may naturally differ.
-- Coverage is represented as inclusive Toronto calendar dates from the
-  published extract metadata (2014-01-01 through 2026-09-30 in the checked
-  metadata fixture). The candidate never substitutes observed row min/max dates
-  as completeness evidence.
-- Require contiguous pages from offset zero, honor the current source
-  `maxRecordCount`, reject duplicate snapshot-local `OBJECTID`s, detect short,
-  incomplete, extra, or transfer-limited pages, require `OBJECTID ASC` on every
-  page, enforce strictly ascending IDs, and match the expected total.
-  `OBJECTID` is used only for snapshot pagination integrity, never as a durable
-  record or aggregate key.
-- Accept only the five currently qualified `CSI_CATEGORY` values. `NSA` is an
-  unassigned neighbourhood code and remains unaggregated rather than becoming
-  a named map cell. The report-quarter builder requires a version-matched
-  validated snapshot and rechecks row schema, ordered unique `OBJECTID`s, and
-  count at the aggregation boundary.
-- Parse `REPORT_DATE` and `OCC_DATE` only with explicit UTC information (or
-  ArcGIS epoch milliseconds). Check report dates against source coverage and
-  use `America/Toronto` when assigning occurrence months.
-- Keep offence/source-row counts distinct from distinct occurrence IDs. A
-  repeated `EVENT_UNIQUE_ID` may be a legitimate related row and an occurrence
-  can contribute to multiple category cells.
-- Produce only an internal candidate grouped by neighbourhood, category and
-  Toronto report quarter and occurrence month. Quarter assignment converts
-  UTC report instants to `America/Toronto`; completeness requires source
-  coverage to include every inclusive Toronto calendar date in the quarter.
-  The candidate uses the published source coverage interval as its completeness
-  evidence; observed row minimum/maximum dates are diagnostics only. The candidate
-  contains no event IDs, `OBJECTID`, offence text, coordinates, address, or
-  premises join. It is marked
-  `disabled_pending_privacy_review`.
-- Public export always raises `PublicExportDisabled`. No sparse-cell threshold
-  is invented. Public use remains blocked until a privacy policy and source
-  terms are requalified.
-- Atomic private candidate writes preserve a prior candidate if replacement
-  fails. This is not a live-site snapshot or deployment mechanism.
+Quarter completeness uses inclusive Toronto calendar dates in published
+extract metadata, not observed row-date minima/maxima. The report-quarter
+adapter's row aggregation remains an internal synthetic validation path; it
+is not used as the public-projection input.
 
-The candidate retains a reference to TPS terms; the Ontario Open Government
-Licence 1.1 and TPS item restrictions both need to be rechecked before any
-future activation.
+## Source and privacy limits
 
-## Current official metadata and licence check
+TPS describes this as historical and preliminary offence/victim/vehicle-level
+data. Repeated event IDs can be legitimate related rows, and a source-row
+count is not a unique incident or person count. NSA represents unassigned
+neighbourhood data. Source locations are deliberately offset. Do not join to
+premises or addresses, reverse-geocode, publish individual locations, rank
+neighbourhood safety, or imply live dispatch.
 
-Checked 2026-10-27 using the layer metadata endpoint only. It reports service
-item `0a239a5563a344a3bbf8452504ed8d68`, layer 0 `CSI_OPEN_DATA`,
-`maxRecordCount: 2000`, pagination and order-by support, UTC date-field
-reference (`Etc/UTC`), and layer last edit `2026-10-08T13:23:11.683Z`. For the
-fields represented by the synthetic query fixture: `OBJECTID` is OID;
-`EVENT_UNIQUE_ID`, `REPORT_YEAR`, `REPORT_MONTH`, `CSI_CATEGORY`, `OFFENCE`,
-and `NEIGHBOURHOOD_158` are strings; `REPORT_DATE` and `OCC_DATE` are dates;
-`LONG_WGS84` and `LAT_WGS84` are doubles. This metadata does not validate an
-actual paged read or row count.
+The candidate's `0-4` band is a conservative direct-republication choice for
+this prototype, not a legal minimum or an anonymity guarantee. A complete,
+versioned HOOD_158 registry and the qualified Scarborough subset/crosswalk are
+not yet included. The synthetic registry does not qualify those prerequisites.
+No real grouped result payload or CSI feature rows were downloaded for this
+change. No public CSI output has been enabled.
 
-The TPS portal licence page identifies Open Government Licence - Ontario
-version 1.1 and says source attribution is required. The layer description
-also says occurrences are preliminary, locations are deliberately offset,
-and the counts may not exactly reflect neighbourhoods. TPS's licence page
-includes a restriction against linking the information with other databases
-to attempt to identify an individual. The project-wide no-join/no-geocoding
-boundary below is deliberately stricter and is a privacy safeguard, not a
-claim that every part of it is quoted from that single licence clause.
+The candidate carries this attribution wording:
 
-Official references: [TPS layer metadata](https://services.arcgis.com/S9th0jAJ7bqgIRjw/arcgis/rest/services/Major_Crime_Indicators_Open_Data/FeatureServer/0?f=pjson), [TPS licence page](https://data.tps.ca/pages/licence), and [Ontario Open Government Licence](https://www.ontario.ca/page/open-government-licence-ontario). The Ontario page was blocked by the browser fetch during this check; TPS's own licence page is the source for the v1.1 and attribution findings. No feature/query endpoint was called.
+> Contains information licensed under the Open Government Licence - Ontario.
 
-The concise privacy-policy proposal, including suppression options and
-limitations, is kept in [PRIVACY-POLICY-PROPOSAL.md](PRIVACY-POLICY-PROPOSAL.md).
-It is not approved; public export remains disabled.
+Official references remain in the source metadata and privacy proposal.
+Recheck applicable terms and item restrictions before any future activation.
 
-## Run tests
+## Tests
+
+Run the standard-library synthetic suite with:
 
 ```powershell
 python -m unittest discover -s tests -v
 ```
 
-The suite uses only Python standard-library modules and the synthetic fixture.
-It does not download or publish anything.
-
-## Activation gates
-
-Before any real-data adapter or public output is considered: recheck the TPS
-source metadata (including full field types/date encodings), license and item
-restrictions; prove a real paged read is complete and version-stable;
-independently review aggregation semantics and a
-privacy suppression/generalisation policy; keep raw CSI rows and locations out
-of the public map; and obtain a separate product/release review for adding the
-feed. This prototype does not decide those gates or claim that the actual feed
-was tested.
+Coverage includes code/name separation, nonconsecutive registry identifiers,
+mixed assigned/NSA groups, count controls and source-version stability,
+quarter coverage, the 4/5 band boundary, unknown/duplicate group rejection,
+and recursive output-key allowlisting. No network access is used.
 
