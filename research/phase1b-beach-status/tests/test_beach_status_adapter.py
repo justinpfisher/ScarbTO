@@ -33,6 +33,9 @@ def card(**overrides):
         "maintenance_enabled": "N",
     }
     values.update(overrides)
+    values.setdefault("control_retrieved_at", {
+        name: values["now"] for name in ("season", "last_update", "maintenance", "results")
+    })
     return beach.build_status_card(**values)
 
 
@@ -49,7 +52,7 @@ class BeachStatusTests(unittest.TestCase):
             control_retrieved_at=source_controls,
         )
         self.assertEqual(original["fetched_at_utc"], later["fetched_at_utc"])
-        self.assertEqual(later["display_state"], "stale")
+        self.assertEqual(later["display_state"], "season_state_stale")
         self.assertEqual(later["results_fetched_at_utc"], "2026-07-15T16:00:00Z")
 
     def test_missing_maintenance_control_is_unknown_by_default(self):
@@ -58,9 +61,53 @@ class BeachStatusTests(unittest.TestCase):
             "in_season": "Yes", "last_update_raw": None,
             "result_envelopes": None, "now": NOW,
             "sample_freshness_limit": timedelta(days=2),
+            "control_retrieved_at": {
+                name: NOW for name in ("season", "last_update", "maintenance", "results")
+            },
         }
         result = beach.build_status_card(**values)
         self.assertEqual(result["display_state"], "maintenance_state_unknown")
+
+    def test_missing_or_old_season_timestamp_never_qualifies_a_current_status(self):
+        self.assertEqual(
+            card(control_retrieved_at={
+                "season": None, "last_update": NOW, "maintenance": NOW, "results": NOW,
+            })["display_state"],
+            "season_state_stale",
+        )
+        old = NOW - timedelta(days=100)
+        self.assertEqual(
+            card(control_retrieved_at={
+                "season": old, "last_update": NOW, "maintenance": NOW, "results": NOW,
+            })["display_state"],
+            "season_state_stale",
+        )
+
+    def test_missing_or_old_maintenance_timestamp_never_qualifies_a_current_status(self):
+        old = NOW - timedelta(days=100)
+        for timestamp in (None, old):
+            with self.subTest(timestamp=timestamp):
+                self.assertEqual(
+                    card(control_retrieved_at={
+                        "season": NOW, "last_update": NOW,
+                        "maintenance": timestamp, "results": NOW,
+                    })["display_state"],
+                    "maintenance_state_stale",
+                )
+
+    def test_old_result_or_update_control_is_not_presented_as_current(self):
+        old = NOW - timedelta(days=100)
+        for key in ("last_update", "results"):
+            with self.subTest(key=key):
+                times = {name: NOW for name in ("season", "last_update", "maintenance", "results")}
+                times[key] = old
+                self.assertEqual(card(control_retrieved_at=times)["display_state"], "source_controls_stale")
+
+    def test_future_control_retrieval_time_is_rejected(self):
+        times = {name: NOW for name in ("season", "last_update", "maintenance", "results")}
+        times["season"] = NOW + timedelta(seconds=1)
+        with self.assertRaisesRegex(beach.BeachContractError, "cannot be in the future"):
+            card(control_retrieved_at=times)
 
     def test_raw_city_flags_are_preserved(self):
         value = card(result_envelopes=[envelope(statusFlag="SAFE", statusFlagPre="UNSAFE")])
@@ -137,6 +184,10 @@ class BeachStatusTests(unittest.TestCase):
         value = card(
             now=just_after_dst_transition,
             result_envelopes=[envelope("2026-03-08")],
+            control_retrieved_at={
+                name: just_after_dst_transition
+                for name in ("season", "last_update", "maintenance", "results")
+            },
         )
         self.assertEqual(value["sample_date"], "2026-03-08")
         self.assertEqual(value["display_state"], "current")
@@ -200,4 +251,3 @@ class BeachStatusTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
