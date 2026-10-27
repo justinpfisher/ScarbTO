@@ -10,13 +10,19 @@ ScarbTO public export remains disabled.
 The CKAN transport uses the Toronto CKAN API base
 `https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/` and
 `datastore_search` with explicit field allowlists, bounded pages, stable
-`_id ASC`, and source-generation/count checks before and after pagination.
+`_id ASC`, and source-generation/count checks before and after pagination. The
+collector requires CKAN's explicit `total_was_estimated: false` flag on every
+count and page response; estimated totals and responses lacking the flag are
+not sufficient proof of completeness. It rejects HTTP redirects before any
+redirect target is contacted, and serializes CKAN field allowlists as the
+comma-separated form expected by `datastore_search`.
 SQL search returned 404 in source qualification and is not used. Large CSVs
 must be streamed with strict limits; the existing whole-file/read-all path is
 not suitable. Observed row counts/resource sizes are not fixed expectations.
 The collector requests only reviewed source-field allowlists, caps each JSON
 page at 16 MiB, retries only bounded transient errors, validates required
-source-specific fields and a nonempty generation marker, and requires stable
+source-specific fields (including the `FOLDERRSN` column even where an
+individual row's value is null) and a nonempty generation marker, and requires stable
 resource generation and row counts before and after pagination. It writes
 content-addressed JSONL candidates, verifies an existing file before reuse,
 and advances one manifest pointer atomically. It does not
@@ -39,7 +45,7 @@ join.
 | Dataset | Datastore ID | Resource ID | Qualified scope |
 | --- | --- | --- | --- |
 | Active building permits | `6d0229af-bc54-46de-9c2b-26759b01dd05` | `dfce3b7b-4f17-4a9d-9155-5e390a5ffa97` | Active collection |
-| Cleared permits since 2017 | `a96c0ba4-3026-402b-b09d-5b1268b8f810` | `b41c3e9e-4d2d-4b09-a789-9569d8da407c` | Legacy 2000-2016 omitted |
+| Cleared permits since 2017 | `a96c0ba4-3026-402b-b09d-5b1268b8f810` | `b41c3e9e-4d2d-4b09-a789-9569d8da407c` | Legacy 2000–2016 omitted |
 | Development applications | `8907d8ed-c515-4ce9-b674-9f8c6eefcf0d` | `77f8a66a-bd43-40e6-b6c9-12a2b03a5032` | Address rows, not unique applications |
 | Toronto One Address Repository | `0b3756af-9caf-4f0f-ac28-9c6617adede4` | `64d4e54b-738f-4cd9-a9e7-8050fac8a52f` | Explicit EPSG:4326 CSV only |
 
@@ -70,7 +76,7 @@ adapter accepts only ASCII decimal text or an integer and normalizes it to an
 integer point ID. A bounded live OAR lookup confirmed
 `ADDRESS_POINT_ID=331669`, `ADDRESS_ID=357094`, `WARD=25`,
 `ADDRESS_FULL=4003 Ellesmere Rd`. A filtered development query for folder
-4970049 returned six rows over two pages (IDs 230-235), with stable metadata
+4970049 returned six rows over two pages (IDs 230–235), with stable metadata
 and matching before/after totals. It identifies application `21 191603 ESC 20
 SA` and six address rows at 1552, 1572, 1554, 1562, 1564, and 1570 Kingston
 Road. This proves only this bounded filtered query, not a full import or
@@ -79,7 +85,7 @@ attempted. Those fields are NAD27
 MTM10 and require independently validated coordinate conversion; this
 prototype avoids them. OAR points must have already-qualified WGS84 fields
 before they can be passed to the normalizer. Ward values are restricted to
-current Scarborough wards 20-25; a ward-grid code such as E2532 is not a ward
+current Scarborough wards 20–25; a ward-grid code such as E2532 is not a ward
 number. Polygon boundary validation is still required before map activation.
 
 The transport must map source fields explicitly before normalization: OAR
@@ -155,4 +161,3 @@ ward/neighbourhood polygons, refresh-failure rollback, and the public allowlist
 with a privacy/source-rights review. Qualify full-scale memory and runtime
 before any large ingest; do not run concurrent heavy imports. Public export
 remains disabled until those gates pass.
-
