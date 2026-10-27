@@ -47,3 +47,4 @@ assert.equal(bounded.children[2].children.length, 50);
 assert.match(bounded.children[3].textContent, /Showing 50 of 51/);
 
 console.log("Beach measurement history view tests passed");
+
