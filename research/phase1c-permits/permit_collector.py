@@ -38,6 +38,12 @@ SOURCE_RESOURCES = {
             "APPLICATION_DATE", "ISSUED_DATE", "COMPLETED_DATE", "STATUS",
             "STREET_NUM", "STREET_NAME", "STREET_TYPE", "STREET_DIRECTION",
         }),
+        "required_fields": frozenset({
+            "_id", "PERMIT_NUM", "REVISION_NUM", "PERMIT_TYPE", "GEO_ID",
+            "APPLICATION_DATE", "ISSUED_DATE", "COMPLETED_DATE", "STATUS",
+            "STREET_NUM", "STREET_NAME", "STREET_TYPE", "STREET_DIRECTION",
+        }),
+        "minimum_row_retention": 0.5,
     },
     "cleared_permits_since_2017": {
         "package_id": "building-permits-cleared-permits",
@@ -47,6 +53,12 @@ SOURCE_RESOURCES = {
             "APPLICATION_DATE", "ISSUED_DATE", "COMPLETED_DATE", "STATUS",
             "STREET_NUM", "STREET_NAME", "STREET_TYPE", "STREET_DIRECTION",
         }),
+        "required_fields": frozenset({
+            "_id", "PERMIT_NUM", "REVISION_NUM", "PERMIT_TYPE", "GEO_ID",
+            "APPLICATION_DATE", "ISSUED_DATE", "COMPLETED_DATE", "STATUS",
+            "STREET_NUM", "STREET_NAME", "STREET_TYPE", "STREET_DIRECTION",
+        }),
+        "minimum_row_retention": 0.5,
     },
     "development_applications": {
         "package_id": "development-applications",
@@ -56,6 +68,12 @@ SOURCE_RESOURCES = {
             "DATE_SUBMITTED", "STATUS", "STREET_NUM", "STREET_NAME",
             "STREET_TYPE", "STREET_DIRECTION", "APPLICATION_URL", "WARD_NUMBER",
         }),
+        "required_fields": frozenset({
+            "_id", "APPLICATION_TYPE", "APPLICATION#", "DATE_SUBMITTED",
+            "STATUS", "STREET_NUM", "STREET_NAME", "STREET_TYPE",
+            "STREET_DIRECTION", "WARD_NUMBER",
+        }),
+        "minimum_row_retention": 0.5,
     },
     "oar_address_points": {
         "package_id": "address-points-municipal-toronto-one-address-repository",
@@ -63,6 +81,10 @@ SOURCE_RESOURCES = {
         "fields": frozenset({
             "_id", "ADDRESS_POINT_ID", "ADDRESS_ID", "WARD", "ADDRESS_FULL", "geometry",
         }),
+        "required_fields": frozenset({
+            "_id", "ADDRESS_POINT_ID", "ADDRESS_ID", "WARD", "ADDRESS_FULL", "geometry",
+        }),
+        "minimum_row_retention": 0.5,
     },
 }
 
@@ -79,7 +101,9 @@ def _safe_source(source_key: str) -> dict[str, Any]:
     return source
 
 
-def _validate_response(payload: Any, *, fields: frozenset[str], limit: int) -> dict[str, Any]:
+def _validate_response(
+    payload: Any, *, fields: frozenset[str], required_fields: frozenset[str], limit: int
+) -> dict[str, Any]:
     if not isinstance(payload, dict) or payload.get("success") is not True:
         raise CollectionError("CKAN response is not a successful result")
     result = payload.get("result")
@@ -92,7 +116,17 @@ def _validate_response(payload: Any, *, fields: frozenset[str], limit: int) -> d
     for row in records:
         if not isinstance(row, dict) or not set(row).issubset(fields):
             raise CollectionError("CKAN row contains unapproved fields or is not an object")
+        if not required_fields.issubset(row):
+            raise CollectionError("CKAN row is missing required source fields")
     return result
+
+
+def _file_sha256(path: Path) -> str:
+    digest = sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 class TorontoCKAN:
@@ -179,7 +213,12 @@ class TorontoCKAN:
             "limit": 0,
             "fields": sorted(source["fields"]),
         })
-        result = _validate_response(payload, fields=source["fields"], limit=0)
+        result = _validate_response(
+            payload, fields=source["fields"],
+            required_fields=source["required_fields"], limit=0,
+        )
+        if not generation.strip():
+            raise CollectionError("CKAN resource generation marker is empty")
         return result["total"], generation
 
     def page(self, source_key: str, *, offset: int, limit: int) -> dict[str, Any]:
@@ -193,7 +232,11 @@ class TorontoCKAN:
             "sort": "_id asc",
             "fields": sorted(source["fields"]),
         })
-        return _validate_response(payload, fields=source["fields"], limit=limit)
+        _validate_response(
+            payload, fields=source["fields"],
+            required_fields=source["required_fields"], limit=limit,
+        )
+        return payload
 
 
 def _atomic_write_text(path: Path, content: str) -> None:
@@ -237,12 +280,39 @@ def collect_snapshot(
     total_before, generation_before = metadata()
     if type(total_before) is not int or total_before < 0 or total_before > max_rows:
         raise CollectionError("Source count exceeds the configured snapshot limit")
+    if not isinstance(generation_before, str) or not generation_before.strip():
+        raise CollectionError("Source generation marker is empty")
     expected_pages = (total_before + page_size - 1) // page_size
     if expected_pages > max_pages:
         raise CollectionError("Source count exceeds the configured page limit")
 
     root = Path(destination)
     root.mkdir(parents=True, exist_ok=True)
+    manifest_path = root / f"{source_key}-manifest.json"
+    previous_count = None
+    if manifest_path.exists():
+        try:
+            previous = json.loads(manifest_path.read_text(encoding="utf-8"))
+            previous_count = previous.get("row_count")
+        except (OSError, json.JSONDecodeError) as exc:
+            raise CollectionError("Existing last-good manifest is unreadable") from exc
+        if (
+            not isinstance(previous, dict) or previous.get("source_key") != source_key
+            or type(previous_count) is not int or previous_count < 0
+        ):
+            raise CollectionError("Existing last-good manifest is malformed")
+        snapshot_name = previous.get("snapshot_file")
+        if not isinstance(snapshot_name, str) or Path(snapshot_name).name != snapshot_name:
+            raise CollectionError("Existing last-good snapshot path is invalid")
+        previous_snapshot = root / snapshot_name
+        if not previous_snapshot.is_file():
+            raise CollectionError("Existing last-good snapshot is missing")
+        if _file_sha256(previous_snapshot) != previous.get("sha256"):
+            raise CollectionError("Existing last-good snapshot hash does not match")
+    if total_before == 0 and (previous_count is None or previous_count > 0):
+        raise CollectionError("Empty source result is not accepted without a qualified empty-source policy")
+    if previous_count and total_before < previous_count * source["minimum_row_retention"]:
+        raise CollectionError("Source row count fell below its source-specific retention floor")
     fd, staged_name = tempfile.mkstemp(prefix=".candidate-", suffix=".jsonl.tmp", dir=root)
     digest = sha256()
     rows_written = 0
@@ -253,7 +323,10 @@ def collect_snapshot(
             offset = 0
             while offset < total_before:
                 response = fetch_page(offset, min(page_size, total_before - offset))
-                result = _validate_response(response, fields=source["fields"], limit=page_size)
+                result = _validate_response(
+                    response, fields=source["fields"],
+                    required_fields=source["required_fields"], limit=page_size,
+                )
                 if result["total"] != total_before:
                     raise CollectionError("Source total changed during pagination")
                 records = result["records"]
@@ -285,10 +358,12 @@ def collect_snapshot(
         content_hash = digest.hexdigest()
         snapshot_name = f"{source_key}-{content_hash}.jsonl"
         snapshot_path = root / snapshot_name
-        if not snapshot_path.exists():
-            os.replace(staged_name, snapshot_path)
-        else:
+        if snapshot_path.exists():
+            if not snapshot_path.is_file() or _file_sha256(snapshot_path) != content_hash:
+                raise CollectionError("Existing content-addressed snapshot is corrupt")
             os.unlink(staged_name)
+        else:
+            os.replace(staged_name, snapshot_path)
         manifest = {
             "schema_version": 1,
             "source_key": source_key,
@@ -304,7 +379,6 @@ def collect_snapshot(
         }
         # The manifest is the only mutable pointer. Until its replacement,
         # readers continue to resolve the previous complete snapshot.
-        manifest_path = root / f"{source_key}-manifest.json"
         _atomic_write_text(manifest_path, json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n")
         return manifest
     except Exception:
