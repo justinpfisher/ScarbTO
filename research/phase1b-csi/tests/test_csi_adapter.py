@@ -239,7 +239,8 @@ class CsiContractTests(unittest.TestCase):
         rows[3]["REPORT_YEAR"] = "2025"
         rows[3]["REPORT_MONTH"] = "December"
         source_version = version(rows)
-        candidate = csi.build_report_quarter_candidate(rows, source_version)
+        validated = csi.validate_pages(pages_from(rows), source_version, source_version)
+        candidate = csi.build_report_quarter_candidate(validated, source_version)
 
         self.assertEqual(candidate["publication_status"], "disabled_pending_privacy_review")
         self.assertEqual(candidate["source_record_total"], 5)
@@ -270,7 +271,8 @@ class CsiContractTests(unittest.TestCase):
         rows[0]["REPORT_YEAR"] = "2026"
         rows[0]["REPORT_MONTH"] = "October"
         source_version = version(rows, coverage_end_utc="2026-10-10T23:59:59Z")
-        candidate = csi.build_report_quarter_candidate(rows, source_version)
+        validated = csi.validate_pages(pages_from(rows), source_version, source_version)
+        candidate = csi.build_report_quarter_candidate(validated, source_version)
 
         self.assertEqual(candidate["source_record_total"], 5)
         self.assertEqual(candidate["incomplete_quarter_rows"], 1)
@@ -287,7 +289,8 @@ class CsiContractTests(unittest.TestCase):
         rows = fixture_rows()
         rows[0]["REPORT_DATE"] = "2026-02-10T12:00:00Z"
         source_version = version(rows, coverage_end_utc="2026-03-31T00:00:00Z")
-        candidate = csi.build_report_quarter_candidate(rows, source_version)
+        validated = csi.validate_pages(pages_from(rows), source_version, source_version)
+        candidate = csi.build_report_quarter_candidate(validated, source_version)
 
         self.assertEqual(candidate["incomplete_quarter_rows"], 1)
         self.assertEqual(candidate["aggregated_source_record_total"], 3)
@@ -297,13 +300,57 @@ class CsiContractTests(unittest.TestCase):
         rows = fixture_rows()
         rows[0]["REPORT_DATE"] = "2026-04-01T04:00:00Z"
         source_version = version(rows, coverage_start_utc="2025-10-01T04:00:01Z")
-        candidate = csi.build_report_quarter_candidate(rows, source_version)
+        validated = csi.validate_pages(pages_from(rows), source_version, source_version)
+        candidate = csi.build_report_quarter_candidate(validated, source_version)
 
         self.assertEqual(candidate["incomplete_quarter_rows"], 3)
         self.assertEqual(candidate["aggregated_source_record_total"], 1)
         self.assertEqual(
             {cell["report_quarter"] for cell in candidate["cells"]}, {"2026-Q2"}
         )
+
+    def test_report_quarter_rejects_unvalidated_or_wrong_version_rows(self):
+        rows = fixture_rows()
+        source_version = version(rows)
+        with self.assertRaisesRegex(csi.ContractError, "paged validated snapshot"):
+            csi.build_report_quarter_candidate(rows, source_version)
+        validated = csi.validate_pages(pages_from(rows), source_version, source_version)
+        other_version = version(rows, edit_date_utc="2026-10-09T12:00:00Z")
+        with self.assertRaisesRegex(csi.ContractError, "different source version"):
+            csi.build_report_quarter_candidate(validated, other_version)
+
+    def test_report_quarter_rechecks_snapshot_objectids_after_validation(self):
+        rows = fixture_rows()
+        source_version = version(rows)
+        validated = csi.validate_pages(pages_from(rows), source_version, source_version)
+        # A caller can mutate the list after validation; the aggregation
+        # boundary must not count the same source record twice.
+        validated[1]["OBJECTID"] = validated[0]["OBJECTID"]
+        with self.assertRaisesRegex(csi.ContractError, "duplicate or invalid OBJECTID"):
+            csi.build_report_quarter_candidate(validated, source_version)
+
+    def test_nsa_is_unaggregated_in_both_internal_candidates(self):
+        rows = fixture_rows()
+        rows[0]["NEIGHBOURHOOD_158"] = "NSA"
+        source_version = version(rows)
+        month_candidate = csi.build_aggregate_candidate(rows, source_version)
+        self.assertFalse(any(cell["neighbourhood"] == "NSA" for cell in month_candidate["cells"]))
+        self.assertEqual(month_candidate["unaggregated_rows"], 2)
+
+        validated = csi.validate_pages(pages_from(rows), source_version, source_version)
+        quarter_candidate = csi.build_report_quarter_candidate(validated, source_version)
+        self.assertFalse(any(cell["neighbourhood"] == "NSA" for cell in quarter_candidate["cells"]))
+        self.assertEqual(quarter_candidate["unaggregated_rows"], 2)
+
+    def test_unknown_csi_categories_fail_closed(self):
+        rows = fixture_rows()
+        rows[0]["CSI_CATEGORY"] = "Synthetic Unknown Category"
+        source_version = version(rows)
+        with self.assertRaisesRegex(csi.ContractError, "Unknown CSI category"):
+            csi.build_aggregate_candidate(rows, source_version)
+        validated = csi.validate_pages(pages_from(rows), source_version, source_version)
+        with self.assertRaisesRegex(csi.ContractError, "Unknown CSI category"):
+            csi.build_report_quarter_candidate(validated, source_version)
 
     def test_null_source_fields_are_counted_as_unaggregated_not_fabricated(self):
         rows = fixture_rows()
