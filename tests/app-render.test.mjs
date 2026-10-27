@@ -16,6 +16,8 @@ class FakeElement {
     this.hidden = false;
     this.style = {};
     this.scrollCalls = [];
+    this.clientWidth = 800;
+    this.clientHeight = 660;
     this.classList = {
       contains: name => this.className.split(/\s+/).filter(Boolean).includes(name),
       add: name => { if (!this.classList.contains(name)) this.className = `${this.className} ${name}`.trim(); },
@@ -94,10 +96,12 @@ class FakeDocument {
 }
 
 class FakeMap {
-  constructor(document) {
+  constructor(document, options) {
     this.document = document;
+    this.options = options;
     this.handlers = Object.create(null);
     this.sources = Object.create(null);
+    this.layers = [];
     this.isLoaded = false;
     this.canvas = new FakeElement(document,'div','','map-canvas');
     this.canvas.style = {};
@@ -112,15 +116,17 @@ class FakeMap {
     this.handlers[`${event}:${layer}`]?.(payload);
   }
   addControl() {}
-  addSource(id) { this.sources[id] = {setData(data) { this.data = data; }}; }
-  addLayer() {}
+  addSource(id, definition) { this.sources[id] = {data:definition?.data,setData(data) { this.data = data; }}; }
+  addLayer(layer) { this.layers.push(layer); }
   getSource(id) { return this.sources[id]; }
+  getContainer() { return this.document.getElementById('map'); }
+  setMaxBounds(bounds) { this.maxBounds = bounds; }
   getBounds() { return {contains:() => true}; }
   loaded() { return this.isLoaded; }
   getZoom() { return 11; }
   getCanvas() { return this.canvas; }
   easeTo() { this.emit('moveend'); }
-  fitBounds() { this.emit('moveend'); }
+  fitBounds(bounds,options) { this.lastFit={bounds,options}; this.emit('moveend'); }
   load() { this.isLoaded = true; this.emit('load'); }
 }
 
@@ -136,12 +142,20 @@ function fixture(count = 1, ready = true) {
       type:'Synthetic inspection detail',
       status:'Pass',
       inspection_date:'2026-10-26',
-      latitude:43.7 + index / 10000,
-      longitude:-79.2 - index / 10000,
+      latitude:count>1&&index===count-1?43.7:43.7 + index / 10000,
+      longitude:count>1&&index===count-1?-79.3:-79.2 - index / 10000,
       neighbourhood:'Synthetic Area',
     })),
     activity:[],
   };
+}
+
+function geometryFixture() {
+  return {type:'FeatureCollection',features:[{
+    type:'Feature',properties:{AREA_NAME:'Synthetic Area'},geometry:{type:'Polygon',coordinates:[[
+      [-79.3,43.7],[-79.1,43.7],[-79.1,43.8],[-79.3,43.8],[-79.3,43.7],
+    ]]},
+  }]};
 }
 
 async function loadApp(snapshot) {
@@ -162,8 +176,10 @@ async function loadApp(snapshot) {
   };
   globalThis.fetch = async url => url.includes('snapshot.json')
     ? {ok:true,json:async()=>snapshot}
-    : {ok:false};
-  globalThis.maplibregl = {Map:class extends FakeMap {constructor(){super(document);map=this;}},NavigationControl:class{}};
+    : url.includes('scarborough-neighbourhoods.geojson')
+      ? {ok:true,json:async()=>geometryFixture()}
+      : {ok:false};
+  globalThis.maplibregl = {Map:class extends FakeMap {constructor(options){super(document,options);map=this;}},NavigationControl:class{}};
   await import(`../docs/app.mjs?render-test=${Math.random()}`);
   await new Promise(resolve => setTimeout(resolve,0));
   return {
@@ -176,6 +192,24 @@ async function loadApp(snapshot) {
     },
   };
 }
+
+test('production map draws the dissolved boundary, fits all neighborhoods, and keeps edge records in a responsive pan buffer', async () => {
+  const app=await loadApp(fixture(2));
+  try {
+    app.map.load();
+    const boundary=app.map.sources['scarborough-boundary'];
+    assert.equal(boundary.data.features[0].geometry.type,'MultiLineString');
+    assert.ok(app.map.layers.some(layer=>layer.id==='scarborough-boundary-outline'));
+    assert.ok(app.map.maxBounds[0][0]>-79.5&&app.map.maxBounds[1][0]<-79.0);
+    const edgeFeature=app.map.sources.places.data.features.find(feature=>feature.properties.id==='entry-001');
+    assert.deepEqual(edgeFeature.geometry.coordinates,[-79.3,43.7]);
+    const container=app.map.getContainer();
+    container.clientWidth=360;container.clientHeight=300;
+    app.document.getElementById('fit').click();
+    assert.ok(app.map.lastFit.options.padding.left<=30);
+    assert.ok(app.map.lastFit.options.padding.bottom>=12);
+  } finally { await app.cleanup(); }
+});
 
 test('production render path handles an initial not-ready snapshot', async () => {
   const app = await loadApp(fixture(0,false));
