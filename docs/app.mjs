@@ -1,5 +1,6 @@
 import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from './logic.mjs';
 import {beginListRedraw, finishListRedraw, revealSelectedRecord} from './list-focus.mjs';
+import {beachPreviewFeature, renderBeachSamplePreview, validateBeachSamplePreview} from './beach-history.mjs';
 
 const $ = id => document.getElementById(id);
 const SCARB_BOUNDS = [[-79.43,43.65],[-79.09,43.89]];
@@ -7,13 +8,14 @@ const STORAGE_KEY = 'scarbto-filters-v1';
 let state = {...DEFAULTS};
 try {
   const remembered = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-  if (['recent','all'].includes(remembered.mode)) state.mode = remembered.mode;
+  if (['recent','all','beach'].includes(remembered.mode)) state.mode = remembered.mode;
   if (['all', ...STATUS].includes(remembered.status)) state.status = remembered.status;
   if (['7','30','90','all'].includes(remembered.days)) state.days = remembered.days;
   if (typeof remembered.neighbourhood === 'string') state.neighbourhood = remembered.neighbourhood;
 } catch { /* Private browsing, old preferences or disabled storage must not break the map. */ }
-let snapshot = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]};
-let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = false, listLimit = 80;
+let snapshot = null, beachPreview = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]};
+let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = false, usingBeach = false, listLimit = 80;
+let dineSafeStatus={text:'Checking official data.',className:''}, dineSafeLoadState='loading', dineSafeLoadError='', beachPreviewState='loading';
 
 function save() {
   try {const {mode,status,days,neighbourhood}=state;localStorage.setItem(STORAGE_KEY,JSON.stringify({mode,status,days,neighbourhood}));}catch{}
@@ -34,12 +36,38 @@ function localDate(iso) {
   return Number.isFinite(t) ? new Intl.DateTimeFormat('en-CA',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}).format(t):'Date unavailable';
 }
 function outcomeClass(status){return status==='Closed'?'closed':status==='Conditional Pass'?'conditional':'pass';}
+function syncDataStatus() {
+  const status=$('data-status');
+  status.classList.remove('error','warning');
+  if(state.mode==='beach'){
+    if(beachPreviewState==='loading')status.textContent='Loading Toronto beach sample preview.';
+    else if(beachPreview){
+      const latest=beachPreview.records.reduce((value,row)=>row.collectionDate>value?row.collectionDate:value,'0000-00-00');
+      status.textContent=`Toronto sample rows checked ${beachPreview.retrieved_on}; latest sample ${latest}. Not current swimming status.`;
+      status.classList.add('warning');
+    }else{
+      status.textContent='Toronto beach sample preview unavailable. Not current swimming status.';
+      status.classList.add('error');
+    }
+    return;
+  }
+  if(dineSafeStatus.className)status.classList.add(dineSafeStatus.className);
+  status.textContent=dineSafeStatus.text;
+}
+function setDineSafeStatus(text,className='') {
+  dineSafeStatus={text,className};
+  syncDataStatus();
+}
 function syncControls() {
   $('window').value=state.days;
   $('neighbourhood').value=state.neighbourhood;
   $('search').value=state.search;
   document.querySelectorAll('.tab').forEach(b=>{let hit=b.dataset.mode===state.mode;b.classList.toggle('active',hit);b.setAttribute('aria-pressed',String(hit));});
   document.querySelectorAll('.chip').forEach(b=>{let hit=b.dataset.status===state.status;b.classList.toggle('selected',hit);b.setAttribute('aria-pressed',String(hit));});
+  const beachMode=state.mode==='beach';
+  $('beach-filter-note').hidden=!beachMode;
+  document.querySelectorAll('#search,#neighbourhood,#window,.outcomes button').forEach(control=>{control.disabled=beachMode;});
+  syncDataStatus();
 }
 function populateNeighbourhoods() {
   const names=[...new Set(snapshot.establishments.map(e=>e.neighbourhood).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'en-CA'));
@@ -53,33 +81,58 @@ function geoFeature(e, activity = false) {
 }
 function updateSource() {
   if(!map || !map.getSource('places'))return;
-  features=visiblePlaces.map(e=>geoFeature(e));
+  features=usingBeach && beachPreview ? [beachPreviewFeature(beachPreview)] : visiblePlaces.map(e=>geoFeature(e));
   map.getSource('places').setData({type:'FeatureCollection',features});
 }
 function performFilters() {
   listLimit=80;
-  if(!snapshot?.ready)return;
-  // Outcome and neighbourhood refer to a place's *current recorded* state;
-  // the recent window refers to when a change was observed, not when inspected.
+  if(state.mode==='beach'){
+    usingBeach=true;visiblePlaces=[];visibleActivity=[];usingActivity=false;
+    $('results-kicker').textContent='Toronto Open Data � dated samples';
+    $('results-title').textContent=beachPreview?.beach_name||'Beach samples';
+    $('results-caption').textContent='A limited sample preview from the Toronto catalogue. Dated measurements are not current swimming advice.';
+    updateSource();renderList();
+    return;
+  }
+  usingBeach=false;
+  if(!snapshot?.ready){
+    visiblePlaces=[];visibleActivity=[];usingActivity=false;
+    $('results-kicker').textContent='Official inspections';
+    $('results-title').textContent='Matching places';
+    $('results-caption').textContent='Results follow the map and your filters.';
+    updateSource();renderList();
+    return;
+  }
+  // Outcome and neighbourhood refer to a place's current recorded state; the recent window
+  // refers to when a change was observed, not when inspected.
   const eligible=filterEstablishments(snapshot.establishments||[],{...state,days:'all'});
   const eligibleIds=new Set(eligible.map(e=>e.id));
   visibleActivity=filterActivity(snapshot.activity||[],{...state,status:'all'}).filter(e=>eligibleIds.has(e.establishment_id));
   usingActivity=state.mode==='recent' && visibleActivity.length>0;
   const activeIds=new Set(visibleActivity.map(e=>e.establishment_id));
-  // A first publication has no observations of change; show dated inspections instead.
   visiblePlaces=usingActivity ? eligible.filter(e=>activeIds.has(e.id)) : filterEstablishments(snapshot.establishments||[],state);
   $('results-kicker').textContent=state.mode==='recent'?(usingActivity?'Changes first observed by Scarb.TO':'Latest City inspection records'):'DineSafe establishments';
   $('results-title').textContent=state.mode==='recent'?(usingActivity?'Recent changes':'Recently inspected'):'Matching places';
   $('results-caption').textContent=usingActivity?'Changes detected on successive daily imports; inspection dates may be older.':
     state.mode==='recent'?'Showing establishments with a recent recorded inspection date; not necessarily newly published.':
     'Showing the latest inspection record available for each establishment.';
-  updateSource();
-  renderList();
+  updateSource();renderList();
 }
 function renderList({focusMore = false, revealSelection = false} = {}) {
   const list=$('record-list');
   const previousFocus=beginListRedraw(list,document.activeElement,{focusMore});
-  if(!snapshot?.ready){list.append(els('p','empty','No validated DineSafe snapshot has been published. The map will populate after the first successful import.'));finishListRedraw(list,previousFocus);return;}
+  if(usingBeach){
+    $('results-count').textContent=beachPreview?`${beachPreview.rows_included} sample rows`:beachPreviewState==='loading'?'Loading':'Unavailable';
+    if(!beachPreview){
+      const message=beachPreviewState==='loading'?'Loading the dated Toronto beach sample preview.':'The dated Toronto sample preview is unavailable.';
+      list.append(els('p','empty',message));
+      const source=els('a','record-source-link','Check Toronto Open Data source');source.href='https://open.toronto.ca/dataset/toronto-beaches-water-quality/';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
+      finishListRedraw(list,previousFocus);return;
+    }
+    list.append(renderBeachSamplePreview(document,beachPreview));
+    finishListRedraw(list,previousFocus);return;
+  }
+  if(!snapshot?.ready){const message=dineSafeLoadState==='error'?`Could not load the published dataset (${dineSafeLoadError}). Check the update history link below.`:dineSafeLoadState==='loading'?'Loading the validated City data snapshot.':'No validated DineSafe snapshot has been published. The map will populate after the first successful import.';list.append(els('p','empty',message));$('results-count').textContent=dineSafeLoadState==='error'?'Unavailable':'0 in view';finishListRedraw(list,previousFocus);return;}
   const bounds=map?.loaded()?map.getBounds():null;
   const inView=e=>!bounds||bounds.contains([e.longitude,e.latitude]);
   const matches=visiblePlaces.filter(inView);
@@ -135,6 +188,7 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
   if(revealSelection)revealSelectedRecord(list,selectedId);
 }
 function selectPlace(id, move, revealSelection = false) {
+  if(id==='beach:10'){state.mode='beach';save();syncControls();performFilters();return;}
   const item=snapshot?.establishments.find(e=>e.id===id);
   if(!item)return;
   selectedId=id;
@@ -161,7 +215,7 @@ function initMap() {
     map.addSource('places',{type:'geojson',data:{type:'FeatureCollection',features:[]},cluster:true,clusterMaxZoom:13,clusterRadius:38});
     map.addLayer({id:'clusters',type:'circle',source:'places',filter:['has','point_count'],paint:{'circle-color':'#174d43','circle-radius':['step',['get','point_count'],18,30,23,150,29],'circle-opacity':.90,'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
     map.addLayer({id:'cluster-count',type:'symbol',source:'places',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-size':12},paint:{'text-color':'#fff'}});
-    map.addLayer({id:'single',type:'circle',source:'places',filter:['!',['has','point_count']],paint:{'circle-color':['match',['get','status'],'Pass','#318f62','Conditional Pass','#e2a03d','Closed','#c4534c','#667d71'],'circle-radius':['case',['get','selected'],11,7],'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
+    map.addLayer({id:'single',type:'circle',source:'places',filter:['!',['has','point_count']],paint:{'circle-color':['match',['get','status'],'Pass','#318f62','Conditional Pass','#e2a03d','Closed','#c4534c','Beach sample','#506c80','#667d71'],'circle-radius':['case',['get','selected'],11,7],'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
     map.on('click','clusters',e=>{const geom=e.features?.[0]?.geometry;if(geom?.type==='Point')map.easeTo({center:geom.coordinates,zoom:Math.min(map.getZoom()+2,15),duration:350});});
     map.on('click','single',e=>{const id=String(e.features?.[0]?.properties?.id||'');if(id)selectPlace(id,false,true);});
     for(const layer of ['clusters','single']){map.on('mouseenter',layer,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',layer,()=>map.getCanvas().style.cursor='');}
@@ -171,7 +225,7 @@ function initMap() {
   map.on('error',e=>console.warn('Map rendering issue:',e?.error?.message||e));
 }
 function bindControls(){
-  document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{const next=b.dataset.mode;state.mode=next;if(next==='all')state.days='all';else if(state.days==='all')state.days='30';save();syncControls();performFilters();}));
+  document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{const next=b.dataset.mode;state.mode=next;if(next==='all')state.days='all';else if(next==='recent'&&state.days==='all')state.days='30';save();syncControls();performFilters();if(next==='beach'&&map&&beachPreview)map.easeTo({center:beachPreview.coordinates,zoom:Math.max(map.getZoom(),13),duration:350});}));
   document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{state.status=b.dataset.status;save();syncControls();performFilters();}));
   $('window').addEventListener('change',e=>{state.days=e.target.value;save();performFilters();});
   $('neighbourhood').addEventListener('change',e=>{state.neighbourhood=e.target.value;save();selectNeighbourhood();performFilters();});
@@ -184,29 +238,47 @@ function bindControls(){
     $('toggle-filters').textContent=expanded?'Hide filters':'Filters';
   });
 }
-async function boot() {
-  bindControls();syncControls();initMap();
+async function loadBeachPreview() {
+  try{
+    const response=await fetch('data/beach-sample-preview.json',{cache:'no-cache'});
+    if(!response.ok)throw new Error(`HTTP ${response.status}`);
+    const candidate=validateBeachSamplePreview(await response.json());
+    beachPreview=candidate;beachPreviewState='ready';
+  }catch(error){
+    beachPreview=null;beachPreviewState='error';
+    console.warn('Beach sample preview unavailable:',error?.message||error);
+  }
+  syncDataStatus();
+  if(state.mode==='beach')performFilters();
+}
+async function loadDineSafeSnapshot() {
   try{
     const response=await fetch('data/snapshot.json',{cache:'no-cache'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
-    snapshot=await response.json();
-    if(snapshot.schema_version!==1)throw new Error('Unsupported schema');
-    if(!snapshot.ready){
-      $('data-status').textContent='Awaiting first validated City data import';
-      $('data-status').classList.add('warning');renderList();return;
-    }
-    if(!Array.isArray(snapshot.establishments)||!snapshot.establishments.length)throw new Error('Empty published snapshot');
+    const candidate=await response.json();
+    if(candidate?.schema_version!==1)throw new Error('Unsupported schema');
+    if(candidate.ready && (!Array.isArray(candidate.establishments)||!candidate.establishments.length))throw new Error('Empty published snapshot');
+    // Only install a fully validated candidate. A rejected payload must never become visible
+    // later when the user switches away from Beach mode.
+    snapshot=candidate;
+    dineSafeLoadState=candidate.ready?'ready':'not-ready';dineSafeLoadError='';
+    if(!candidate.ready){setDineSafeStatus('Awaiting first validated City data import','warning');performFilters();return;}
     try{const r=await fetch('data/scarborough-neighbourhoods.geojson',{cache:'force-cache'});if(r.ok)shapes=await r.json();}catch{}
     populateNeighbourhoods();
-    const stale=isStale(snapshot.published_at);
-    $('data-status').textContent=stale?`Data may be stale: last validated ${publishedAt(snapshot.published_at)} · check update history`:
-      `City data checked ${publishedAt(snapshot.published_at)} · not live`; 
-    if(stale)$('data-status').classList.add('warning');
+    const stale=isStale(candidate.published_at);
+    setDineSafeStatus(stale?`Data may be stale: last validated ${publishedAt(candidate.published_at)} � check update history`:
+      `City data checked ${publishedAt(candidate.published_at)} � not live`,stale?'warning':'');
     performFilters();
   }catch(error){
-    $('data-status').textContent='City data unavailable — last verified publication retained where possible';
-    $('data-status').classList.add('error');
-    $('record-list').replaceChildren(els('p','empty',`Could not load the published dataset (${error.message}). Check the update history link below.`));
+    snapshot=null;dineSafeLoadState='error';dineSafeLoadError=error.message;
+    setDineSafeStatus('City data unavailable - last verified publication retained where possible','error');
+    performFilters();
   }
+}
+function boot() {
+  bindControls();syncControls();initMap();
+  // Each feed loads independently so an optional beach request never holds DineSafe hostage.
+  void loadBeachPreview();
+  void loadDineSafeSnapshot();
 }
 boot();
