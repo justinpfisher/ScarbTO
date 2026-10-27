@@ -31,16 +31,27 @@ QUERY_BOUND_KEYS = {
     "statistics_where", "count_after_where",
 }
 STAT_RESPONSE_REQUIRED_KEYS = {
-    "objectIdFieldName", "globalIdFieldName", "geometryType",
-    "spatialReference", "fields", "features", "exceededTransferLimit",
+    "objectIdFieldName", "geometryType", "spatialReference", "fields", "features",
 }
-STAT_RESPONSE_OPTIONAL_KEYS = {"displayFieldName", "fieldAliases", "hasZ", "hasM"}
+STAT_RESPONSE_OPTIONAL_KEYS = {
+    "globalIdFieldName", "uniqueIdField", "displayFieldName", "fieldAliases",
+    "hasZ", "hasM", "exceededTransferLimit",
+}
 STAT_FIELD_TYPES = {
     "HOOD_158": "esriFieldTypeString",
     "CSI_CATEGORY": "esriFieldTypeString",
     "source_record_count": "esriFieldTypeInteger",
 }
-STAT_FIELD_METADATA_KEYS = {"name", "type", "alias", "sqlType", "length", "nullable", "editable"}
+STAT_FIELD_SQL_TYPES = {
+    "HOOD_158": "sqlTypeOther",
+    "CSI_CATEGORY": "sqlTypeOther",
+    "source_record_count": "sqlTypeInteger",
+}
+STAT_STRING_LENGTHS = {"HOOD_158": 4, "CSI_CATEGORY": 16}
+STAT_FIELD_METADATA_KEYS = {
+    "name", "type", "alias", "sqlType", "length", "nullable", "editable",
+    "domain", "defaultValue",
+}
 
 
 def _validate_registry(registry: dict[str, str]) -> dict[str, str]:
@@ -120,15 +131,29 @@ def _validate_statistics_headers(response: Any) -> None:
     keys = set(response)
     if not STAT_RESPONSE_REQUIRED_KEYS <= keys or keys - STAT_RESPONSE_REQUIRED_KEYS - STAT_RESPONSE_OPTIONAL_KEYS:
         raise csi.ContractError("ArcGIS statistics response has missing or unexpected headers")
-    if response["geometryType"] is not None:
-        raise csi.ContractError("Grouped statistics response unexpectedly describes geometry")
-    for key in ("objectIdFieldName", "globalIdFieldName"):
-        if response[key] not in (None, ""):
-            raise csi.ContractError("Grouped statistics response unexpectedly identifies source records")
+    if response["geometryType"] != "esriGeometryPoint":
+        raise csi.ContractError("Grouped statistics source geometry type is unexpected")
+    if response["objectIdFieldName"] != "OBJECTID":
+        raise csi.ContractError("Grouped statistics object ID field is unexpected")
+    if response.get("globalIdFieldName") not in (None, ""):
+        raise csi.ContractError("Grouped statistics global ID field is unexpected")
+    if "uniqueIdField" in response:
+        unique_id = response["uniqueIdField"]
+        if (
+            not isinstance(unique_id, dict)
+            or set(unique_id) != {"name", "isSystemMaintained"}
+            or unique_id["name"] != "OBJECTID"
+            or unique_id["isSystemMaintained"] is not True
+        ):
+            raise csi.ContractError("Grouped statistics unique ID metadata is unexpected")
     spatial = response["spatialReference"]
     if not isinstance(spatial, dict) or set(spatial) - {"wkid", "latestWkid"} or not spatial:
         raise csi.ContractError("Grouped statistics spatial reference is invalid")
-    if any(value != 4326 for value in spatial.values()):
+    if spatial not in (
+        {"wkid": 102100, "latestWkid": 3857},
+        {"wkid": 3857},
+        {"latestWkid": 3857},
+    ):
         raise csi.ContractError("Grouped statistics spatial reference is unexpected")
     fields = response["fields"]
     if not isinstance(fields, list) or len(fields) != len(STAT_FIELD_TYPES):
@@ -137,9 +162,18 @@ def _validate_statistics_headers(response: Any) -> None:
     for field in fields:
         if not isinstance(field, dict) or set(field) - STAT_FIELD_METADATA_KEYS:
             raise csi.ContractError("Grouped statistics field metadata has unexpected keys")
+        if any(field.get(key) is not None for key in ("domain", "defaultValue") if key in field):
+            raise csi.ContractError("Grouped statistics field metadata has unexpected domain/default value")
         name = field.get("name")
         if name not in STAT_FIELD_TYPES or field.get("type") != STAT_FIELD_TYPES[name]:
             raise csi.ContractError("Grouped statistics field name or type is unexpected")
+        if "sqlType" in field and field["sqlType"] != STAT_FIELD_SQL_TYPES[name]:
+            raise csi.ContractError("Grouped statistics SQL field type is unexpected")
+        if "length" in field and field["length"] != STAT_STRING_LENGTHS.get(name):
+            raise csi.ContractError("Grouped statistics field length is unexpected")
+        for flag in ("nullable", "editable"):
+            if flag in field and type(field[flag]) is not bool:
+                raise csi.ContractError("Grouped statistics field flags are invalid")
         alias = field.get("alias", name)
         if not isinstance(alias, str) or not alias:
             raise csi.ContractError("Grouped statistics field alias is invalid")

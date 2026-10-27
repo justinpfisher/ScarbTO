@@ -41,9 +41,9 @@ class CsiProjectionTests(unittest.TestCase):
         if total is None:
             total = sum(row["attributes"]["source_record_count"] for row in groups)
         fields = [
-            {"name": "HOOD_158", "type": "esriFieldTypeString", "alias": "HOOD_158"},
-            {"name": "CSI_CATEGORY", "type": "esriFieldTypeString", "alias": "CSI_CATEGORY"},
-            {"name": "source_record_count", "type": "esriFieldTypeInteger", "alias": "source_record_count"},
+            {"name": "source_record_count", "type": "esriFieldTypeInteger", "alias": "source_record_count", "sqlType": "sqlTypeInteger", "domain": None, "defaultValue": None},
+            {"name": "HOOD_158", "type": "esriFieldTypeString", "alias": "HOOD_158", "sqlType": "sqlTypeOther", "length": 4, "domain": None, "defaultValue": None},
+            {"name": "CSI_CATEGORY", "type": "esriFieldTypeString", "alias": "CSI_CATEGORY", "sqlType": "sqlTypeOther", "length": 16, "domain": None, "defaultValue": None},
         ]
         return {
             "metadata_before": metadata,
@@ -59,17 +59,17 @@ class CsiProjectionTests(unittest.TestCase):
                 "count_after_where": where,
             },
             "statistics_response": {
-                "objectIdFieldName": "",
+                "objectIdFieldName": "OBJECTID",
                 "globalIdFieldName": "",
-                "geometryType": None,
-                "spatialReference": {"wkid": 4326, "latestWkid": 4326},
+                "uniqueIdField": {"name": "OBJECTID", "isSystemMaintained": True},
+                "geometryType": "esriGeometryPoint",
+                "spatialReference": {"wkid": 102100, "latestWkid": 3857},
                 "displayFieldName": "",
                 "fieldAliases": {field["name"]: field["alias"] for field in fields},
                 "fields": fields,
                 "hasZ": False,
                 "hasM": False,
                 "features": copy.deepcopy(groups),
-                "exceededTransferLimit": False,
             },
         }
 
@@ -106,10 +106,10 @@ class CsiProjectionTests(unittest.TestCase):
             "2025-Q4",
         )
         for field, value, message in (
-            ("geometryType", "esriGeometryPoint", "geometry"),
-            ("spatialReference", {"wkid": 3857}, "spatial reference"),
-            ("objectIdFieldName", "OBJECTID", "identifies source records"),
-            ("globalIdFieldName", "GlobalID", "identifies source records"),
+            ("geometryType", "esriGeometryPolygon", "geometry"),
+            ("spatialReference", {"wkid": 4326}, "spatial reference"),
+            ("objectIdFieldName", "unexpected", "object ID field"),
+            ("globalIdFieldName", "GlobalID", "global ID field"),
         ):
             candidate = copy.deepcopy(accepted)
             candidate["statistics_response"][field] = value
@@ -119,6 +119,22 @@ class CsiProjectionTests(unittest.TestCase):
         candidate["statistics_response"]["features"][0]["geometry"] = {"x": -79, "y": 43}
         with self.assertRaisesRegex(csi.ContractError, "unexpected fields"):
             projection.build_projection_candidate(candidate, neighbourhood_registry=self.registry)
+        candidate = copy.deepcopy(accepted)
+        candidate["statistics_response"]["uniqueIdField"] = {"name": "EVENT_UNIQUE_ID", "isSystemMaintained": False}
+        with self.assertRaisesRegex(csi.ContractError, "unique ID metadata"):
+            projection.build_projection_candidate(candidate, neighbourhood_registry=self.registry)
+        candidate = copy.deepcopy(accepted)
+        candidate["statistics_response"]["fields"][1]["length"] = 3
+        with self.assertRaisesRegex(csi.ContractError, "field length"):
+            projection.build_projection_candidate(candidate, neighbourhood_registry=self.registry)
+
+    def test_optional_transfer_flag_may_be_absent_but_true_is_rejected(self):
+        response = self.grouped_response([self.group("109", "Assault", 1)])
+        self.assertNotIn("exceededTransferLimit", response["statistics_response"])
+        projection.build_projection_candidate(response, neighbourhood_registry=self.registry)
+        response["statistics_response"]["exceededTransferLimit"] = True
+        with self.assertRaisesRegex(csi.ContractError, "transfer-limited"):
+            projection.build_projection_candidate(response, neighbourhood_registry=self.registry)
 
     def test_query_controls_and_statistics_share_derived_toronto_quarter(self):
         response = self.grouped_response([self.group("109", "Assault", 1)])
