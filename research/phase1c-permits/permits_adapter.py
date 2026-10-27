@@ -6,7 +6,7 @@ included. Real-data ingestion and publication remain disabled.
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 from hashlib import sha256
 import json
 import math
@@ -110,6 +110,52 @@ def _date_value(row: dict[str, Any], field: str) -> str | None:
     return value
 
 
+def _planning_submitted_value(row: dict[str, Any]) -> tuple[str | None, str | None]:
+    """Preserve DATE_SUBMITTED's source form without assigning a timezone."""
+    value = row.get("DATE_SUBMITTED")
+    if value is None or value == "":
+        return None, None
+    if not isinstance(value, str):
+        raise PermitContractError("DATE_SUBMITTED must remain source text")
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        try:
+            parsed = date.fromisoformat(value)
+        except ValueError as exc:
+            raise PermitContractError("DATE_SUBMITTED must be an ISO date or timestamp") from exc
+        if parsed.isoformat() != value:
+            raise PermitContractError("DATE_SUBMITTED must be an ISO date or timestamp")
+        return value, None
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?", value):
+        raise PermitContractError("DATE_SUBMITTED must be an ISO date or timestamp")
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise PermitContractError("DATE_SUBMITTED must be an ISO date or timestamp") from exc
+    return value[:10], value
+
+
+def _oar_geometry_value(value: Any) -> list[Any] | None:
+    """Parse OAR CSV geometry text and accept only Point or singleton MultiPoint."""
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return None
+    if not isinstance(value, dict):
+        return None
+    geometry_type = value.get("type")
+    coordinates = value.get("coordinates")
+    if geometry_type == "Point" and isinstance(coordinates, list) and len(coordinates) == 2:
+        return coordinates
+    if (
+        geometry_type == "MultiPoint" and isinstance(coordinates, list)
+        and len(coordinates) == 1 and isinstance(coordinates[0], list)
+        and len(coordinates[0]) == 2
+    ):
+        return coordinates[0]
+    return None
+
+
 def _point_on_segment(x: float, y: float, a: list[Any], b: list[Any]) -> bool:
     cross = (x - a[0]) * (b[1] - a[1]) - (y - a[1]) * (b[0] - a[0])
     if abs(cross) > 1e-10:
@@ -147,16 +193,9 @@ def _ring_contains(lon: float, lat: float, ring: list[list[float]]) -> bool:
     return inside
 
 
-def point_in_scarborough_neighbourhoods(lon: float, lat: float, features: list[dict[str, Any]]) -> bool:
-    """Test WGS84 point against the supplied authoritative neighbourhood polygons."""
+def _validated_neighbourhood_polygons(features: list[dict[str, Any]]) -> list[list[list[list[float]]]]:
     if not isinstance(features, list) or not features:
         raise PermitContractError("Scarborough neighbourhood polygons are required")
-    if (
-        type(lon) not in (int, float) or type(lat) not in (int, float)
-        or not math.isfinite(lon) or not math.isfinite(lat)
-        or not (-180 <= lon <= 180 and -90 <= lat <= 90)
-    ):
-        raise PermitContractError("Point must be finite WGS84 coordinates")
     normalized_polygons: list[list[list[list[float]]]] = []
     for feature in features:
         geometry = feature.get("geometry") if isinstance(feature, dict) else None
@@ -180,21 +219,39 @@ def point_in_scarborough_neighbourhoods(lon: float, lat: float, features: list[d
             normalized_polygons.append(rings)
     if not normalized_polygons:
         raise PermitContractError("Scarborough neighbourhood polygon set is empty")
-    for rings in normalized_polygons:
+    return normalized_polygons
+
+
+def _point_in_validated_polygons(lon: float, lat: float, polygons: list[list[list[list[float]]]]) -> bool:
+    for rings in polygons:
         if _ring_contains(lon, lat, rings[0]) and not any(_ring_contains(lon, lat, hole) for hole in rings[1:]):
             return True
     return False
 
 
+def point_in_scarborough_neighbourhoods(lon: float, lat: float, features: list[dict[str, Any]]) -> bool:
+    """Test WGS84 point against the supplied authoritative neighbourhood polygons."""
+    if (
+        type(lon) not in (int, float) or type(lat) not in (int, float)
+        or not math.isfinite(lon) or not math.isfinite(lat)
+        or not (-180 <= lon <= 180 and -90 <= lat <= 90)
+    ):
+        raise PermitContractError("Point must be finite WGS84 coordinates")
+    return _point_in_validated_polygons(float(lon), float(lat), _validated_neighbourhood_polygons(features))
+
+
 def normalize_oar_address_points(
-    rows: list[dict[str, Any]], *, neighbourhood_features: list[dict[str, Any]]
+    rows: list[dict[str, Any]], *, neighbourhood_features: list[dict[str, Any]], geometry_crs: str
 ) -> dict[str, Any]:
     """Map the qualified OAR4326 WARD/ADDRESS_FULL/geometry schema with explicit accounting."""
     if not isinstance(rows, list):
         raise PermitContractError("OAR rows must be a list")
+    if geometry_crs != "EPSG:4326":
+        raise PermitContractError("OAR geometry CRS must be explicitly qualified as EPSG:4326")
+    boundary_polygons = _validated_neighbourhood_polygons(neighbourhood_features)
     points: dict[int, dict[str, Any]] = {}
-    seen_point_ids: set[int] = set()
-    unlocated = rejected = 0
+    grouped_rows: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    rejected = 0
     for row in rows:
         if not isinstance(row, dict):
             rejected += 1
@@ -202,20 +259,37 @@ def normalize_oar_address_points(
         point_id = row.get("ADDRESS_POINT_ID")
         if isinstance(point_id, str) and point_id.isascii() and point_id.isdecimal():
             point_id = int(point_id)
-        if type(point_id) is not int or point_id <= 0 or point_id in seen_point_ids:
+        if type(point_id) is not int or point_id <= 0:
             rejected += 1
             continue
-        seen_point_ids.add(point_id)
+        grouped_rows[point_id].append(row)
+    unlocated = 0
+    for point_id, occurrences in grouped_rows.items():
+        signatures = {
+            json.dumps({
+                "ADDRESS_ID": row.get("ADDRESS_ID"),
+                "WARD": row.get("WARD"),
+                "ADDRESS_FULL": row.get("ADDRESS_FULL"),
+                "geometry": row.get("geometry"),
+            }, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+            for row in occurrences
+        }
+        if len(signatures) > 1:
+            rejected += len(occurrences)
+            continue
+        if len(occurrences) > 1:
+            rejected += len(occurrences) - 1
+        row = occurrences[0]
         ward = _qualified_ward(row.get("WARD"))
         address = row.get("ADDRESS_FULL")
         if ward is None or not isinstance(address, str) or not address.strip():
             rejected += 1
             continue
         geometry = row.get("geometry")
-        if geometry is None:
+        if geometry is None or geometry == "":
             unlocated += 1
             continue
-        coordinates = geometry.get("coordinates") if isinstance(geometry, dict) and geometry.get("type") == "Point" else None
+        coordinates = _oar_geometry_value(geometry)
         if ward is None or not isinstance(address, str) or not address.strip():
             rejected += 1
             continue
@@ -226,7 +300,7 @@ def normalize_oar_address_points(
         if not all(math.isfinite(value) for value in (lon, lat)) or not (-180 <= lon <= 180 and -90 <= lat <= 90):
             rejected += 1
             continue
-        if not point_in_scarborough_neighbourhoods(float(lon), float(lat), neighbourhood_features):
+        if not _point_in_validated_polygons(float(lon), float(lat), boundary_polygons):
             rejected += 1
             continue
         points[point_id] = {
@@ -239,7 +313,7 @@ def normalize_oar_address_points(
         }
     total = len(rows)
     return {
-        "address_points": list(points.values()),
+        "address_points": [points[point_id] for point_id in sorted(points)],
         "total_count": total,
         "located_count": len(points),
         "unlocated_count": unlocated,
@@ -546,7 +620,8 @@ def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, 
         status = _optional_source_text(row, "STATUS")
         if group and any(group[field] != value for field, value in (
             ("application_type", application_type),
-            ("submission_date", _date_value(row, "DATE_SUBMITTED")),
+            ("submission_date", _planning_submitted_value(row)[0]),
+            ("submission_timestamp", _planning_submitted_value(row)[1]),
             ("status", status),
             ("official_url", _official_url(row.get("APPLICATION_URL"))),
         )):
@@ -559,7 +634,8 @@ def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, 
                 "application_type": application_type,
                 "raw_application_type": row.get("APPLICATION_TYPE"),
                 "application_number": application_number,
-                "submission_date": _date_value(row, "DATE_SUBMITTED"),
+                "submission_date": _planning_submitted_value(row)[0],
+                "submission_timestamp": _planning_submitted_value(row)[1],
                 "status": status,
                 "raw_status": raw_status,
                 "wards": set(),
@@ -598,7 +674,7 @@ def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, 
         group["wards"] = sorted(group["wards"], key=int)
         stable_fields = {
             k: group[k] for k in (
-                "record_key", "application_type", "application_number", "submission_date",
+                "record_key", "application_type", "application_number", "submission_date", "submission_timestamp",
                 "status", "official_url", "folder_fallback_used",
                 "missing_folder_resolved_from_other_row",
             )
