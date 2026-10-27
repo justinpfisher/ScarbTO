@@ -65,13 +65,14 @@ async function startStaticServer() {
 async function installLocalRoutes(page, origin, {snapshotStatus = 200, snapshotBody = snapshot, beachStatus = 200, beachDelayMs = 0, selectedCalls = false, selectedCallsDelayMs = 0, selectedCallsSourceAgeMs = 60_000, onSelectedCallsRequest = () => {}} = {}) {
   let beachResponseSent = false;
   let selectedCallsRequestIndex=0;
+  const selectedCallsEditDate=Date.now()-selectedCallsSourceAgeMs;
   await page.route('**/*', async route => {
     const url = route.request().url();
     if (url.startsWith('https://services.arcgis.com/S9th0jAJ7bqgIRjw/arcgis/rest/services/C4S_Public_NoGO/FeatureServer/0')) {
       if(!selectedCalls){await route.abort('blockedbyclient');return;}
       const requestIndex=selectedCallsRequestIndex++;onSelectedCallsRequest(url,requestIndex);
       if(selectedCallsDelayMs&&requestIndex===0)await new Promise(resolveDelay=>setTimeout(resolveDelay,selectedCallsDelayMs));
-      const edit=Date.now()-selectedCallsSourceAgeMs;
+      const edit=selectedCallsEditDate;
       const metadata={fields:[{name:'OBJECTID',type:'esriFieldTypeOID'},{name:'DIVISION',type:'esriFieldTypeString'}],editingInfo:{lastEditDate:edit,dataLastEditDate:edit,schemaLastEditDate:edit}};
       const parsed=new URL(url);
       const body=parsed.pathname.endsWith('/FeatureServer/0')?metadata:parsed.searchParams.get('returnCountOnly')==='true'?{count:16}:{features:[{attributes:{DIVISION:'D41',call_count:7}},{attributes:{DIVISION:'D42',call_count:5}},{attributes:{DIVISION:'D43',call_count:4}}]};
@@ -437,59 +438,6 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
 });
 
 
-test('selected-call view requests only while explicitly selected and renders aggregate-only output on desktop and mobile', {timeout:60_000}, async t=>{
-  const {server,origin}=await startStaticServer();
-  const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
-  t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
-  for(const viewport of [{width:1280,height:900},{width:390,height:844,isMobile:true,hasTouch:true}]){
-    let requests=0;
-    const context=await browser.newContext({viewport:{width:viewport.width,height:viewport.height},isMobile:Boolean(viewport.isMobile),hasTouch:Boolean(viewport.hasTouch)});
-    t.after(()=>context.close());
-    const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
-    await installLocalRoutes(page,origin,{selectedCalls:true,onSelectedCallsRequest:()=>requests++});
-    await page.goto(origin,{waitUntil:'domcontentloaded'});
-    await page.getByRole('button',{name:'Selected police calls'}).click();
-    await page.getByText('Division 41',{exact:true}).waitFor();
-    assert.equal(requests,5,'the selected view uses the bounded metadata/count/group/count/metadata sequence');
-    assert.match(await page.locator('#results-caption').textContent(),/not all crime, police activity, or officer presence/i);
-    assert.match(await page.locator('#record-list').textContent(),/Open Government Licence – Ontario/);
-    assert.equal(await page.locator('.selected-call-row').count(),3);
-    assert.equal(await page.locator('#map').getAttribute('aria-label'),'Map background only; selected calls are not mapped individually');
-    assert.equal(await page.locator('.selected-calls-map-note').isVisible(),true);
-    assert.equal(await page.locator('.maplibregl-marker').count(),0,'no incident locations are mapped');
-    await page.getByRole('button',{name:'All establishments'}).click();
-    assert.equal(await page.locator('.selected-call-row').count(),0,'leaving selected calls clears counts');
-    await page.getByRole('button',{name:'Selected police calls'}).click();
-    assert.equal(await page.locator('.selected-call-row').count(),0,'cooldown does not retain prior counts');
-    assert.equal(requests,5);
-    assert.deepEqual(errors,[]);
-  }
-});
-
-test('selected-call mode aborts when the document becomes hidden and never renders stale counts', {timeout:60_000}, async t=>{
-  const {server,origin}=await startStaticServer();
-  const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
-  t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
-  let requests=0;
-  const context=await browser.newContext({viewport:{width:1280,height:900}});
-  t.after(()=>context.close());
-  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.addInitScript(()=>{let visibility='visible';Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>visibility});window.__setVisibility=value=>{visibility=value;document.dispatchEvent(new Event('visibilitychange'));};});
-  await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsDelayMs:3_000,onSelectedCallsRequest:()=>requests++});
-  await page.goto(origin,{waitUntil:'domcontentloaded'});
-  await page.getByRole('button',{name:'Selected police calls'}).click();
-  await page.waitForFunction(()=>performance.getEntriesByType('resource').some(e=>e.name.includes('C4S_Public_NoGO')));
-  await page.evaluate(()=>window.__setVisibility('hidden'));
-  await page.getByText(/counts are cleared while this view is hidden/i).waitFor();
-  assert.equal(await page.locator('.selected-call-row').count(),0);
-  assert.equal(requests,1,'aborting at the first source request prevents later query stages');
-  await page.evaluate(()=>window.__setVisibility('visible'));
-  await page.getByText(/selected-call counts unavailable or stale/i).waitFor();
-  assert.equal(await page.locator('.selected-call-row').count(),0,'expired/aborted counts never reappear on visibility return');
-  assert.equal(requests,1,'cooldown prevents an immediate refetch after cancellation');
-  assert.deepEqual(errors,[]);
-});
-
 test('selected calls render only after explicit selection and clear after leaving the view at desktop and mobile sizes', {timeout:60_000}, async t=>{
   const {server,origin}=await startStaticServer();
   const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
@@ -531,8 +479,9 @@ test('selected-call mode aborts on hidden document and never renders stale count
   await page.addInitScript(()=>{let visibility='visible';Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>visibility});window.__setVisibility=value=>{visibility=value;document.dispatchEvent(new Event('visibilitychange'));};});
   await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsDelayMs:3_000,onSelectedCallsRequest:()=>requests++});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
+  const firstRequest=page.waitForRequest(request=>request.url().includes('C4S_Public_NoGO/FeatureServer/0?f=json'));
   await page.getByRole('button',{name:'Selected police calls'}).click();
-  await page.waitForFunction(()=>performance.getEntriesByType('resource').some(e=>e.name.includes('C4S_Public_NoGO')));
+  await firstRequest;
   await page.evaluate(()=>window.__setVisibility('hidden'));
   await page.getByText(/counts are cleared while this view is hidden/i).waitFor();
   assert.equal(await page.locator('.selected-call-row').count(),0);
@@ -570,5 +519,42 @@ test('rendered selected-call counts disappear at the upstream freshness deadline
   await page.getByText('Division 41',{exact:true}).waitFor();
   await page.getByText(/selected-call counts unavailable or stale/i).waitFor({timeout:10_000});
   assert.equal(await page.locator('.selected-call-row').count(),0);
+  assert.deepEqual(errors,[]);
+});
+
+test('reselecting the active selected-calls tab does not extend the absolute freshness deadline', {timeout:60_000}, async t=>{
+  const {server,origin}=await startStaticServer();
+  const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+  t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
+  const context=await browser.newContext({viewport:{width:1280,height:900}});t.after(()=>context.close());
+  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsSourceAgeMs:30*60_000-4_000});
+  await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
+  const tab=page.getByRole('button',{name:'Selected police calls'});
+  await tab.click();await page.getByText('Division 41',{exact:true}).waitFor();
+  await page.waitForTimeout(1_500);
+  await tab.click();
+  await page.getByText(/selected-call counts unavailable or stale/i).waitFor({timeout:3_200});
+  assert.equal(await page.locator('.selected-call-row').count(),0);
+  assert.deepEqual(errors,[]);
+});
+
+test('resetting during a selected-call request aborts it and prevents late rendering', {timeout:60_000}, async t=>{
+  const {server,origin}=await startStaticServer();
+  const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+  t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
+  let requests=0;
+  const context=await browser.newContext({viewport:{width:1280,height:900}});t.after(()=>context.close());
+  const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
+  await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsDelayMs:3_000,onSelectedCallsRequest:()=>requests++});
+  await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
+  const firstRequest=page.waitForRequest(request=>request.url().includes('C4S_Public_NoGO/FeatureServer/0?f=json'));
+  await page.getByRole('button',{name:'Selected police calls'}).click();
+  await firstRequest;
+  await page.getByRole('button',{name:'Reset filters'}).click();
+  await page.waitForTimeout(3_200);
+  assert.equal(requests,1,'reset aborts the active first stage');
+  assert.equal(await page.locator('.selected-call-row').count(),0,'a late response cannot repopulate calls after reset');
+  assert.match(await page.locator('#results-title').textContent(),/Recently inspected/);
   assert.deepEqual(errors,[]);
 });

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { SelectedCallsClient, selectedCallsPolicy } from "../../../docs/selected-calls.mjs";
+import { SelectedCallsClient, selectedCallsPolicy } from "../client.mjs";
 
 const now0 = Date.parse("2026-10-27T12:00:00.000Z");
 const edit0 = now0 - 5 * 60_000;

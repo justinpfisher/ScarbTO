@@ -19,9 +19,32 @@ let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = fal
 let dineSafeStatus={text:'Checking official data.',className:''}, dineSafeLoadState='loading', dineSafeLoadError='', beachPreviewState='loading';
 const selectedCallsClient = new SelectedCallsClient();
 let selectedCallsViewState = {status:'unavailable',reason:'not loaded',counts:[]};
-let selectedCallsExpiryTimer=null;
+let selectedCallsExpiryTimer=null, selectedCallsExpiryDeadlineMono=null, selectedCallsExpiryFetchedAt=null;
 let mapUnavailable = false;
 
+function clearSelectedCallsExpiry(){
+  clearTimeout(selectedCallsExpiryTimer);selectedCallsExpiryTimer=null;
+  selectedCallsExpiryDeadlineMono=null;selectedCallsExpiryFetchedAt=null;
+}
+function scheduleSelectedCallsExpiry(view){
+  if(view?.status!=='available'){clearSelectedCallsExpiry();return;}
+  if(selectedCallsExpiryFetchedAt!==view.fetchedAt){
+    selectedCallsExpiryFetchedAt=view.fetchedAt;
+    const lifetime=Math.max(0,Math.min(selectedCallsPolicy.maxLocalAgeMs,selectedCallsPolicy.maxUpstreamAgeMs-view.sourceAgeMsAtFetch));
+    selectedCallsExpiryDeadlineMono=performance.now()+lifetime;
+  }
+  clearTimeout(selectedCallsExpiryTimer);
+  const remaining=Math.max(0,selectedCallsExpiryDeadlineMono-performance.now());
+  selectedCallsExpiryTimer=setTimeout(()=>{
+    if(state.mode!=='selected-calls'||document.visibilityState==='hidden')return;
+    selectedCallsViewState=selectedCallsClient.state();syncControls();updateSource();renderList();
+  },remaining+1);
+}
+function deactivateSelectedCalls(){
+  clearSelectedCallsExpiry();
+  selectedCallsClient.setVisible(false);
+  selectedCallsViewState=selectedCallsClient.state();
+}
 function save() {
   try {const {status,days,neighbourhood}=state;const mode=state.mode==='selected-calls'?'recent':state.mode;localStorage.setItem(STORAGE_KEY,JSON.stringify({mode,status,days,neighbourhood}));}catch{}
 }
@@ -300,7 +323,7 @@ function initMap() {
 function bindControls(){
   document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
     const next=b.dataset.mode;
-    if(state.mode==='selected-calls'&&next!=='selected-calls'){clearTimeout(selectedCallsExpiryTimer);selectedCallsExpiryTimer=null;selectedCallsClient.setVisible(false);selectedCallsViewState=selectedCallsClient.state();}
+    if(state.mode==='selected-calls'&&next!=='selected-calls')deactivateSelectedCalls();
     state.mode=next;
     if(next==='all')state.days='all';else if(next==='recent'&&state.days==='all')state.days='30';
     if(next==='selected-calls')selectedCallsViewState={status:'unavailable',reason:'loading',counts:[]};else save();
@@ -311,7 +334,7 @@ function bindControls(){
   $('window').addEventListener('change',e=>{state.days=e.target.value;save();performFilters();});
   $('neighbourhood').addEventListener('change',e=>{state.neighbourhood=e.target.value;save();selectNeighbourhood();performFilters();});
   $('search').addEventListener('input',e=>{state.search=e.target.value;performFilters();});
-  $('reset').addEventListener('click',()=>{state={...DEFAULTS};selectedId=null;syncControls();fitAll();save();performFilters();});
+  $('reset').addEventListener('click',()=>{if(state.mode==='selected-calls')deactivateSelectedCalls();state={...DEFAULTS};selectedId=null;syncControls();fitAll();save();performFilters();});
   $('fit').addEventListener('click',fitAll);
   $('toggle-filters').addEventListener('click',()=>{
     const expanded=document.querySelector('.filters').classList.toggle('expanded');
@@ -326,25 +349,16 @@ async function loadSelectedCalls(){
   selectedCallsViewState={status:'unavailable',reason:'loading',counts:[]};syncControls();performFilters();
   const result=await selectedCallsClient.load();
   if(state.mode!=='selected-calls')return;
-  if(document.visibilityState==='hidden'){clearTimeout(selectedCallsExpiryTimer);selectedCallsExpiryTimer=null;selectedCallsClient.setVisible(false);selectedCallsViewState=selectedCallsClient.state();}
+  if(document.visibilityState==='hidden')deactivateSelectedCalls();
   else {
-    selectedCallsViewState=result;
-    clearTimeout(selectedCallsExpiryTimer);selectedCallsExpiryTimer=null;
-    if(result.status==='available'){
-      const remaining=Math.max(0,Math.min(selectedCallsPolicy.maxLocalAgeMs,selectedCallsPolicy.maxUpstreamAgeMs-result.sourceAgeMsAtFetch));
-      selectedCallsExpiryTimer=setTimeout(()=>{
-        if(state.mode!=='selected-calls'||document.visibilityState==='hidden')return;
-        selectedCallsViewState=selectedCallsClient.state();syncControls();updateSource();renderList();
-      },remaining+1);
-    }
+    selectedCallsViewState=result;scheduleSelectedCallsExpiry(result);
   }
   syncControls();updateSource();renderList();
 }
 document.addEventListener('visibilitychange',()=>{
   if(state.mode!=='selected-calls')return;
   if(document.visibilityState==='hidden'){
-    clearTimeout(selectedCallsExpiryTimer);selectedCallsExpiryTimer=null;
-    selectedCallsClient.setVisible(false);selectedCallsViewState=selectedCallsClient.state();syncControls();performFilters();
+    deactivateSelectedCalls();syncControls();performFilters();
   }else void loadSelectedCalls();
 });
 

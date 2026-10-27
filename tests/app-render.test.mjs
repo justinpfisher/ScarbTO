@@ -310,3 +310,17 @@ test('hiding selected-calls view aborts its in-flight request and discards count
     assert.equal(app.document.getElementById('record-list').querySelectorAll('.selected-call-row').length,0);
   } finally { await app.cleanup(); }
 });
+
+test('resetting selected calls aborts its request and clears its expiry lifecycle', async () => {
+  const transport=selectedTransport({delayFirst:true});
+  const app=await loadApp(fixture(),{selectedFetch:transport.fetchImpl});
+  try {
+    app.document.tabs.find(tab=>tab.dataset.mode==='selected-calls').click();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(transport.firstSignal.aborted,false);
+    app.document.getElementById('reset').click();
+    assert.equal(transport.firstSignal.aborted,true);
+    assert.match(app.document.getElementById('record-list').textContent,/Place 000/);
+    assert.equal(app.document.getElementById('record-list').querySelectorAll('.selected-call-row').length,0);
+  } finally { await app.cleanup(); }
+});
