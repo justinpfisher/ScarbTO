@@ -30,8 +30,10 @@
           <button class="tab active" data-mode="recent" type="button" aria-pressed="true">Recent activity</button>
           <button class="tab" data-mode="all" type="button" aria-pressed="false">All establishments</button>
           <button class="tab" data-mode="beach" type="button" aria-pressed="false">Beach samples</button>
+          <button class="tab" data-mode="selected-calls" type="button" aria-pressed="false">Selected police calls</button>
         </div>
         <p id="beach-filter-note" class="filter-note" hidden>Search, time, neighbourhood, and inspection-outcome filters apply to DineSafe views only.</p>
+        <p id="selected-calls-filter-note" class="filter-note" hidden>Opening this view makes an on-demand request to TPS/Esri. Counts expire and remain in memory only; no individual calls or locations are requested.</p>
         <label for="search">Find a place</label>
         <input id="search" type="search" placeholder="Name or address" autocomplete="off" spellcheck="false">
         <div class="control-grid">
@@ -54,7 +56,7 @@
       </aside>
       <main class="map-results">
         <div class="map-panel">
-          <div id="map" role="region" aria-label="Interactive map of DineSafe establishments and beach sample locations"></div><p id="map-fallback" class="map-fallback" role="status" aria-live="polite" hidden>Map unavailable. Use the searchable results list below; feeds, filters and record links remain available.</p>
+          <div id="map" role="region" aria-label="Interactive map of DineSafe establishments and beach sample locations"></div><p id="selected-calls-map-note" class="map-mode-note" hidden>Selected calls are division totals in the list; no individual call locations are mapped.</p><p id="map-fallback" class="map-fallback" role="status" aria-live="polite" hidden>Map unavailable. Use the searchable results list below; feeds, filters and record links remain available.</p>
           <div class="map-legend" id="map-legend" aria-hidden="true"><span><i class="dot pass"></i>Pass</span><span><i class="dot conditional"></i>Conditional</span><span><i class="dot closed"></i>Closed</span><span><i class="dot beach"></i>Beach sample</span></div>
           <button class="map-fit" id="fit" type="button" title="Show all Scarborough">Show all Scarborough</button>
         </div>
