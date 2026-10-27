@@ -233,7 +233,7 @@ class CsiContractTests(unittest.TestCase):
         with self.assertRaises(csi.PublicExportDisabled):
             csi.export_public(candidate)
 
-    def test_completed_report_quarter_candidate_counts_source_records(self):
+    def test_report_quarter_uses_toronto_calendar_and_counts_source_records(self):
         rows = fixture_rows()
         rows[3]["REPORT_DATE"] = "2025-12-31T23:59:59Z"
         rows[3]["REPORT_YEAR"] = "2025"
@@ -251,8 +251,10 @@ class CsiContractTests(unittest.TestCase):
             by_quarter[cell["report_quarter"]] = (
                 by_quarter.get(cell["report_quarter"], 0) + cell["source_record_count"]
             )
-        self.assertEqual(by_quarter["2025-Q4"], 1)
-        self.assertEqual(by_quarter["2026-Q1"], 3)
+        # 00:15Z on January 1 is still December 31 in Toronto, so all
+        # aggregatable rows belong to 2025-Q4 (not UTC 2026-Q1).
+        self.assertEqual(by_quarter["2025-Q4"], 4)
+        self.assertNotIn("2026-Q1", by_quarter)
         self.assertEqual(candidate["observed_report_date_min_utc"], "2025-12-31")
         self.assertEqual(candidate["observed_report_date_max_utc"], "2026-01-01")
         serialized = json.dumps(candidate)
@@ -274,6 +276,34 @@ class CsiContractTests(unittest.TestCase):
         self.assertEqual(candidate["incomplete_quarter_rows"], 1)
         self.assertEqual(candidate["aggregated_source_record_total"], 3)
         self.assertNotIn("2026-Q4", {cell["report_quarter"] for cell in candidate["cells"]})
+
+    def test_toronto_quarter_boundary_accounts_for_utc_offset(self):
+        before = csi.parse_utc("2026-01-01T04:59:59Z", "test report date")
+        at = csi.parse_utc("2026-01-01T05:00:00Z", "test report date")
+        self.assertEqual(csi._quarter_for_toronto(before), (2025, 4))
+        self.assertEqual(csi._quarter_for_toronto(at), (2026, 1))
+
+    def test_partial_last_coverage_day_does_not_complete_quarter(self):
+        rows = fixture_rows()
+        rows[0]["REPORT_DATE"] = "2026-02-10T12:00:00Z"
+        source_version = version(rows, coverage_end_utc="2026-03-31T00:00:00Z")
+        candidate = csi.build_report_quarter_candidate(rows, source_version)
+
+        self.assertEqual(candidate["incomplete_quarter_rows"], 1)
+        self.assertEqual(candidate["aggregated_source_record_total"], 3)
+        self.assertNotIn("2026-Q1", {cell["report_quarter"] for cell in candidate["cells"]})
+
+    def test_partial_first_coverage_instant_does_not_complete_quarter(self):
+        rows = fixture_rows()
+        rows[0]["REPORT_DATE"] = "2026-04-01T04:00:00Z"
+        source_version = version(rows, coverage_start_utc="2025-10-01T04:00:01Z")
+        candidate = csi.build_report_quarter_candidate(rows, source_version)
+
+        self.assertEqual(candidate["incomplete_quarter_rows"], 3)
+        self.assertEqual(candidate["aggregated_source_record_total"], 1)
+        self.assertEqual(
+            {cell["report_quarter"] for cell in candidate["cells"]}, {"2026-Q2"}
+        )
 
     def test_null_source_fields_are_counted_as_unaggregated_not_fabricated(self):
         rows = fixture_rows()
