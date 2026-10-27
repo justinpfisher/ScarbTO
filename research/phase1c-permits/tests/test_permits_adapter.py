@@ -263,7 +263,7 @@ class PermitContractTests(unittest.TestCase):
             oar_row(2, coordinates=None),
             oar_row(3, coordinates=[-80.0, 43.8]),
             oar_row(4, ward="E2532", coordinates=[-79.2, 43.8]),
-        ], neighbourhood_features=SQUARE)
+        ], neighbourhood_features=SQUARE, geometry_crs="EPSG:4326")
         self.assertEqual(result["total_count"], 4)
         self.assertEqual(result["located_count"], 1)
         self.assertEqual(result["unlocated_count"], 1)
@@ -275,18 +275,51 @@ class PermitContractTests(unittest.TestCase):
     def test_oar_mapper_does_not_classify_invalid_attributes_as_unlocated(self):
         result = permits.normalize_oar_address_points([
             oar_row(1, ward="E2532", coordinates=None),
-        ], neighbourhood_features=SQUARE)
+        ], neighbourhood_features=SQUARE, geometry_crs="EPSG:4326")
         self.assertEqual(result["unlocated_count"], 0)
         self.assertEqual(result["rejected_count"], 1)
 
-    def test_oar_mapper_rejects_duplicate_id_even_after_unlocated_row(self):
+    def test_oar_mapper_validates_boundaries_even_when_no_points_are_locatable(self):
+        with self.assertRaisesRegex(permits.PermitContractError, "required"):
+            permits.normalize_oar_address_points(
+                [oar_row(1)], neighbourhood_features=[], geometry_crs="EPSG:4326"
+            )
+
+    def test_oar_mapper_requires_explicit_coordinate_reference_system(self):
+        with self.assertRaisesRegex(permits.PermitContractError, "explicitly qualified"):
+            permits.normalize_oar_address_points(
+                [oar_row(1, coordinates=[-79.2, 43.8])],
+                neighbourhood_features=SQUARE, geometry_crs="",
+            )
+
+    def test_oar_mapper_quarantines_conflict_between_unlocated_and_located_rows(self):
         result = permits.normalize_oar_address_points([
             oar_row(9), oar_row(9, coordinates=[-79.2, 43.8]),
-        ], neighbourhood_features=SQUARE)
-        self.assertEqual(result["unlocated_count"], 1)
-        self.assertEqual(result["rejected_count"], 1)
+        ], neighbourhood_features=SQUARE, geometry_crs="EPSG:4326")
+        self.assertEqual(result["unlocated_count"], 0)
+        self.assertEqual(result["rejected_count"], 2)
         self.assertEqual(result["located_count"], 0)
         self.assertEqual(result["accounted_count"], 2)
+
+    def test_oar_mapper_accepts_json_text_singleton_multipoint(self):
+        result = permits.normalize_oar_address_points([
+            oar_row(11, coordinates=None) | {
+                "geometry": '{"type":"MultiPoint","coordinates":[[-79.2,43.8]]}'
+            },
+        ], neighbourhood_features=SQUARE, geometry_crs="EPSG:4326")
+        self.assertEqual(result["located_count"], 1)
+        self.assertEqual(result["address_points"][0]["longitude"], -79.2)
+
+    def test_conflicting_duplicate_oar_id_is_quarantined_independent_of_order(self):
+        rows = [
+            oar_row(12, address="First Address", coordinates=[-79.2, 43.8]),
+            oar_row(12, address="Different Address", coordinates=[-79.21, 43.81]),
+        ]
+        forward = permits.normalize_oar_address_points(rows, neighbourhood_features=SQUARE, geometry_crs="EPSG:4326")
+        reverse = permits.normalize_oar_address_points(list(reversed(rows)), neighbourhood_features=SQUARE, geometry_crs="EPSG:4326")
+        self.assertEqual(forward, reverse)
+        self.assertEqual(forward["address_points"], [])
+        self.assertEqual(forward["rejected_count"], 2)
 
     def test_polygon_union_supports_multipolygon_holes_and_rejects_malformed_rings(self):
         multipolygon = [{"geometry": {"type": "MultiPolygon", "coordinates": [
@@ -313,7 +346,7 @@ class PermitContractTests(unittest.TestCase):
     def test_non_finite_oar_coordinates_are_rejected(self):
         result = permits.normalize_oar_address_points([
             oar_row(10, coordinates=[float("nan"), 43.8]),
-        ], neighbourhood_features=SQUARE)
+        ], neighbourhood_features=SQUARE, geometry_crs="EPSG:4326")
         self.assertEqual(result["rejected_count"], 1)
         self.assertEqual(result["accounted_count"], 1)
 
@@ -433,8 +466,16 @@ class PermitContractTests(unittest.TestCase):
                 permits.normalize_development_applications([dev_row(**{field: 123})])
 
     def test_development_submission_date_requires_iso_calendar_format(self):
-        with self.assertRaisesRegex(permits.PermitContractError, "ISO calendar date"):
+        with self.assertRaisesRegex(permits.PermitContractError, "ISO date or timestamp"):
             permits.normalize_development_applications([dev_row(DATE_SUBMITTED="2021-1-14")])
+
+    def test_development_submission_timestamp_preserves_naive_source_form(self):
+        record = permits.normalize_development_applications([
+            dev_row(DATE_SUBMITTED="2021-07-29T00:00:00"),
+        ])["records"][0]
+        self.assertEqual(record["submission_date"], "2021-07-29")
+        self.assertEqual(record["submission_timestamp"], "2021-07-29T00:00:00")
+        self.assertNotIn("Z", record["submission_timestamp"])
 
     def test_non_ward_grid_codes_are_not_treated_as_ward_numbers(self):
         result = permits.normalize_development_applications([dev_row(WARD_NUMBER="E2532")])
