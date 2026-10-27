@@ -43,8 +43,9 @@ def version(rows: list[dict] | None = None, **overrides) -> csi.SourceVersion:
         "supports_pagination": metadata["supports_pagination"],
         "supports_order_by": metadata["supports_order_by"],
         "date_fields_time_zone_iana": metadata["date_fields_time_zone_iana"],
-        "coverage_start_utc": "2014-01-01T00:00:00Z",
-        "coverage_end_utc": "2026-09-30T23:59:59Z",
+        "coverage_start_date": metadata["published_extract_coverage_start_date"],
+        "coverage_end_date": metadata["published_extract_coverage_end_date"],
+        "coverage_basis": metadata["coverage_basis"],
         "queried_at_utc": "2026-10-27T12:00:00Z",
         "expected_total": len(rows),
     }
@@ -75,7 +76,7 @@ class CsiContractTests(unittest.TestCase):
         self.assertEqual(rows[0]["EVENT_UNIQUE_ID"], rows[1]["EVENT_UNIQUE_ID"])
         self.assertEqual(rows[0]["EVENT_UNIQUE_ID"], rows[2]["EVENT_UNIQUE_ID"])
         self.assertNotIn("coordinates", json.dumps(rows).casefold())
-        self.assertEqual(metadata["metadata_status"], "official ArcGIS layer metadata only; no feature rows")
+        self.assertIn("published extract coverage metadata only", metadata["metadata_status"])
         self.assertEqual(metadata["max_record_count"], 2000)
         self.assertIs(metadata["supports_pagination"], True)
         self.assertIs(metadata["supports_order_by"], True)
@@ -184,6 +185,10 @@ class CsiContractTests(unittest.TestCase):
         with self.assertRaisesRegex(csi.ContractError, "Invalid source pagination metadata"):
             version(expected_total=0).validate()
 
+    def test_coverage_must_come_from_published_extract_metadata(self):
+        with self.assertRaisesRegex(csi.ContractError, "published extract metadata"):
+            version(coverage_basis="observed_row_min_max").validate()
+
     def test_naive_or_non_utc_dates_are_rejected(self):
         with self.assertRaisesRegex(csi.ContractError, "explicit UTC offset"):
             csi.parse_utc("2026-01-01T00:00:00", "REPORT_DATE")
@@ -197,7 +202,7 @@ class CsiContractTests(unittest.TestCase):
             csi.build_aggregate_candidate(rows, version(rows))
 
         rows = fixture_rows()
-        rows[4]["REPORT_DATE"] = "2013-12-31T23:59:59Z"
+        rows[4]["REPORT_DATE"] = "2013-12-31T18:59:59Z"
         with self.assertRaisesRegex(csi.ContractError, "outside the reported source coverage"):
             csi.build_aggregate_candidate(rows, version(rows))
 
@@ -270,7 +275,7 @@ class CsiContractTests(unittest.TestCase):
         rows[0]["REPORT_DATE"] = "2026-10-10T10:00:00Z"
         rows[0]["REPORT_YEAR"] = "2026"
         rows[0]["REPORT_MONTH"] = "October"
-        source_version = version(rows, coverage_end_utc="2026-10-10T23:59:59Z")
+        source_version = version(rows, coverage_end_date="2026-10-10")
         validated = csi.validate_pages(pages_from(rows), source_version, source_version)
         candidate = csi.build_report_quarter_candidate(validated, source_version)
 
@@ -285,10 +290,10 @@ class CsiContractTests(unittest.TestCase):
         self.assertEqual(csi._quarter_for_toronto(before), (2025, 4))
         self.assertEqual(csi._quarter_for_toronto(at), (2026, 1))
 
-    def test_partial_last_coverage_day_does_not_complete_quarter(self):
+    def test_partial_last_inclusive_coverage_date_does_not_complete_quarter(self):
         rows = fixture_rows()
         rows[0]["REPORT_DATE"] = "2026-02-10T12:00:00Z"
-        source_version = version(rows, coverage_end_utc="2026-03-31T00:00:00Z")
+        source_version = version(rows, coverage_end_date="2026-03-30")
         validated = csi.validate_pages(pages_from(rows), source_version, source_version)
         candidate = csi.build_report_quarter_candidate(validated, source_version)
 
@@ -296,15 +301,17 @@ class CsiContractTests(unittest.TestCase):
         self.assertEqual(candidate["aggregated_source_record_total"], 3)
         self.assertNotIn("2026-Q1", {cell["report_quarter"] for cell in candidate["cells"]})
 
-    def test_partial_first_coverage_instant_does_not_complete_quarter(self):
+    def test_partial_first_inclusive_coverage_date_does_not_complete_quarter(self):
         rows = fixture_rows()
-        rows[0]["REPORT_DATE"] = "2026-04-01T04:00:00Z"
-        source_version = version(rows, coverage_start_utc="2025-10-01T04:00:01Z")
+        rows[0]["REPORT_DATE"] = "2026-01-15T12:00:00Z"
+        for row in rows[1:4]:
+            row["REPORT_DATE"] = "2026-04-15T12:00:00Z"
+        source_version = version(rows, coverage_start_date="2026-01-02")
         validated = csi.validate_pages(pages_from(rows), source_version, source_version)
         candidate = csi.build_report_quarter_candidate(validated, source_version)
 
-        self.assertEqual(candidate["incomplete_quarter_rows"], 3)
-        self.assertEqual(candidate["aggregated_source_record_total"], 1)
+        self.assertEqual(candidate["incomplete_quarter_rows"], 1)
+        self.assertEqual(candidate["aggregated_source_record_total"], 3)
         self.assertEqual(
             {cell["report_quarter"] for cell in candidate["cells"]}, {"2026-Q2"}
         )
