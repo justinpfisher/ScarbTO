@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from urllib.parse import parse_qs, urlparse
+from unittest.mock import patch
 
 import beach_measurement_history as history
 
@@ -42,6 +43,56 @@ class BeachMeasurementHistoryTests(unittest.TestCase):
         self.assertEqual(params["sort"], ["_id asc"])
         self.assertEqual(params["offset"], ["20"])
         self.assertEqual(params["limit"], ["10"])
+
+    def test_live_client_refuses_unapproved_host_and_redirects(self):
+        client = history.TorontoBeachHistoryClient()
+        with self.assertRaisesRegex(history.BeachHistoryError, "outside the fixed HTTPS host"):
+            client._get_json("https://example.invalid/api")
+        handler = history._RejectRedirects()
+        with self.assertRaisesRegex(history.BeachHistoryError, "redirect rejected"):
+            handler.redirect_request(None, None, 302, "Found", {}, "https://example.invalid/")
+        with self.assertRaisesRegex(ValueError, "Invalid bounded CKAN client limits"):
+            history.TorontoBeachHistoryClient(max_response_bytes=history.MAX_PAGE_BYTES + 1)
+
+    def test_live_client_requires_exact_package_resource_and_count(self):
+        client = history.TorontoBeachHistoryClient()
+        package = {
+            "success": True,
+            "result": {
+                "id": history.PACKAGE_ID,
+                "metadata_modified": "2026-09-24T21:07:41.327144",
+                "resources": [{
+                    "id": history.RESOURCE_ID,
+                    "datastore_active": True,
+                    "last_modified": None,
+                    "metadata_modified": "2026-09-24T21:07:40.968373",
+                }],
+            },
+        }
+        count = page(10_300, [])
+        with patch.object(client, "_get_json", side_effect=[package, count]) as get_json:
+            total, generation = client.metadata()
+        self.assertEqual(total, 10_300)
+        self.assertIn("package:2026-09-24T21:07:41.327144", generation)
+        self.assertIn("resource:2026-09-24T21:07:40.968373", generation)
+        request = get_json.call_args.args[0]
+        params = parse_qs(urlparse(request).query)
+        self.assertEqual(params["limit"], ["0"])
+        self.assertEqual(params["fields"], [",".join(history.FIELDS)])
+
+    def test_live_client_rejects_inactive_or_mismatched_resource(self):
+        client = history.TorontoBeachHistoryClient()
+        package = {
+            "success": True,
+            "result": {
+                "id": history.PACKAGE_ID,
+                "metadata_modified": "2026-09-24T21:07:41.327144",
+                "resources": [{"id": "wrong", "datastore_active": True}],
+            },
+        }
+        with patch.object(client, "_get_json", return_value=package):
+            with self.assertRaisesRegex(history.BeachHistoryError, "missing or inactive"):
+                client.metadata()
 
     def test_complete_snapshot_requires_exact_stable_pagination(self):
         result = history.build_complete_snapshot(
@@ -92,7 +143,7 @@ class BeachMeasurementHistoryTests(unittest.TestCase):
         with self.assertRaisesRegex(history.BeachHistoryError, "page size"):
             history.collect_and_store_snapshot(
                 metadata_before=(1, "g1"), fetch_page=lambda offset, limit: page(1, [row(1)]),
-                metadata_after=(1, "g1"), destination=".", page_size=0,
+                metadata_after=lambda: (1, "g1"), destination=".", page_size=0,
                 retrieved_at=datetime.now(timezone.utc),
             )
         with self.assertRaisesRegex(history.BeachHistoryError, "source total changed"):
@@ -120,7 +171,7 @@ class BeachMeasurementHistoryTests(unittest.TestCase):
             manifest = history.collect_and_store_snapshot(
                 metadata_before=(2, "g1"),
                 fetch_page=lambda offset, limit: page(2, rows[offset:offset + limit]),
-                metadata_after=(2, "g1"), destination=directory, page_size=1,
+                metadata_after=lambda: (2, "g1"), destination=directory, page_size=1,
                 retrieved_at=datetime(2026, 10, 27, 12, 0, tzinfo=timezone.utc),
             )
             root = Path(directory)
@@ -139,7 +190,7 @@ class BeachMeasurementHistoryTests(unittest.TestCase):
             first = history.collect_and_store_snapshot(
                 metadata_before=(2, "g1"),
                 fetch_page=lambda offset, limit: page(2, rows[offset:offset + limit]),
-                metadata_after=(2, "g1"), destination=directory, page_size=1,
+                metadata_after=lambda: (2, "g1"), destination=directory, page_size=1,
                 retrieved_at=datetime(2026, 10, 27, 12, 0, tzinfo=timezone.utc),
             )
             manifest_path = Path(directory) / "beach-10-history-manifest.json"
@@ -155,7 +206,7 @@ class BeachMeasurementHistoryTests(unittest.TestCase):
             with self.assertRaisesRegex(history.BeachHistoryError, "page total changed"):
                 history.collect_and_store_snapshot(
                     metadata_before=(2, "g2"), fetch_page=broken_page,
-                    metadata_after=(2, "g2"), destination=directory, page_size=1,
+                    metadata_after=lambda: (2, "g2"), destination=directory, page_size=1,
                     retrieved_at=datetime(2026, 10, 27, 13, 0, tzinfo=timezone.utc),
                 )
             self.assertEqual(calls, [0, 1])
@@ -165,3 +216,4 @@ class BeachMeasurementHistoryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
