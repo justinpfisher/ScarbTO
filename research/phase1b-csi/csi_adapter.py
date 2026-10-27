@@ -13,6 +13,7 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
+import re
 import tempfile
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo
@@ -42,6 +43,7 @@ REQUIRED_FIELDS = {
     "OCC_DATE",
     "CSI_CATEGORY",
     "OFFENCE",
+    "HOOD_158",
     "NEIGHBOURHOOD_158",
 }
 EXPECTED_FIELD_TYPES = {
@@ -53,6 +55,7 @@ EXPECTED_FIELD_TYPES = {
     "REPORT_MONTH": "esriFieldTypeString",
     "CSI_CATEGORY": "esriFieldTypeString",
     "OFFENCE": "esriFieldTypeString",
+    "HOOD_158": "esriFieldTypeString",
     "NEIGHBOURHOOD_158": "esriFieldTypeString",
     "LONG_WGS84": "esriFieldTypeDouble",
     "LAT_WGS84": "esriFieldTypeDouble",
@@ -434,7 +437,8 @@ def _quarter_interval_toronto(year: int, quarter: int) -> tuple[date, date]:
 
 
 def build_report_quarter_candidate(
-    rows: list[dict[str, Any]], version: SourceVersion
+    rows: list[dict[str, Any]], version: SourceVersion,
+    *, neighbourhood_registry: dict[str, str],
 ) -> dict[str, Any]:
     """Build internal neighborhood/category counts by completed report quarter.
 
@@ -470,9 +474,19 @@ def build_report_quarter_candidate(
         seen_object_ids.add(object_id)
         previous_object_id = object_id
 
+    if not isinstance(neighbourhood_registry, dict) or not neighbourhood_registry:
+        raise ContractError("A verified HOOD_158 registry is required for report-quarter aggregation")
+    registry: dict[str, str] = {}
+    for code, name in neighbourhood_registry.items():
+        if not isinstance(code, str) or not re.fullmatch(r"\d{3}", code):
+            raise ContractError("HOOD_158 registry keys must be three-digit source codes")
+        if not isinstance(name, str) or not name.strip():
+            raise ContractError("HOOD_158 registry names must be nonempty")
+        registry[code] = name.strip()
+
     coverage_start = parse_source_coverage_date(version.coverage_start_date, "coverage start")
     coverage_end = parse_source_coverage_date(version.coverage_end_date, "coverage end")
-    groups: dict[tuple[str, str, int, int], dict[str, Any]] = defaultdict(
+    groups: dict[tuple[str, str, str, int, int], dict[str, Any]] = defaultdict(
         lambda: {"source_record_count": 0, "report_dates": []}
     )
     unaggregated_rows = 0
@@ -481,7 +495,10 @@ def build_report_quarter_candidate(
 
     for row in rows:
         reported = _optional_date_utc(row.get("REPORT_DATE"), "REPORT_DATE")
-        neighbourhood = str(row.get("NEIGHBOURHOOD_158") or "").strip()
+        code_value = row.get("HOOD_158")
+        label_value = row.get("NEIGHBOURHOOD_158")
+        code = code_value.strip() if isinstance(code_value, str) else ""
+        neighbourhood = label_value.strip() if isinstance(label_value, str) else ""
         category = str(row.get("CSI_CATEGORY") or "").strip()
         if category and category not in KNOWN_CSI_CATEGORIES:
             raise ContractError("Unknown CSI category value")
@@ -489,11 +506,18 @@ def build_report_quarter_candidate(
         if reported_local_date is not None and not coverage_start <= reported_local_date <= coverage_end:
             raise ContractError("REPORT_DATE falls outside the reported source coverage")
         if (
-            reported is None or not neighbourhood or not category
+            reported is None or not category
+            or code.upper() == UNASSIGNED_NEIGHBOURHOOD
             or neighbourhood.upper() == UNASSIGNED_NEIGHBOURHOOD
         ):
             unaggregated_rows += 1
             continue
+        if not re.fullmatch(r"\d{3}", code):
+            raise ContractError("Assigned HOOD_158 value is not a three-digit source code")
+        if code not in registry:
+            raise ContractError("HOOD_158 code is absent from the supplied official registry")
+        if neighbourhood != registry[code]:
+            raise ContractError("HOOD_158 code and neighbourhood display name disagree")
         report_dates.append(reported)
         year, quarter = _quarter_for_toronto(reported)
         quarter_start_date, quarter_end_date = _quarter_interval_toronto(year, quarter)
@@ -502,13 +526,14 @@ def build_report_quarter_candidate(
         if coverage_start > quarter_start_date or coverage_end < quarter_end_date:
             incomplete_quarter_rows += 1
             continue
-        group = groups[(neighbourhood, category, year, quarter)]
+        group = groups[(code, neighbourhood, category, year, quarter)]
         group["source_record_count"] += 1
         group["report_dates"].append(reported)
 
     cells = []
-    for (neighbourhood, category, year, quarter), counts in sorted(groups.items()):
+    for (code, neighbourhood, category, year, quarter), counts in sorted(groups.items()):
         cells.append({
+            "neighbourhood_code": code,
             "neighbourhood": neighbourhood,
             "category": category,
             "report_quarter": f"{year}-Q{quarter}",
@@ -579,4 +604,5 @@ def export_public(*_args: Any, **_kwargs: Any) -> None:
     raise PublicExportDisabled(
         "Public CSI export is disabled until the source and aggregate privacy policy are reviewed"
     )
+
 
