@@ -23,6 +23,33 @@ POINTS = [
     },
 ]
 
+SQUARE = [{
+    "type": "Feature",
+    "properties": {"AREA_NAME": "Synthetic Neighbourhood"},
+    "geometry": {"type": "Polygon", "coordinates": [[
+        [-79.3, 43.7], [-79.1, 43.7], [-79.1, 43.9],
+        [-79.3, 43.9], [-79.3, 43.7],
+    ]]},
+}]
+
+SQUARE_WITH_HOLE = [{
+    "type": "Feature",
+    "geometry": {"type": "Polygon", "coordinates": [
+        [[-79.3, 43.7], [-79.1, 43.7], [-79.1, 43.9], [-79.3, 43.9], [-79.3, 43.7]],
+        [[-79.25, 43.75], [-79.15, 43.75], [-79.15, 43.85], [-79.25, 43.85], [-79.25, 43.75]],
+    ]},
+}]
+
+
+def oar_row(point_id, *, ward="25", address="4003 Ellesmere Rd", coordinates=None):
+    return {
+        "ADDRESS_POINT_ID": point_id,
+        "ADDRESS_ID": 357094,
+        "WARD": ward,
+        "ADDRESS_FULL": address,
+        "geometry": None if coordinates is None else {"type": "Point", "coordinates": coordinates},
+    }
+
 
 def permit_row(**overrides):
     row = {
@@ -230,6 +257,70 @@ class PermitContractTests(unittest.TestCase):
                 source_collection="active", address_points=POINTS,
             )
 
+    def test_oar_mapper_uses_live_schema_and_accounts_located_unlocated_rejected(self):
+        result = permits.normalize_oar_address_points([
+            oar_row("331669", coordinates=[-79.2, 43.8]),
+            oar_row(2, coordinates=None),
+            oar_row(3, coordinates=[-80.0, 43.8]),
+            oar_row(4, ward="E2532", coordinates=[-79.2, 43.8]),
+        ], neighbourhood_features=SQUARE)
+        self.assertEqual(result["total_count"], 4)
+        self.assertEqual(result["located_count"], 1)
+        self.assertEqual(result["unlocated_count"], 1)
+        self.assertEqual(result["rejected_count"], 2)
+        self.assertEqual(result["accounted_count"], result["total_count"])
+        self.assertEqual(result["address_points"][0]["WARD_NUMBER"], 25)
+        self.assertEqual(result["address_points"][0]["address"], "4003 Ellesmere Rd")
+
+    def test_oar_mapper_rejects_duplicate_id_even_after_unlocated_row(self):
+        result = permits.normalize_oar_address_points([
+            oar_row(9), oar_row(9, coordinates=[-79.2, 43.8]),
+        ], neighbourhood_features=SQUARE)
+        self.assertEqual(result["unlocated_count"], 1)
+        self.assertEqual(result["rejected_count"], 1)
+        self.assertEqual(result["located_count"], 0)
+        self.assertEqual(result["accounted_count"], 2)
+
+    def test_polygon_union_supports_multipolygon_holes_and_rejects_malformed_rings(self):
+        multipolygon = [{"geometry": {"type": "MultiPolygon", "coordinates": [
+            SQUARE[0]["geometry"]["coordinates"],
+            [[[-78.9, 43.7], [-78.8, 43.7], [-78.8, 43.8], [-78.9, 43.8], [-78.9, 43.7]]],
+        ]}}]
+        self.assertTrue(permits.point_in_scarborough_neighbourhoods(-79.2, 43.8, multipolygon))
+        self.assertTrue(permits.point_in_scarborough_neighbourhoods(-78.85, 43.75, multipolygon))
+        self.assertFalse(permits.point_in_scarborough_neighbourhoods(-79.2, 43.8, SQUARE_WITH_HOLE))
+        self.assertTrue(permits.point_in_scarborough_neighbourhoods(-79.3, 43.8, SQUARE))
+        with self.assertRaisesRegex(permits.PermitContractError, "closed"):
+            permits.point_in_scarborough_neighbourhoods(-79.2, 43.8, [{
+                "geometry": {"type": "Polygon", "coordinates": [[[-79.3, 43.7], [-79.1, 43.7], [-79.1, 43.9], [-79.3, 43.9]]]}
+            }])
+
+    def test_non_finite_oar_coordinates_are_rejected(self):
+        result = permits.normalize_oar_address_points([
+            oar_row(10, coordinates=[float("nan"), 43.8]),
+        ], neighbourhood_features=SQUARE)
+        self.assertEqual(result["rejected_count"], 1)
+        self.assertEqual(result["accounted_count"], 1)
+
+    def test_permit_status_is_trimmed_but_raw_text_and_unlocated_count_are_retained(self):
+        result = permits.normalize_permits(
+            [permit_row(STATUS=" Issued ", GEO_ID=None)],
+            source_collection="active", address_points=[],
+            oar_accounting={"total_count": 3, "located_count": 2, "unlocated_count": 1, "rejected_count": 0},
+        )
+        row = result["records"][0]
+        self.assertEqual(row["status"], "Issued")
+        self.assertEqual(row["raw_status"], " Issued ")
+        self.assertEqual(result["location_accounting"]["address_points_total"], 3)
+        self.assertEqual(result["location_accounting"]["permit_rows_unlocated"], 1)
+
+    def test_permit_dates_require_iso_calendar_format(self):
+        for value in ("2022-6-01", "2022-02-30", "2022-06-01T00:00:00Z"):
+            with self.subTest(value=value), self.assertRaisesRegex(permits.PermitContractError, "ISO calendar date"):
+                permits.normalize_permits(
+                    [permit_row(APPLICATION_DATE=value)], source_collection="active", address_points=POINTS
+                )
+
     def test_development_rows_group_by_folder_and_keep_all_locations(self):
         rows = [
             dev_row(address="1552 Kingston Rd", _id=3),
@@ -281,6 +372,43 @@ class PermitContractTests(unittest.TestCase):
         ])["records"][0]
         self.assertEqual(record["record_key"], "development:application:21 191603 ESC 20 SA")
         self.assertTrue(record["folder_fallback_used"])
+
+    def test_missing_folder_resolves_only_from_unambiguous_matching_application(self):
+        rows = [dev_row(), dev_row(FOLDERRSN=None, address="1572 Kingston Rd")]
+        record = permits.normalize_development_applications(rows)["records"][0]
+        self.assertEqual(record["record_key"], "development:folder:4970049")
+        self.assertFalse(record["folder_fallback_used"])
+        self.assertTrue(record["missing_folder_resolved_from_other_row"])
+        self.assertEqual(len(record["locations"]), 2)
+
+    def test_missing_folder_is_quarantined_if_application_maps_to_multiple_folders(self):
+        result = permits.normalize_development_applications([
+            dev_row(FOLDERRSN="4970049"),
+            dev_row(FOLDERRSN="4970050"),
+            dev_row(FOLDERRSN=None),
+        ])
+        self.assertEqual(result["records"], [])
+        self.assertEqual(set(result["quarantined_record_keys"]), {
+            "development:folder:4970049", "development:folder:4970050",
+        })
+
+    def test_development_source_text_is_trimmed_and_raw_fields_retained(self):
+        row = permits.normalize_development_applications([
+            dev_row(APPLICATION_TYPE=" Site Plan ", STATUS=" Under Review "),
+        ])["records"][0]
+        self.assertEqual(row["application_type"], "Site Plan")
+        self.assertEqual(row["raw_application_type"], " Site Plan ")
+        self.assertEqual(row["status"], "Under Review")
+        self.assertEqual(row["raw_status"], " Under Review ")
+
+    def test_development_status_and_type_must_remain_text(self):
+        for field in ("APPLICATION_TYPE", "STATUS"):
+            with self.subTest(field=field), self.assertRaisesRegex(permits.PermitContractError, "source text"):
+                permits.normalize_development_applications([dev_row(**{field: 123})])
+
+    def test_development_submission_date_requires_iso_calendar_format(self):
+        with self.assertRaisesRegex(permits.PermitContractError, "ISO calendar date"):
+            permits.normalize_development_applications([dev_row(DATE_SUBMITTED="2021-1-14")])
 
     def test_non_ward_grid_codes_are_not_treated_as_ward_numbers(self):
         result = permits.normalize_development_applications([dev_row(WARD_NUMBER="E2532")])
