@@ -43,14 +43,14 @@ Bluffer's Beach Park, `inSeason: No`, `lastUpdate: 2026-09-09 10:19:11`, and
 four-day historical query returned two envelopes, dated 2026-09-07 and
 2026-09-06, with the expected six row keys. The observed status code was
 `SAFE`, not the human-readable label; the official City UI maps `SAFE` to
-“Safe to swim”, `UNSAFE` to “Caution is advised”, and `NO_DATA` to “Data
-unavailable”. The adapter now maps those exact codes. No measurements,
+"Safe to swim", `UNSAFE` to "Caution is advised", and `NO_DATA` to "Data
+unavailable". The adapter now maps those exact codes. No measurements,
 coordinates, or source rows were saved or published. This confirms endpoint
 shape and mapping only; it does not establish current conditions, refresh
 reliability, complete source rights, or a safe-to-swim claim.
 
 The [City's SwimSafe terms](https://www.toronto.ca/community-people/health-wellness-care/health-inspections-monitoring/swimsafe/swimsafe-terms-of-use/)
-say results are usually posted 24–36 hours after inspection, disclaim accuracy,
+say results are usually posted 24-36 hours after inspection, disclaim accuracy,
 completeness, and currency guarantees, and say the webpages are not a guarantee
 of facility conditions. The terms page contains no express data reuse grant.
 Catalogue licensing for related data and these operational-page terms are
@@ -108,11 +108,12 @@ links to the official Toronto beach-water-quality page. It does not render
 coordinates or E. coli values. Operational-status export remains disabled in
 `beach_status_adapter.py`.
 
-The separate `beach_measurement_history.py` module validates fixed-resource,
-beach-10 CKAN pages, requires an exact non-estimated total, stable generation,
-complete contiguous pages and monotonically ordered IDs, and can write a
-content-addressed candidate snapshot with an atomic manifest pointer. It has
-no HTTP client or scheduler. `beach-measurement-history-view.mjs` renders a
+The separate `beach_measurement_history.py` module includes a fixed-host,
+GET-only bounded CKAN client and validates beach-10 pages. It requires an exact
+non-estimated total, stable package/resource generation, complete contiguous
+pages and monotonically ordered IDs, and can write a content-addressed
+candidate snapshot with an atomic manifest pointer. It has no scheduler or
+publisher. `beach-measurement-history-view.mjs` renders a
 bounded dated-measurement list with an attribution link and explicitly says
 the measurements are not current swimming advice. Neither module is connected
 to the ScarbTO application. The bounded live CKAN probe below verified one
@@ -141,7 +142,8 @@ bytes, ten allowlisted records for `beachId=10`, `total=10300`, and
 Beach Park; the ten returned sample rows have date-only collection dates and
 null `eColi` values. This verifies a small page's schema and exact-total flag,
 not a complete snapshot, current swimming status, or refresh reliability. No
-CKAN rows were saved or published.
+CKAN rows were saved or published. The client supports a bounded complete
+collection, but that full collection has not yet been run.
 
 ## Run tests
 
@@ -156,11 +158,14 @@ data, deploy, or publish.
 
 ## Activation gates
 
-Before integrating a live feed, resolve the specific operational-feed
-redistribution basis; implement a bounded transport with control-first
-validation, one in-flight request, timeouts and byte limits; verify source
-response schemas and Toronto date handling; and implement atomic validated
-last-good retention. Agree the app freshness policy and any separate closure
-source before showing current labels. Keep public export disabled until these
-gates pass. This prototype does not claim current beach conditions or actual
-source availability.
+Before integrating a live history layer, run the bounded collector against
+the complete fixed source and validate the resulting snapshot and application
+rendering. The collector limits each response to 2 MiB, each page to 2,000
+records, the snapshot to 20,000 rows/16 MiB, rejects redirects, and checks the
+exact count and source generation before promoting its manifest. The history
+component is not wired into ScarbTO and no complete snapshot exists yet.
+Operational-status redistribution remains separately unqualified; its public
+export stays disabled. Agree app freshness and any separate closure source
+before showing current labels. This prototype does not claim current beach
+conditions or a complete-source refresh result.
+
