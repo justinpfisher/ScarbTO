@@ -23,7 +23,8 @@
     "OFFENCE": "esriFieldTypeString",
     "NEIGHBOURHOOD_158": "esriFieldTypeString",
     "LONG_WGS84": "esriFieldTypeDouble",
-    "LAT_WGS84": "esriFieldTypeDouble"
+    "LAT_WGS84": "esriFieldTypeDouble",
+    "HOOD_158": "esriFieldTypeString"
   }
 }
 
