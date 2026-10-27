@@ -31,6 +31,10 @@ TPS_TERMS_URL = (
     "0a239a5563a344a3bbf8452504ed8d68?f=pjson"
 )
 TORONTO = ZoneInfo("America/Toronto")
+UNASSIGNED_NEIGHBOURHOOD = "NSA"
+KNOWN_CSI_CATEGORIES = frozenset({
+    "Assault", "Auto Theft", "Break and Enter", "Robbery", "Theft Over",
+})
 REQUIRED_FIELDS = {
     "OBJECTID",
     "EVENT_UNIQUE_ID",
@@ -150,6 +154,14 @@ class SourceVersion:
         )
 
 
+class ValidatedSnapshot(list[dict[str, Any]]):
+    """Rows accepted by complete pagination validation for one source version."""
+
+    def __init__(self, rows: list[dict[str, Any]], source_version_key: tuple[Any, ...]):
+        super().__init__(rows)
+        self.source_version_key = source_version_key
+
+
 def parse_utc(value: str, label: str) -> datetime:
     if not isinstance(value, str) or not value.strip():
         raise ContractError(f"Missing UTC {label}")
@@ -190,7 +202,7 @@ def validate_pages(
     pages: list[dict[str, Any]],
     version_before: SourceVersion,
     version_after: SourceVersion,
-) -> list[dict[str, Any]]:
+) -> ValidatedSnapshot:
     """Require contiguous, complete, duplicate-safe pages from one source version."""
     version_before.validate()
     version_after.validate()
@@ -253,7 +265,7 @@ def validate_pages(
         raise ContractError("CSI row schema does not match source metadata signature")
     if any({str(name).strip().upper() for name in row.keys()} != first_schema for row in collected[1:]):
         raise ContractError("CSI row schema changed within the paged response")
-    return collected
+    return ValidatedSnapshot(collected, version_before.stable_key())
 
 
 def _date_utc(value: Any, field: str) -> datetime:
@@ -312,6 +324,9 @@ def build_aggregate_candidate(rows: list[dict[str, Any]], version: SourceVersion
     occurred_days: list[date] = []
     report_days: list[date] = []
     unaggregated_rows = 0
+    # These bounds come from the published extract's declared coverage
+    # metadata. Observed row min/max dates are reported for QA only and never
+    # establish that a quarter is complete.
     coverage_start = parse_utc(version.coverage_start_utc, "coverage start")
     coverage_end = parse_utc(version.coverage_end_utc, "coverage end")
     for row in rows:
@@ -326,7 +341,12 @@ def build_aggregate_candidate(rows: list[dict[str, Any]], version: SourceVersion
         neighbourhood = str(row.get("NEIGHBOURHOOD_158") or "").strip()
         category = str(row.get("CSI_CATEGORY") or "").strip()
         occurrence_id = str(row.get("EVENT_UNIQUE_ID") or "").strip()
-        if not neighbourhood or not category or not occurrence_id or occurred is None or reported is None:
+        if category and category not in KNOWN_CSI_CATEGORIES:
+            raise ContractError("Unknown CSI category value")
+        if (
+            not neighbourhood or neighbourhood.upper() == UNASSIGNED_NEIGHBOURHOOD
+            or not category or not occurrence_id or occurred is None or reported is None
+        ):
             # Preserve source totals in pagination metadata, but do not create
             # a misleadingly located/category-labelled aggregate cell.
             unaggregated_rows += 1
@@ -410,8 +430,31 @@ def build_report_quarter_candidate(
     approved; no exact row dates or event identifiers are emitted.
     """
     version.validate()
+    if not isinstance(rows, ValidatedSnapshot):
+        raise ContractError("Report-quarter aggregation requires a paged validated snapshot")
+    if rows.source_version_key != version.stable_key():
+        raise ContractError("Validated report snapshot belongs to a different source version")
     if len(rows) != version.expected_total:
         raise ContractError("Validated rows no longer match source count")
+
+    # The wrapper is a runtime guard, not a cryptographic capability: callers
+    # can still mutate its list or row dictionaries after pagination. Recheck
+    # the invariants that make it unsafe to count duplicate snapshot rows.
+    expected_schema = {str(name).strip().upper() for name in version.field_types}
+    seen_object_ids: set[int] = set()
+    previous_object_id: int | None = None
+    for row in rows:
+        normalized_schema = {str(name).strip().upper() for name in row} if isinstance(row, dict) else set()
+        if not isinstance(row, dict) or normalized_schema != expected_schema:
+            raise ContractError("Validated report snapshot row schema changed")
+        _validate_row_types(row)
+        object_id = row.get("OBJECTID")
+        if type(object_id) is not int or object_id in seen_object_ids:
+            raise ContractError("Validated report snapshot has duplicate or invalid OBJECTID")
+        if previous_object_id is not None and object_id <= previous_object_id:
+            raise ContractError("Validated report snapshot OBJECTID order changed")
+        seen_object_ids.add(object_id)
+        previous_object_id = object_id
 
     coverage_start = parse_utc(version.coverage_start_utc, "coverage start")
     coverage_end = parse_utc(version.coverage_end_utc, "coverage end")
@@ -426,9 +469,14 @@ def build_report_quarter_candidate(
         reported = _optional_date_utc(row.get("REPORT_DATE"), "REPORT_DATE")
         neighbourhood = str(row.get("NEIGHBOURHOOD_158") or "").strip()
         category = str(row.get("CSI_CATEGORY") or "").strip()
+        if category and category not in KNOWN_CSI_CATEGORIES:
+            raise ContractError("Unknown CSI category value")
         if reported is not None and not coverage_start <= reported <= coverage_end:
             raise ContractError("REPORT_DATE falls outside the reported source coverage")
-        if reported is None or not neighbourhood or not category:
+        if (
+            reported is None or not neighbourhood or not category
+            or neighbourhood.upper() == UNASSIGNED_NEIGHBOURHOOD
+        ):
             unaggregated_rows += 1
             continue
         report_dates.append(reported)
