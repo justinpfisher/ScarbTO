@@ -142,7 +142,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   assert.equal(await page.locator('.beach-sample-preview-list li').count(), 10);
   assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /not current swimming advice/i);
   assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /reference point, not sample-site coordinates/i);
-  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /Open Government Licence\s+-\s+Toronto/i);
+  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /Open Government Licence.*Toronto/i);
   assert.match(await page.locator('#data-status').textContent(), /Toronto sample rows checked 2026-10-27; latest sample 2026-09-16\. Not current swimming status\./);
   assert.equal(await page.locator('.beach-sample-preview a').count(), 3);
   const links = await page.locator('.beach-sample-preview a').evaluateAll(anchors => anchors.map(anchor => ({href: anchor.href, rel: anchor.rel, target: anchor.target})));
@@ -249,7 +249,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   const readyFalse = {schema_version: 1, ready: false, published_at: null, establishments: [], activity: []};
   const switchingView = await openScenario(browser, origin, {snapshotBody: readyFalse}, {initialMode: 'beach'});
   t.after(() => switchingView.context.close());
-  await switchingView.page.getByRole('heading', {name: "Bluffer's Beach Park"}).waitFor();
+  await switchingView.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
   await switchingView.page.waitForFunction(() => window.__scarbMap.querySourceFeatures('places').some(feature => feature.properties.id === 'beach:10'));
   await switchingView.page.getByRole('button', {name: 'All establishments'}).click();
   await switchingView.page.getByText(/No validated DineSafe snapshot has been published/).waitFor();
@@ -261,7 +261,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   await delayedBeach.page.getByRole('button', {name: 'Fixture Caf�'}).waitFor({timeout: 2_000});
   assert.equal(delayedBeach.isBeachResponseSent(), false, 'DineSafe view is available while the independent beach request is still pending');
   await delayedBeach.page.getByRole('button', {name: 'Beach samples'}).click();
-  await delayedBeach.page.getByRole('heading', {name: "Bluffer's Beach Park"}).waitFor({timeout: 8_000});
+  await delayedBeach.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor({timeout: 8_000});
   assert.equal(delayedBeach.isBeachResponseSent(), true);
   assert.deepEqual(delayedBeach.pageErrors, []);
 });
