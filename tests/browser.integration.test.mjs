@@ -16,12 +16,23 @@ const mime = new Map([
   ['.geojson', 'application/geo+json; charset=utf-8'],
 ]);
 
+test('UI source text retains intended separators and badge text', async () => {
+  const [html, app] = await Promise.all([
+    readFile(resolve(root, 'index.html'), 'utf8'),
+    readFile(resolve(root, 'app.mjs'), 'utf8'),
+  ]);
+  assert.equal((html + String.fromCharCode(10) + app).includes(String.fromCharCode(0xfffd)), false);
+  assert.match(html, /class="data-pill">DineSafe<\/span>/);
+  assert.ok(html.includes("DineSafe Open Data</a> " + String.fromCharCode(0x00b7) + " <a"));
+  assert.ok(app.includes("Toronto Open Data " + String.fromCharCode(0x00b7) + " dated samples"));
+});
+
 const snapshot = {
   schema_version: 1,
   ready: true,
   published_at: '2026-10-27T12:00:00Z',
   establishments: [
-    {id: 'fixture-a', establishment_id: 'fixture-a', name: 'Fixture Caf?', address: '10 Test Road', status: 'Pass', inspection_date: '2026-10-26', longitude: -79.255, latitude: 43.775, neighbourhood: 'Agincourt'},
+    {id: 'fixture-a', establishment_id: 'fixture-a', name: 'Fixture Cafe', address: '10 Test Road', status: 'Pass', inspection_date: '2026-10-26', longitude: -79.255, latitude: 43.775, neighbourhood: 'Agincourt'},
     {id: 'fixture-b', establishment_id: 'fixture-b', name: 'Fixture Bakery', address: '20 Sample Avenue', status: 'Conditional Pass', inspection_date: '2026-10-25', longitude: -79.29, latitude: 43.73, neighbourhood: 'Woburn'},
   ],
   activity: [],
@@ -118,7 +129,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await waitForMap(page);
   if (mobile) await page.getByRole('button', {name: 'Filters'}).click();
   await page.getByRole('button', {name: 'All establishments'}).click();
-  await page.getByRole('button', {name: 'Fixture Caf?'}).waitFor();
+  await page.getByRole('button', {name: 'Fixture Cafe'}).waitFor();
   assert.equal(await page.getByRole('button', {name: 'Fixture Bakery'}).count(), 1, `${name}: both synthetic records are listed`);
 
   const initialCenter = await page.evaluate(() => window.__scarbMap.getCenter().toArray());
@@ -189,6 +200,18 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   assert.ok(dimensions.mapWidth > 0 && dimensions.mapHeight > 0, `${name}: MapLibre rendered a real canvas`);
   assert.ok(dimensions.documentWidth <= dimensions.viewportWidth, `${name}: no horizontal page overflow`);
   assert.ok(dimensions.zoom > 0);
+  if (mobile) {
+    const [legend, attribution, fit] = await Promise.all([
+      page.locator('.map-legend').boundingBox(),
+      page.locator('.maplibregl-ctrl-attrib').boundingBox(),
+      page.locator('#fit').boundingBox(),
+    ]);
+    assert.ok(legend && attribution && fit, `${name}: map legend, attribution, and fit control remain rendered`);
+    const overlaps = legend.x < attribution.x + attribution.width && legend.x + legend.width > attribution.x
+      && legend.y < attribution.y + attribution.height && legend.y + legend.height > attribution.y;
+    assert.equal(overlaps, false, `${name}: legend does not cover map attribution`);
+    assert.ok(fit.y + fit.height < legend.y, `${name}: fit control remains clear above the legend`);
+  }
   await page.screenshot({path: resolve(outputDir, `${name}.png`), fullPage: true});
   assert.deepEqual(pageErrors, [], `${name}: no uncaught app errors`);
   await context.close();
@@ -246,7 +269,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
 
   const dineSafeSurvivesBeachError = await openScenario(browser, origin, {beachStatus: 503}, {initialMode: 'all'});
   t.after(() => dineSafeSurvivesBeachError.context.close());
-  await dineSafeSurvivesBeachError.page.getByRole('button', {name: 'Fixture Caf?'}).waitFor();
+  await dineSafeSurvivesBeachError.page.getByRole('button', {name: 'Fixture Cafe'}).waitFor();
   await dineSafeSurvivesBeachError.page.getByRole('button', {name: 'Fixture Bakery'}).waitFor();
   assert.deepEqual(dineSafeSurvivesBeachError.pageErrors, []);
 
@@ -298,7 +321,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
 
   const delayedBeach = await openScenario(browser, origin, {beachDelayMs: 5_000}, {initialMode: 'all'});
   t.after(() => delayedBeach.context.close());
-  await delayedBeach.page.getByRole('button', {name: 'Fixture Caf?'}).waitFor({timeout: 2_000});
+  await delayedBeach.page.getByRole('button', {name: 'Fixture Cafe'}).waitFor({timeout: 2_000});
   assert.equal(delayedBeach.isBeachResponseSent(), false, 'DineSafe view is available while the independent beach request is still pending');
   await delayedBeach.page.getByRole('button', {name: 'Beach samples'}).click();
   await delayedBeach.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor({timeout: 8_000});

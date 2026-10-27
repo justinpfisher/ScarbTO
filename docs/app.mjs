@@ -88,7 +88,7 @@ function performFilters() {
   listLimit=80;
   if(state.mode==='beach'){
     usingBeach=true;visiblePlaces=[];visibleActivity=[];usingActivity=false;
-    $('results-kicker').textContent='Toronto Open Data � dated samples';
+    $('results-kicker').textContent='Toronto Open Data · dated samples';
     $('results-title').textContent=beachPreview?.beach_name||'Beach samples';
     $('results-caption').textContent='A limited sample preview from the Toronto catalogue. Dated measurements are not current swimming advice.';
     updateSource();renderList();
@@ -266,8 +266,8 @@ async function loadDineSafeSnapshot() {
     try{const r=await fetch('data/scarborough-neighbourhoods.geojson',{cache:'force-cache'});if(r.ok)shapes=await r.json();}catch{}
     populateNeighbourhoods();
     const stale=isStale(candidate.published_at);
-    setDineSafeStatus(stale?`Data may be stale: last validated ${publishedAt(candidate.published_at)} � check update history`:
-      `City data checked ${publishedAt(candidate.published_at)} � not live`,stale?'warning':'');
+    setDineSafeStatus(stale?`Data may be stale: last validated ${publishedAt(candidate.published_at)} · check update history`:
+      `City data checked ${publishedAt(candidate.published_at)} · not live`,stale?'warning':'');
     performFilters();
   }catch(error){
     snapshot=null;dineSafeLoadState='error';dineSafeLoadError=error.message;

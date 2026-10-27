@@ -30,6 +30,7 @@
   .filters .mobile-hint{display:none}
 }
 @media(max-width:570px){.map-panel{height:51vh;min-height:300px;flex-basis:51vh}.filters{padding:12px 15px}.filter-topline .eyebrow{letter-spacing:1px;font-size:9px}}
+@media(max-width:570px){.map-legend{top:104px;bottom:auto;left:8px;right:8px;max-width:none;justify-content:flex-start}}
 
 .record-card{border-bottom:1px solid var(--line)}.record-item{border-bottom:0}.record-details{padding:0 14px 14px 20px;display:grid;gap:8px}.record-detail-note{margin:0;color:var(--muted);line-height:1.5}.record-source-link{justify-self:start;color:var(--green);font-weight:700}.more-results{display:block;width:100%;padding:14px;border:1px solid var(--green);border-radius:10px;background:#fff;color:var(--green);font-weight:700;text-align:center}
 .dot.beach{background:#506c80}
