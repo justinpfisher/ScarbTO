@@ -37,7 +37,10 @@ for (const mutate of [
   value => { value.resource_id = "other"; },
   value => { value.coordinates[0] = -79.2; },
   value => { value.total_was_estimated = true; },
+  value => { value.total_rows_in_source_filter = 1; },
   value => { value.records[0].statusFlag = "SAFE"; },
+  value => { value.statusFlag = "Safe to swim"; },
+  value => { value.advisory = "Current conditions"; },
   value => { value.records[0].collectionDate = "2026-02-30"; },
 ]) {
   const changed = structuredClone(preview);
@@ -46,4 +49,3 @@ for (const mutate of [
 }
 
 console.log("Beach history app integration tests passed");
-

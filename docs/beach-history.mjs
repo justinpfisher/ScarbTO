@@ -2,6 +2,7 @@ const RESOURCE_ID = "8102bd4c-83cd-4354-9788-eecc0c7a09b4";
 const BEACH_ID = 10;
 const EXPECTED_COORDINATES = [-79.2252, 43.7141];
 const RECORD_KEYS = ["beachId", "beachName", "siteName", "collectionDate", "eColi"];
+const PREVIEW_KEYS = ["schema_version", "source", "source_url", "licence_url", "resource_id", "beach_id", "beach_name", "coordinates", "selection", "total_rows_in_source_filter", "total_was_estimated", "rows_included", "retrieved_on", "coverage_note", "records"];
 const CATALOGUE_URL = "https://open.toronto.ca/dataset/toronto-beaches-water-quality/";
 const LICENCE_URL = "https://open.toronto.ca/open-data-licence/";
 const CURRENT_INFO_URL = "https://www.toronto.ca/community-people/health-wellness-care/health-inspections-monitoring/swimsafe/beach-water-quality/";
@@ -14,10 +15,12 @@ function isCalendarDate(value) {
 
 export function validateBeachSamplePreview(input) {
   if (!input || typeof input !== "object" || input.schema_version !== 1
+      || Object.keys(input).sort().join(",") !== [...PREVIEW_KEYS].sort().join(",")
       || input.resource_id !== RESOURCE_ID || input.beach_id !== BEACH_ID
       || input.total_was_estimated !== false || !Number.isInteger(input.total_rows_in_source_filter)
       || input.total_rows_in_source_filter < 1 || !Array.isArray(input.records)
       || input.records.length < 1 || input.records.length > 10
+      || input.total_rows_in_source_filter < input.records.length
       || input.rows_included !== input.records.length
       || typeof input.retrieved_on !== "string" || !isCalendarDate(input.retrieved_on)
       || !Array.isArray(input.coordinates) || input.coordinates.length !== 2
@@ -54,7 +57,7 @@ export function renderBeachSamplePreview(document, input) {
   const title = document.createElement("h3");
   title.textContent = preview.beach_name;
   const note = document.createElement("p");
-  note.textContent = `Latest ${preview.rows_included} catalogue rows shown, selected from ${preview.total_rows_in_source_filter.toLocaleString("en-CA")} rows for this beach. Samples are dated measurements, not current swimming advice.`;
+  note.textContent = `Latest ${preview.rows_included} catalogue rows shown, selected from ${preview.total_rows_in_source_filter.toLocaleString("en-CA")} rows for this beach. Samples are dated measurements, not current swimming advice. The map pin marks the beach reference point, not sample-site coordinates. Contains information licensed under the Open Government Licence – Toronto.`;
   const records = document.createElement("ol");
   records.className = "beach-sample-preview-list";
   for (const record of preview.records) {
@@ -92,4 +95,3 @@ export function renderBeachSamplePreview(document, input) {
   section.append(title, note, records, captured, source, licence, currentInfo);
   return section;
 }
-
