@@ -44,14 +44,25 @@ function metadataEditTime(metadata) {
   if (fields.get("DIVISION") !== "esriFieldTypeString" || fields.get("OBJECTID") !== "esriFieldTypeOID") {
     fail("required aggregate fields have unexpected types");
   }
-  const value = metadata.editingInfo?.lastEditDate;
-  if (!Number.isSafeInteger(value) || value <= 0) fail("source edit time is unavailable");
-  return value;
+  const editing = metadata.editingInfo;
+  if (!editing || typeof editing !== "object") fail("source editing revisions are unavailable");
+  const revisions = {
+    lastEditDate: editing.lastEditDate,
+    dataLastEditDate: editing.dataLastEditDate,
+    schemaLastEditDate: editing.schemaLastEditDate,
+  };
+  for (const [name, value] of Object.entries(revisions)) {
+    if (!Number.isSafeInteger(value) || value <= 0) fail(`source ${name} is unavailable`);
+  }
+  if (revisions.dataLastEditDate > revisions.lastEditDate || revisions.schemaLastEditDate > revisions.lastEditDate) {
+    fail("source editing revisions are inconsistent");
+  }
+  return revisions;
 }
 
 function metadataSignature(metadata) {
   return JSON.stringify({
-    editTime: metadataEditTime(metadata),
+    revisions: metadataEditTime(metadata),
     objectIdField: metadata.objectIdField ?? null,
     globalIdField: metadata.globalIdField ?? null,
     geometryType: metadata.geometryType ?? null,
@@ -72,7 +83,9 @@ function groupedCounts(payload, controlCount) {
     fail("grouped response is invalid");
   }
   if (payload.exceededTransferLimit === true) fail("grouped response was truncated");
-  if (payload.exceededTransferLimit !== false) fail("grouped response omitted transfer-limit status");
+  if (payload.exceededTransferLimit !== undefined && payload.exceededTransferLimit !== false) {
+    fail("grouped response has invalid transfer-limit status");
+  }
   const found = new Map();
   for (const feature of payload.features) {
     if (Object.hasOwn(feature ?? {}, "geometry")) fail("grouped response included geometry");
@@ -221,9 +234,15 @@ export class SelectedCallsClient {
       this.invalidReason = "clock changed; refresh required";
       return UNAVAILABLE(this.invalidReason);
     }
+    const sourceAgeMs = this.current.sourceAgeMsAtLoad + monoElapsed;
     if (monoElapsed > this.limits.maxLocalAgeMs) {
       this.current = null;
       this.invalidReason = "cached counts expired";
+      return UNAVAILABLE(this.invalidReason);
+    }
+    if (!Number.isFinite(sourceAgeMs) || sourceAgeMs > this.limits.maxUpstreamAgeMs) {
+      this.current = null;
+      this.invalidReason = "source data expired";
       return UNAVAILABLE(this.invalidReason);
     }
     return this.current.publicState;
@@ -249,8 +268,6 @@ export class SelectedCallsClient {
       controller.abort();
     }, this.limits.timeoutMs);
     const requests = makeRequests();
-    const requestStartMono = this.monotonicNow();
-    const requestStartWall = this.now();
     const run = async () => {
       try {
         const call = async (url) => {
@@ -267,34 +284,36 @@ export class SelectedCallsClient {
 
         const beforeMetadata = await call(requests[0]);
         const beforeSignature = metadataSignature(beforeMetadata);
-        const beforeEdit = metadataEditTime(beforeMetadata);
-        freshness(beforeEdit, this.now(), this.limits.maxUpstreamAgeMs, this.limits.futureClockToleranceMs);
+        const beforeRevisions = metadataEditTime(beforeMetadata);
+        const dataEditTime = beforeRevisions.dataLastEditDate;
+        freshness(dataEditTime, this.now(), this.limits.maxUpstreamAgeMs, this.limits.futureClockToleranceMs);
         const beforeCount = countValue(await call(requests[1]), "initial control");
         const grouped = await call(requests[2]);
         const afterCount = countValue(await call(requests[3]), "final control");
         const afterMetadata = await call(requests[4]);
-        const afterEdit = metadataEditTime(afterMetadata);
+        const afterRevisions = metadataEditTime(afterMetadata);
         if (beforeSignature !== metadataSignature(afterMetadata)) fail("source metadata changed during request");
         if (beforeCount !== afterCount) fail("source count changed during request");
         const completedAt = this.now();
-        const finalEditAge = freshness(afterEdit, completedAt, this.limits.maxUpstreamAgeMs, this.limits.futureClockToleranceMs);
+        const finalEditAge = freshness(afterRevisions.dataLastEditDate, completedAt, this.limits.maxUpstreamAgeMs, this.limits.futureClockToleranceMs);
         const counts = groupedCounts(grouped, beforeCount);
         if (!this.visible || controller.signal.aborted) fail("view is no longer active");
         const publicState = Object.freeze({
           status: "available",
           label: "Selected calls published by TPS - Divisions 41, 42 and 43",
           counts: Object.freeze(counts),
-          sourceEditedAt: new Date(beforeEdit).toISOString(),
+          sourceEditedAt: new Date(dataEditTime).toISOString(),
           sourceAgeMsAtFetch: finalEditAge,
           fetchedAt: new Date(completedAt).toISOString(),
-          attribution: "Contains information licensed under the Open Government Licence - Toronto.",
+          attribution: "Contains information licensed under the Open Government Licence - Ontario.",
           sourceUrl: "https://experience.arcgis.com/experience/a22f5295933e48a5b0a4c90cd3c4cae1",
           disclosure: "These are selected calls published for Divisions 41, 42 and 43. They are not all crime, police activity, or officer presence.",
         });
         this.current = {
           publicState,
-          loadedAtWall: requestStartWall,
-          loadedAtMono: requestStartMono,
+          loadedAtWall: completedAt,
+          loadedAtMono: this.monotonicNow(),
+          sourceAgeMsAtLoad: finalEditAge,
         };
         this.invalidReason = null;
         return publicState;

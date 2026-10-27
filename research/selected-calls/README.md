@@ -24,5 +24,5 @@ source attribution and official map link.
 
 Source: <https://services.arcgis.com/S9th0jAJ7bqgIRjw/arcgis/rest/services/C4S_Public_NoGO/FeatureServer/0>
 Official map: <https://experience.arcgis.com/experience/a22f5295933e48a5b0a4c90cd3c4cae1>
-Attribution: Contains information licensed under the Open Government Licence - Toronto.
+Attribution: Contains information licensed under the Open Government Licence - Ontario.
 

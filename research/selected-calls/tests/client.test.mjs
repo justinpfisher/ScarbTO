@@ -5,8 +5,8 @@ import { SelectedCallsClient, selectedCallsPolicy } from "../client.mjs";
 const now0 = Date.parse("2026-10-27T12:00:00.000Z");
 const edit0 = now0 - 5 * 60_000;
 
-function metadata(edit = edit0) {
-  return { fields: [{ name: "OBJECTID", type: "esriFieldTypeOID" }, { name: "DIVISION", type: "esriFieldTypeString" }], editingInfo: { lastEditDate: edit } };
+function metadata(edit = edit0, { dataEdit = edit, schemaEdit = edit } = {}) {
+  return { fields: [{ name: "OBJECTID", type: "esriFieldTypeOID" }, { name: "DIVISION", type: "esriFieldTypeString" }], editingInfo: { lastEditDate: edit, dataLastEditDate: dataEdit, schemaLastEditDate: schemaEdit } };
 }
 
 function jsonResponse(payload, url, options = {}) {
@@ -21,7 +21,12 @@ function fixtureTransport({
   count = groups.reduce((n, [, value]) => n + value, 0),
   beforeEdit = edit0,
   afterEdit = beforeEdit,
+  beforeDataEdit = beforeEdit,
+  afterDataEdit = beforeDataEdit,
+  beforeSchemaEdit = beforeEdit,
+  afterSchemaEdit = beforeSchemaEdit,
   groupedPatch = {},
+  omitTransferFlag = false,
   countAfter = count,
   beforeMetadataPatch = {},
   afterMetadataPatch = {},
@@ -33,15 +38,15 @@ function fixtureTransport({
     const index = callIndex++;
     calls.push({ url: new URL(url), init });
     if (responseAt === index) return jsonResponse({ error: { message: "synthetic failure" } }, url);
-    if (index === 0) return jsonResponse({ ...metadata(beforeEdit), ...beforeMetadataPatch }, url);
+    if (index === 0) return jsonResponse({ ...metadata(beforeEdit, { dataEdit: beforeDataEdit, schemaEdit: beforeSchemaEdit }), ...beforeMetadataPatch }, url);
     if (index === 1) return jsonResponse({ count }, url);
     if (index === 2) return jsonResponse({
       features: groups.map(([division, call_count]) => ({ attributes: { DIVISION: division, call_count } })),
-      exceededTransferLimit: false,
+      ...(omitTransferFlag ? {} : { exceededTransferLimit: false }),
       ...groupedPatch,
     }, url);
     if (index === 3) return jsonResponse({ count: countAfter }, url);
-    if (index === 4) return jsonResponse({ ...metadata(afterEdit), ...afterMetadataPatch }, url);
+    if (index === 4) return jsonResponse({ ...metadata(afterEdit, { dataEdit: afterDataEdit, schemaEdit: afterSchemaEdit }), ...afterMetadataPatch }, url);
     throw new Error("unexpected extra request");
   };
   return { fetchImpl, calls };
@@ -90,6 +95,7 @@ test("valid synthetic aggregate uses five bounded requests and exposes only divi
   assert.equal(calls[2].url.searchParams.get("outFields"), "DIVISION");
   assert.match(calls[2].url.searchParams.get("outStatistics"), /OBJECTID/);
   assert.match(state.disclosure, /not all crime/);
+  assert.equal(state.attribution, "Contains information licensed under the Open Government Licence - Ontario.");
   assert.equal("features" in state, false);
   assert.equal("OBJECTID" in state, false);
 });
@@ -114,6 +120,19 @@ test("upstream data older than 30 minutes fails closed with no counts", async ()
   assert.equal(h.calls.length, 1);
 });
 
+test("generic layer edit does not make stale source data look fresh", async () => {
+  const h = harness({
+    beforeEdit: now0 - 1_000,
+    afterEdit: now0 - 1_000,
+    beforeDataEdit: now0 - 30 * 60_000 - 1,
+    afterDataEdit: now0 - 30 * 60_000 - 1,
+    beforeSchemaEdit: now0 - 60 * 60_000,
+    afterSchemaEdit: now0 - 60 * 60_000,
+  });
+  assert.equal((await h.client.load()).status, "unavailable");
+  assert.equal(h.calls.length, 1);
+});
+
 test("future source timestamps beyond tolerance fail closed", async () => {
   const h = harness({ beforeEdit: now0 + 60_001 });
   const result = await h.client.load();
@@ -133,6 +152,14 @@ test("source edit time and count must be unchanged across the request sequence",
   const badType = harness({ beforeMetadataPatch: { fields: [{ name: "OBJECTID", type: "esriFieldTypeString" }, { name: "DIVISION", type: "esriFieldTypeOID" }] } });
   assert.equal((await badType.client.load()).status, "unavailable");
   assert.equal(badType.calls.length, 1);
+  const genericOnlyChange = harness({ afterEdit: edit0 + 2, afterDataEdit: edit0, afterSchemaEdit: edit0 });
+  assert.equal((await genericOnlyChange.client.load()).status, "unavailable");
+  const dataRevisionChange = harness({ afterEdit: edit0, afterDataEdit: edit0 + 1, afterSchemaEdit: edit0 });
+  assert.equal((await dataRevisionChange.client.load()).status, "unavailable");
+  const missingDataRevision = harness({ beforeMetadataPatch: { editingInfo: { lastEditDate: edit0, schemaLastEditDate: edit0 } } });
+  assert.equal((await missingDataRevision.client.load()).status, "unavailable");
+  const inconsistentRevision = harness({ beforeMetadataPatch: { editingInfo: { lastEditDate: edit0, dataLastEditDate: edit0 + 1, schemaLastEditDate: edit0 } } });
+  assert.equal((await inconsistentRevision.client.load()).status, "unavailable");
 });
 
 test("duplicate, unknown, geometry-bearing, truncated and malformed groups fail closed", async (t) => {
@@ -140,7 +167,6 @@ test("duplicate, unknown, geometry-bearing, truncated and malformed groups fail 
     ["duplicate", { groups: [["D41", 8], ["D41", 8]], count: 16 }],
     ["unknown division", { groups: [["D44", 16]], count: 16 }],
     ["transfer limit", { groupedPatch: { exceededTransferLimit: true } }],
-    ["missing transfer flag", { groupedPatch: { exceededTransferLimit: undefined } }],
     ["geometry", { groupedPatch: { features: [{ attributes: { DIVISION: "D41", call_count: 16 }, geometry: {} }] } }],
     ["extra attribute", { groupedPatch: { features: [{ attributes: { DIVISION: "D41", call_count: 16, OBJECTID: 1 } }] } }],
     ["bad JSON-shaped attributes", { groupedPatch: { features: [{ attributes: { DIVISION: "D41", call_count: "16" } }] } }],
@@ -152,6 +178,12 @@ test("duplicate, unknown, geometry-bearing, truncated and malformed groups fail 
     assert.equal(state.status, "unavailable");
     assert.deepEqual(state.counts, []);
   });
+  const presentFalse = harness({ groupedPatch: { exceededTransferLimit: false } });
+  assert.equal((await presentFalse.client.load()).status, "available");
+  const absentFlag = harness({ omitTransferFlag: true });
+  assert.equal((await absentFlag.client.load()).status, "available");
+  const invalidFlag = harness({ groupedPatch: { exceededTransferLimit: "false" } });
+  assert.equal((await invalidFlag.client.load()).status, "unavailable");
 });
 
 test("a coherent empty source response is available as an empty count set", async () => {
@@ -269,6 +301,15 @@ test("local cache expires after ten minutes and suspicious wall-clock changes hi
     assert.equal(h.client.state().status, "unavailable");
     assert.deepEqual(h.client.state().counts, []);
   });
+});
+
+test("counts expire when the source reaches its 30-minute edit-age limit", async () => {
+  const h = harness({ beforeEdit: now0 - 29 * 60_000, beforeDataEdit: now0 - 29 * 60_000, beforeSchemaEdit: now0 - 29 * 60_000 });
+  assert.equal((await h.client.load()).status, "available");
+  h.time.mono += 60_001;
+  h.time.wall += 60_001;
+  assert.equal(h.client.state().status, "unavailable");
+  assert.deepEqual(h.client.state().counts, []);
 });
 
 test("source errors never retain previously displayed counts", async () => {
