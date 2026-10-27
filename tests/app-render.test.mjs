@@ -68,7 +68,11 @@ class FakeDocument {
   constructor() {
     this.elements = new Map();
     this.activeElement = null;
-    this.tabs = ['recent','all'].map(mode => {
+    this.visibilityState='visible';
+    this.documentHandlers={};
+    this.addEventListener=(type,callback)=>{(this.documentHandlers[type] ||= []).push(callback);};
+    this.dispatch=(type)=>{for(const callback of this.documentHandlers[type]||[])callback();};
+    this.tabs = ['recent','all','beach','selected-calls'].map(mode => {
       const button = new FakeElement(this,'button','','tab');
       button.dataset.mode = mode;
       return button;
@@ -144,7 +148,7 @@ function fixture(count = 1, ready = true) {
   };
 }
 
-async function loadApp(snapshot) {
+async function loadApp(snapshot,{selectedFetch} = {}) {
   const document = new FakeDocument();
   let map;
   const prior = {
@@ -160,9 +164,12 @@ async function loadApp(snapshot) {
       : null,
     setItem:() => {},
   };
-  globalThis.fetch = async url => url.includes('snapshot.json')
+  const ordinaryFetch=async url => url.includes('snapshot.json')
     ? {ok:true,json:async()=>snapshot}
     : {ok:false};
+  globalThis.fetch=async (url,init)=>String(url).includes('C4S_Public_NoGO')&&selectedFetch
+    ? selectedFetch(url,init)
+    : ordinaryFetch(url,init);
   globalThis.maplibregl = {Map:class extends FakeMap {constructor(){super(document);map=this;}},NavigationControl:class{}};
   await import(`../docs/app.mjs?render-test=${Math.random()}`);
   await new Promise(resolve => setTimeout(resolve,0));
@@ -225,5 +232,95 @@ test('production list paging, record selection, and map redraw preserve focus an
     assert.ok(selectedCard);
     assert.deepEqual(selectedCard.scrollCalls,[{block:'nearest'}]);
     assert.equal(app.document.activeElement,app.map.canvas);
+  } finally { await app.cleanup(); }
+});
+
+function selectedTransport({stale=false,delayFirst=false}={}) {
+  const edit=Date.now()-(stale?31:5)*60_000;
+  let calls=0, firstSignal=null;
+  const response=(payload)=>({ok:true,status:200,url:'',redirected:false,headers:{get:()=> 'application/json'},json:async()=>payload,text:async()=>JSON.stringify(payload)});
+  const fields=[{name:'OBJECTID',type:'esriFieldTypeOID'},{name:'DIVISION',type:'esriFieldTypeString'}];
+  const metadata={fields,editingInfo:{lastEditDate:edit,dataLastEditDate:edit,schemaLastEditDate:edit}};
+  const fetchImpl=async(url,init)=>{
+    calls++; if(!firstSignal)firstSignal=init.signal;
+    if(init.signal.aborted)throw new Error('aborted');
+    if(delayFirst&&calls===1)return new Promise((resolve,reject)=>{
+      const onAbort=()=>reject(new Error('aborted'));
+      init.signal.addEventListener('abort',onAbort,{once:true});
+      setTimeout(()=>{init.signal.removeEventListener('abort',onAbort);resolve(response(metadata));},1000);
+    });
+    const parsed=new URL(url);
+    if(parsed.pathname.endsWith('/FeatureServer/0'))return response(metadata);
+    if(parsed.searchParams.get('returnCountOnly')==='true')return response({count:16});
+    return response({features:[{attributes:{DIVISION:'D41',call_count:7}},{attributes:{DIVISION:'D42',call_count:5}},{attributes:{DIVISION:'D43',call_count:4}}]});
+  };
+  return {fetchImpl,get calls(){return calls;},get firstSignal(){return firstSignal;}};
+}
+
+test('selected-calls mode fetches only on explicit view selection and clears counts on exit', async () => {
+  const transport=selectedTransport();
+  const app=await loadApp(fixture(),{selectedFetch:transport.fetchImpl});
+  try {
+    app.map.load();
+    assert.equal(transport.calls,0);
+    app.document.tabs.find(tab=>tab.dataset.mode==='selected-calls').click();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    const list=app.document.getElementById('record-list');
+    assert.match(list.textContent,/Selected calls published by TPS/);
+    assert.match(list.textContent,/Division 41/);
+    assert.match(list.textContent,/Division 42/);
+    assert.match(list.textContent,/Division 43/);
+    assert.match(app.document.getElementById('results-caption').textContent,/not all crime, police activity, or officer presence/i);
+    assert.equal(list.querySelectorAll('.selected-call-row').length,3);
+    assert.equal(transport.calls,5);
+    assert.deepEqual(app.map.sources.places.data.features,[]);
+    app.document.tabs.find(tab=>tab.dataset.mode==='all').click();
+    assert.doesNotMatch(list.textContent,/Division 41/);
+    app.document.tabs.find(tab=>tab.dataset.mode==='selected-calls').click();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(list.querySelectorAll('.selected-call-row').length,0);
+    assert.match(list.textContent,/unavailable or stale/i);
+    assert.equal(transport.calls,5);
+  } finally { await app.cleanup(); }
+});
+
+test('stale selected-call source response renders unavailable without counts', async () => {
+  const transport=selectedTransport({stale:true});
+  const app=await loadApp(fixture(),{selectedFetch:transport.fetchImpl});
+  try {
+    app.document.tabs.find(tab=>tab.dataset.mode==='selected-calls').click();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    const list=app.document.getElementById('record-list');
+    assert.equal(list.querySelectorAll('.selected-call-row').length,0);
+    assert.match(list.textContent,/unavailable or stale/i);
+    assert.equal(transport.calls,1);
+  } finally { await app.cleanup(); }
+});
+
+test('hiding selected-calls view aborts its in-flight request and discards counts', async () => {
+  const transport=selectedTransport({delayFirst:true});
+  const app=await loadApp(fixture(),{selectedFetch:transport.fetchImpl});
+  try {
+    app.document.tabs.find(tab=>tab.dataset.mode==='selected-calls').click();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    app.document.visibilityState='hidden';
+    app.document.dispatch('visibilitychange');
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(transport.firstSignal.aborted,true);
+    assert.equal(app.document.getElementById('record-list').querySelectorAll('.selected-call-row').length,0);
+  } finally { await app.cleanup(); }
+});
+
+test('resetting selected calls aborts its request and clears its expiry lifecycle', async () => {
+  const transport=selectedTransport({delayFirst:true});
+  const app=await loadApp(fixture(),{selectedFetch:transport.fetchImpl});
+  try {
+    app.document.tabs.find(tab=>tab.dataset.mode==='selected-calls').click();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(transport.firstSignal.aborted,false);
+    app.document.getElementById('reset').click();
+    assert.equal(transport.firstSignal.aborted,true);
+    assert.match(app.document.getElementById('record-list').textContent,/Place 000/);
+    assert.equal(app.document.getElementById('record-list').querySelectorAll('.selected-call-row').length,0);
   } finally { await app.cleanup(); }
 });

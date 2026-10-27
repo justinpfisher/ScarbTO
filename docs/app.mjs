@@ -1,6 +1,7 @@
 import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from './logic.mjs';
 import {beginListRedraw, finishListRedraw, revealSelectedRecord} from './list-focus.mjs';
 import {beachPreviewFeature, renderBeachSamplePreview, validateBeachSamplePreview} from './beach-history.mjs';
+import {SelectedCallsClient, selectedCallsPolicy} from './selected-calls.mjs';
 
 const $ = id => document.getElementById(id);
 const SCARB_BOUNDS = [[-79.43,43.65],[-79.09,43.89]];
@@ -16,10 +17,36 @@ try {
 let snapshot = null, beachPreview = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]};
 let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = false, usingBeach = false, listLimit = 80;
 let dineSafeStatus={text:'Checking official data.',className:''}, dineSafeLoadState='loading', dineSafeLoadError='', beachPreviewState='loading';
+const selectedCallsClient = new SelectedCallsClient();
+let selectedCallsViewState = {status:'unavailable',reason:'not loaded',counts:[]};
+let selectedCallsExpiryTimer=null, selectedCallsExpiryDeadlineMono=null, selectedCallsExpiryFetchedAt=null;
 let mapUnavailable = false;
 
+function clearSelectedCallsExpiry(){
+  clearTimeout(selectedCallsExpiryTimer);selectedCallsExpiryTimer=null;
+  selectedCallsExpiryDeadlineMono=null;selectedCallsExpiryFetchedAt=null;
+}
+function scheduleSelectedCallsExpiry(view){
+  if(view?.status!=='available'){clearSelectedCallsExpiry();return;}
+  if(selectedCallsExpiryFetchedAt!==view.fetchedAt){
+    selectedCallsExpiryFetchedAt=view.fetchedAt;
+    const lifetime=Math.max(0,Math.min(selectedCallsPolicy.maxLocalAgeMs,selectedCallsPolicy.maxUpstreamAgeMs-view.sourceAgeMsAtFetch));
+    selectedCallsExpiryDeadlineMono=performance.now()+lifetime;
+  }
+  clearTimeout(selectedCallsExpiryTimer);
+  const remaining=Math.max(0,selectedCallsExpiryDeadlineMono-performance.now());
+  selectedCallsExpiryTimer=setTimeout(()=>{
+    if(state.mode!=='selected-calls'||document.visibilityState==='hidden')return;
+    selectedCallsViewState=selectedCallsClient.state();syncControls();updateSource();renderList();
+  },remaining+1);
+}
+function deactivateSelectedCalls(){
+  clearSelectedCallsExpiry();
+  selectedCallsClient.setVisible(false);
+  selectedCallsViewState=selectedCallsClient.state();
+}
 function save() {
-  try {const {mode,status,days,neighbourhood}=state;localStorage.setItem(STORAGE_KEY,JSON.stringify({mode,status,days,neighbourhood}));}catch{}
+  try {const {status,days,neighbourhood}=state;const mode=state.mode==='selected-calls'?'recent':state.mode;localStorage.setItem(STORAGE_KEY,JSON.stringify({mode,status,days,neighbourhood}));}catch{}
 }
 function els(tag, cls, value) {
   const element = document.createElement(tag);
@@ -40,6 +67,14 @@ function outcomeClass(status){return status==='Closed'?'closed':status==='Condit
 function syncDataStatus() {
   const status=$('data-status');
   status.classList.remove('error','warning');
+  if(state.mode==='selected-calls'){
+    if(selectedCallsViewState.status==='available')status.classList.add('warning');else if(selectedCallsViewState.reason!=='loading')status.classList.add('error');
+    status.textContent=selectedCallsViewState.status==='available'
+      ? `TPS source data last edited ${publishedAt(selectedCallsViewState.sourceEditedAt)}; checked ${publishedAt(selectedCallsViewState.fetchedAt)}. Counts expire.`
+      : selectedCallsViewState.reason==='loading'?'Loading selected TPS calls for Divisions 41, 42 and 43.'
+      : 'Selected-call counts unavailable or stale. No current counts are shown.';
+    return;
+  }
   if(state.mode==='beach'){
     if(beachPreviewState==='loading')status.textContent='Loading Toronto beach sample preview.';
     else if(beachPreview){
@@ -66,8 +101,13 @@ function syncControls() {
   document.querySelectorAll('.tab').forEach(b=>{let hit=b.dataset.mode===state.mode;b.classList.toggle('active',hit);b.setAttribute('aria-pressed',String(hit));});
   document.querySelectorAll('.chip').forEach(b=>{let hit=b.dataset.status===state.status;b.classList.toggle('selected',hit);b.setAttribute('aria-pressed',String(hit));});
   const beachMode=state.mode==='beach';
+  const selectedCallsMode=state.mode==='selected-calls';
   $('beach-filter-note').hidden=!beachMode;
-  document.querySelectorAll('#search,#neighbourhood,#window,.outcomes button').forEach(control=>{control.disabled=beachMode;});
+  $('selected-calls-filter-note').hidden=!selectedCallsMode;
+  $('selected-calls-map-note').hidden=!selectedCallsMode;
+  $('map-legend').hidden=selectedCallsMode;
+  $('map').setAttribute('aria-label',selectedCallsMode?'Map background only; selected calls are not mapped individually':'Interactive map of DineSafe establishments and beach sample locations');
+  document.querySelectorAll('#search,#neighbourhood,#window,.outcomes button').forEach(control=>{control.disabled=beachMode||selectedCallsMode;});
   syncDataStatus();
 }
 function populateNeighbourhoods() {
@@ -82,11 +122,18 @@ function geoFeature(e, activity = false) {
 }
 function updateSource() {
   if(!map || !map.getSource('places'))return;
-  features=usingBeach && beachPreview ? [beachPreviewFeature(beachPreview)] : visiblePlaces.map(e=>geoFeature(e));
+  features=state.mode==='selected-calls'?[]:usingBeach && beachPreview ? [beachPreviewFeature(beachPreview)] : visiblePlaces.map(e=>geoFeature(e));
   map.getSource('places').setData({type:'FeatureCollection',features});
 }
 function performFilters() {
   listLimit=80;
+  if(state.mode==='selected-calls'){
+    usingBeach=false;visiblePlaces=[];visibleActivity=[];usingActivity=false;
+    $('results-kicker').textContent='Toronto Police Service · on-demand aggregate';
+    $('results-title').textContent='Selected calls — Divisions 41, 42 and 43';
+    $('results-caption').textContent='Selected calls published for these divisions; not all crime, police activity, or officer presence. Opening this view requests grouped counts from TPS/Esri. No individual calls or locations are requested or mapped.';
+    updateSource();renderList();return;
+  }
   if(state.mode==='beach'){
     usingBeach=true;visiblePlaces=[];visibleActivity=[];usingActivity=false;
     $('results-kicker').textContent='Toronto Open Data · dated samples';
@@ -122,6 +169,23 @@ function performFilters() {
 function renderList({focusMore = false, revealSelection = false} = {}) {
   const list=$('record-list');
   const previousFocus=beginListRedraw(list,document.activeElement,{focusMore});
+  if(state.mode==='selected-calls'){
+    let view=selectedCallsViewState;
+    if(view.status==='available'||document.visibilityState==='hidden')view=selectedCallsClient.state();
+    selectedCallsViewState=view;syncDataStatus();
+    if(view.status==='available'){
+      list.append(els('p','selected-calls-label',view.label));
+      $('results-count').textContent=`${view.counts.reduce((sum,row)=>sum+row.count,0).toLocaleString('en-CA')} selected calls`;
+      for(const row of view.counts){const item=els('div','selected-call-row');item.append(els('span','',`Division ${row.division.slice(1)}`),els('strong','',row.count.toLocaleString('en-CA')));list.append(item);}
+      list.append(els('p','selected-calls-attribution','Contains information licensed under the Open Government Licence – Ontario.'));
+    }else{
+      $('results-count').textContent=view.reason==='loading'?'Loading':'Unavailable';
+      const message=view.reason==='loading'?'Loading selected counts from Toronto Police Service.':view.reason==='view hidden'?'Counts are cleared while this view is hidden. Reopen the view to request fresh counts.':'Selected-call counts are unavailable or stale. No counts are retained.';
+      list.append(els('p','empty',message));list.append(els('p','selected-calls-attribution','Contains information licensed under the Open Government Licence – Ontario.'));
+    }
+    const source=els('a','record-source-link','Open the official TPS selected-calls map');source.href='https://experience.arcgis.com/experience/a22f5295933e48a5b0a4c90cd3c4cae1';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
+    finishListRedraw(list,previousFocus);return;
+  }
   if(usingBeach){
     $('results-count').textContent=beachPreview?`${beachPreview.rows_included} sample rows`:beachPreviewState==='loading'?'Loading':'Unavailable';
     if(!beachPreview){
@@ -257,12 +321,20 @@ function initMap() {
   }catch(error){setMapUnavailable(error);}
 }
 function bindControls(){
-  document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{const next=b.dataset.mode;state.mode=next;if(next==='all')state.days='all';else if(next==='recent'&&state.days==='all')state.days='30';save();syncControls();performFilters();if(next==='beach'&&map&&beachPreview)map.easeTo({center:beachPreview.coordinates,zoom:Math.max(map.getZoom(),13),duration:350});}));
+  document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
+    const next=b.dataset.mode;
+    if(state.mode==='selected-calls'&&next!=='selected-calls')deactivateSelectedCalls();
+    state.mode=next;
+    if(next==='all')state.days='all';else if(next==='recent'&&state.days==='all')state.days='30';
+    if(next==='selected-calls')selectedCallsViewState={status:'unavailable',reason:'loading',counts:[]};else save();
+    syncControls();performFilters();if(next==='selected-calls')void loadSelectedCalls();
+    if(next==='beach'&&map&&beachPreview)map.easeTo({center:beachPreview.coordinates,zoom:Math.max(map.getZoom(),13),duration:350});
+  }));
   document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{state.status=b.dataset.status;save();syncControls();performFilters();}));
   $('window').addEventListener('change',e=>{state.days=e.target.value;save();performFilters();});
   $('neighbourhood').addEventListener('change',e=>{state.neighbourhood=e.target.value;save();selectNeighbourhood();performFilters();});
   $('search').addEventListener('input',e=>{state.search=e.target.value;performFilters();});
-  $('reset').addEventListener('click',()=>{state={...DEFAULTS};selectedId=null;syncControls();fitAll();save();performFilters();});
+  $('reset').addEventListener('click',()=>{if(state.mode==='selected-calls')deactivateSelectedCalls();state={...DEFAULTS};selectedId=null;syncControls();fitAll();save();performFilters();});
   $('fit').addEventListener('click',fitAll);
   $('toggle-filters').addEventListener('click',()=>{
     const expanded=document.querySelector('.filters').classList.toggle('expanded');
@@ -270,6 +342,26 @@ function bindControls(){
     $('toggle-filters').textContent=expanded?'Hide filters':'Filters';
   });
 }
+async function loadSelectedCalls(){
+  const visible=state.mode==='selected-calls'&&document.visibilityState!=='hidden';
+  selectedCallsClient.setVisible(visible);
+  if(!visible){selectedCallsViewState=selectedCallsClient.state();syncControls();return;}
+  selectedCallsViewState={status:'unavailable',reason:'loading',counts:[]};syncControls();performFilters();
+  const result=await selectedCallsClient.load();
+  if(state.mode!=='selected-calls')return;
+  if(document.visibilityState==='hidden')deactivateSelectedCalls();
+  else {
+    selectedCallsViewState=result;scheduleSelectedCallsExpiry(result);
+  }
+  syncControls();updateSource();renderList();
+}
+document.addEventListener('visibilitychange',()=>{
+  if(state.mode!=='selected-calls')return;
+  if(document.visibilityState==='hidden'){
+    deactivateSelectedCalls();syncControls();performFilters();
+  }else void loadSelectedCalls();
+});
+
 async function loadBeachPreview() {
   try{
     const response=await fetch('data/beach-sample-preview.json',{cache:'no-cache'});

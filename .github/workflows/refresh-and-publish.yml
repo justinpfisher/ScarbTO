@@ -54,6 +54,7 @@ jobs:
           node --check docs/logic.mjs
           node --check docs/app.mjs
           node --check docs/beach-history.mjs
+          node --check docs/selected-calls.mjs
       - name: JavaScript logic tests
         run: node --test tests/logic.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs
       - name: Offline research prototype tests
