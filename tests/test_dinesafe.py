@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'scripts'))
 from update_dinesafe import (DataError, build_snapshot, date_string, get_resources, in_geometry,
-    make_activity, normalise, atomic_write, prepare_activity_archives)
+    make_activity, normalise, atomic_write, prepare_activity_archives, reconcile_activity_history)
 
 
 def polygon(w,s,e,n):
@@ -161,6 +161,26 @@ class IngestionTests(unittest.TestCase):
             november = {**second, 'id': 'event-3', 'detected_at': '2026-11-01T12:00:00Z'}
             with self.assertRaisesRegex(DataError, 'Invalid existing activity archive'):
                 prepare_activity_archives(output, [november])
+
+    def test_cross_month_crash_retry_preserves_first_observation_once(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            first = {'id': 'stable-event', 'detected_at': '2026-10-31T23:59:50+00:00',
+                     'source_url': 'https://open.toronto.ca/dataset/dinesafe/',
+                     'establishment_id': '123', 'status': 'Pass'}
+            # Simulate a process that wrote the October archive then crashed
+            # before replacing snapshot.json.
+            for path, content in prepare_activity_archives(output, [first]):
+                atomic_write(path, content)
+
+            retried = {**first, 'detected_at': '2026-11-01T00:00:10+00:00'}
+            reconciled = reconcile_activity_history(output, [retried])
+            self.assertEqual(reconciled, [first])
+            self.assertEqual(prepare_activity_archives(output, reconciled), [])
+            self.assertFalse((output/'history'/'2026-11.json').exists())
+            archive = json.loads((output/'history'/'2026-10.json').read_text(encoding='utf-8'))
+            self.assertEqual([event['id'] for event in archive['events']], ['stable-event'])
+            self.assertEqual(archive['events'][0]['detected_at'], first['detected_at'])
 
     def test_date_formats_are_explicit(self):
         self.assertEqual(date_string('20261024'),'2026-10-24')
