@@ -331,6 +331,51 @@ def atomic_write(path: Path, content: bytes) -> None:
     os.replace(stage, path)
 
 
+def prepare_activity_archives(output: Path, activity: list[dict]) -> list[tuple[Path, bytes]]:
+    """Stage durable monthly observed events; do not backfill nonexistent observations.
+
+    Archives contain only source-linked events already produced by successful
+    snapshot comparisons. Existing event IDs are immutable; a repeated import
+    cannot silently rewrite the original observation.
+    """
+    months: dict[str, list[dict]] = {}
+    for event in activity:
+        observed = event.get('detected_at', '')
+        month = observed[:7] if isinstance(observed, str) else ''
+        try:
+            if len(month) != 7 or datetime.strptime(month, '%Y-%m').strftime('%Y-%m') != month:
+                raise ValueError('invalid month')
+        except ValueError as exc:
+            raise DataError(f'Invalid archived observation month: {month!r}') from exc
+        if not event.get('id') or not event.get('source_url'):
+            raise DataError('An observed change is missing its identifier or official source')
+        months.setdefault(month, []).append(event)
+
+    pending: list[tuple[Path, bytes]] = []
+    for month, new_events in sorted(months.items()):
+        path = output / 'history' / (month + '.json')
+        if path.exists():
+            existing = json.loads(path.read_text(encoding='utf-8'))
+            if not isinstance(existing, dict) or existing.get('schema_version') != 1 or existing.get('month') != month or not isinstance(existing.get('events'), list):
+                raise DataError(f'Invalid existing activity archive: {path}')
+            previous = existing['events']
+        else:
+            previous = []
+        by_id: dict[str, dict] = {}
+        for event in previous:
+            if not isinstance(event, dict) or not isinstance(event.get('id'), str) or event['id'] in by_id:
+                raise DataError(f'Invalid or duplicate archived event: {path}')
+            by_id[event['id']] = event
+        for event in new_events:
+            by_id.setdefault(event['id'], event)
+        records = sorted(by_id.values(), key=lambda value: (value['detected_at'], value['id']))
+        serialised = json.dumps({'schema_version': 1, 'month': month, 'events': records},
+                                separators=(',', ':'), ensure_ascii=False).encode('utf-8')
+        if not path.exists() or path.read_bytes() != serialised:
+            pending.append((path, serialised))
+    return pending
+
+
 def load_local(path: str) -> bytes:
     return Path(path).read_bytes()
 
@@ -382,8 +427,11 @@ def main() -> None:
                      'dry_run': args.dry_run, 'source': source_url}, indent=2))
     if args.dry_run:
         return
+    archive_writes = prepare_activity_archives(args.output, snapshot['activity'])
     atomic_write(args.output / 'scarborough-neighbourhoods.geojson', json.dumps(local_neigh, separators=(',', ':'), ensure_ascii=False).encode())
     atomic_write(args.output / 'establishments.csv', export.getvalue().encode('utf-8-sig'))
+    for archive_path, archive_data in archive_writes:
+        atomic_write(archive_path, archive_data)
     atomic_write(previous_path, json.dumps(snapshot, separators=(',', ':'), ensure_ascii=False).encode())
 
 
