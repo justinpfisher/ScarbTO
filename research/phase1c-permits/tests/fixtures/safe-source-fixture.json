@@ -1,0 +1,1887 @@
+{
+  "version": 1,
+  "qualification_scope": "Bounded source/schema sample only; NOT full feed or Scarborough spatial qualification",
+  "created_at": "2026-10-28T01:41:46.068612+00:00",
+  "licence": {
+    "name": "Open Government Licence - Toronto",
+    "version": "1.0",
+    "url": "https://open.toronto.ca/open-data-licence/",
+    "attribution": "Contains information licensed under the Open Government Licence – Toronto.",
+    "api_discrepancy": "All four package_show responses report license_id=notspecified. Official dataset portal pages link Open Government Licence - Toronto.",
+    "personal_information_excluded": true
+  },
+  "feeds": {
+    "active": {
+      "resource_id": "6d0229af-bc54-46de-9c2b-26759b01dd05",
+      "package_id": "108c2bd1-6945-46f6-af92-02f5658ee7f7",
+      "name": "building-permits-active-permits",
+      "source_metadata_modified": "2026-10-27T10:23:15.826602",
+      "schema": [
+        {
+          "id": "_id",
+          "type": "int"
+        },
+        {
+          "id": "PERMIT_NUM",
+          "type": "text",
+          "info": {
+            "notes": "Last two digits of calendar year, plus IBMS-generated sequence"
+          }
+        },
+        {
+          "id": "REVISION_NUM",
+          "type": "text",
+          "info": {
+            "notes": "Two digit number identifying revisions to permit application made after permit issuance"
+          }
+        },
+        {
+          "id": "PERMIT_TYPE",
+          "type": "text",
+          "info": {
+            "notes": "Text field describing the type of permit. The less descriptive permit type names here include:\n\n* Designated Structures: Designated structure, such as communication towers, crane runways, exterior tanks and supports, pedestrian bridges, retaining walls, satellite dishes and solar collectors.\n* Partial Permits: Permits issued for parts of a building; Excavation, Shoring, Structure, etc...\n* Authority to Occupy: Partial occupancy of a building"
+          }
+        },
+        {
+          "id": "STRUCTURE_TYPE",
+          "type": "text",
+          "info": {
+            "notes": "Identifies that type of structure the application relates to."
+          }
+        },
+        {
+          "id": "WORK",
+          "type": "text",
+          "info": {
+            "notes": "Overall description of the type of work covered by application."
+          }
+        },
+        {
+          "id": "STREET_NUM",
+          "type": "text",
+          "info": {
+            "notes": "Address - street number"
+          }
+        },
+        {
+          "id": "STREET_NAME",
+          "type": "text",
+          "info": {
+            "notes": "Address - street name"
+          }
+        },
+        {
+          "id": "STREET_TYPE",
+          "type": "text",
+          "info": {
+            "notes": "Address - street type"
+          }
+        },
+        {
+          "id": "STREET_DIRECTION",
+          "type": "text",
+          "info": {
+            "notes": "Address - street direction"
+          }
+        },
+        {
+          "id": "POSTAL",
+          "type": "text",
+          "info": {
+            "notes": "First 3 digits of postal code"
+          }
+        },
+        {
+          "id": "GEO_ID",
+          "type": "text",
+          "info": {
+            "notes": "City-defined, unique identifier for Property Address"
+          }
+        },
+        {
+          "id": "WARD_GRID",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "APPLICATION_DATE",
+          "type": "date",
+          "info": {
+            "notes": "Date that the application was received and entered into the city's permit application management system (IBMS)"
+          }
+        },
+        {
+          "id": "ISSUED_DATE",
+          "type": "date",
+          "info": {
+            "notes": "Date that the permit was issued."
+          }
+        },
+        {
+          "id": "COMPLETED_DATE",
+          "type": "date",
+          "info": {
+            "notes": "Date work is complete and permit is cleared"
+          }
+        },
+        {
+          "id": "STATUS",
+          "type": "text",
+          "info": {
+            "notes": "Current status of application / permit"
+          }
+        },
+        {
+          "id": "DESCRIPTION",
+          "type": "text",
+          "info": {
+            "notes": "Description of work proposed in application"
+          }
+        },
+        {
+          "id": "CURRENT_USE",
+          "type": "text",
+          "info": {
+            "notes": "Use of the property at the time of application submission"
+          }
+        },
+        {
+          "id": "PROPOSED_USE",
+          "type": "text",
+          "info": {
+            "notes": "Use of the property after completion of work covered by permit"
+          }
+        },
+        {
+          "id": "DWELLING_UNITS_CREATED",
+          "type": "text",
+          "info": {
+            "notes": "Number of residential dwelling units created by completion of permit work."
+          }
+        },
+        {
+          "id": "DWELLING_UNITS_LOST",
+          "type": "text",
+          "info": {
+            "notes": "Number of residential dwelling units lost by completion of permit work."
+          }
+        },
+        {
+          "id": "EST_CONST_COST",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "ASSEMBLY",
+          "type": "float8",
+          "info": {
+            "notes": "Assembly Occupancy area (in sq metres) covered by permit work. (eg Restaurant, Library, Theatre)"
+          }
+        },
+        {
+          "id": "INSTITUTIONAL",
+          "type": "float8",
+          "info": {
+            "notes": "Institutional Occupancy area (in sq metres) covered by permit work (eg Hospital, Nursing Home)"
+          }
+        },
+        {
+          "id": "RESIDENTIAL",
+          "type": "float8",
+          "info": {
+            "notes": "Residential Occupancy area (in sq metres) covered by permit work"
+          }
+        },
+        {
+          "id": "BUSINESS_AND_PERSONAL_SERVICES",
+          "type": "float8",
+          "info": {
+            "notes": "Business and Personal Services Occupancy area (in sq metres) covered by permit work (Office, Bank, Medical Clinic)"
+          }
+        },
+        {
+          "id": "MERCANTILE",
+          "type": "float8",
+          "info": {
+            "notes": "Mercantile Occupancy area (in sq metres) covered by permit work (eg Department Store, Supermarket)"
+          }
+        },
+        {
+          "id": "INDUSTRIAL",
+          "type": "float8",
+          "info": {
+            "notes": "Industrial Occupancy area (in sq metres) covered by permit work (eg Warehouse, Gas Station)"
+          }
+        },
+        {
+          "id": "INTERIOR_ALTERATIONS",
+          "type": "float8",
+          "info": {
+            "notes": "Floor area (in sq metres) covered by permit work"
+          }
+        },
+        {
+          "id": "DEMOLITION",
+          "type": "float8",
+          "info": {
+            "notes": "Floor area (in sq metres) covered by permit work"
+          }
+        },
+        {
+          "id": "BUILDER_NAME",
+          "type": "text",
+          "info": {
+            "notes": "Builder associated w the permit"
+          }
+        }
+      ],
+      "pages": [
+        {
+          "retrieved_at": "2026-10-28T01:37:32.718225+00:00",
+          "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=6d0229af-bc54-46de-9c2b-26759b01dd05&fields=_id%2CPERMIT_NUM%2CREVISION_NUM%2CPERMIT_TYPE%2CSTRUCTURE_TYPE%2CSTREET_NUM%2CSTREET_NAME%2CSTREET_TYPE%2CSTREET_DIRECTION%2CPOSTAL%2CGEO_ID%2CAPPLICATION_DATE%2CISSUED_DATE%2CCOMPLETED_DATE%2CSTATUS%2CDWELLING_UNITS_CREATED%2CDWELLING_UNITS_LOST%2CEST_CONST_COST&limit=5&offset=0&sort=_id+asc&include_total=true&total_estimation_threshold=1000000000",
+          "offset": 0,
+          "limit": 5,
+          "total": 200978,
+          "total_was_estimated": false,
+          "rows": [
+            {
+              "logical_id": "toronto:permit:19 255349 BLD:rev:01",
+              "source": {
+                "_id": 1,
+                "PERMIT_NUM": "19 255349 BLD",
+                "REVISION_NUM": "01",
+                "PERMIT_TYPE": "New Houses",
+                "STRUCTURE_TYPE": "SFD - Detached",
+                "STREET_NUM": "31",
+                "STREET_NAME": "BALMORAL",
+                "STREET_TYPE": "AVE",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M4V",
+                "GEO_ID": "8741300",
+                "APPLICATION_DATE": "2021-09-24",
+                "ISSUED_DATE": "2022-03-30",
+                "COMPLETED_DATE": null,
+                "STATUS": "Revision Issued",
+                "DWELLING_UNITS_CREATED": 0,
+                "DWELLING_UNITS_LOST": 0,
+                "EST_CONST_COST": 0
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:permit:19 255349 HVA:rev:00",
+              "source": {
+                "_id": 2,
+                "PERMIT_NUM": "19 255349 HVA",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "Mechanical(MS)",
+                "STRUCTURE_TYPE": "SFD - Detached",
+                "STREET_NUM": "31",
+                "STREET_NAME": "BALMORAL",
+                "STREET_TYPE": "AVE",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M4V",
+                "GEO_ID": "8741300",
+                "APPLICATION_DATE": "2022-03-26",
+                "ISSUED_DATE": "2022-03-30",
+                "COMPLETED_DATE": null,
+                "STATUS": "Inspection",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": [
+                "EST_CONST_COST:invalid_numeric"
+              ]
+            },
+            {
+              "logical_id": "toronto:permit:26 165188 BLD:rev:00",
+              "source": {
+                "_id": 3,
+                "PERMIT_NUM": "26 165188 BLD",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "Small Residential Projects",
+                "STRUCTURE_TYPE": "SFD - Detached",
+                "STREET_NUM": "26",
+                "STREET_NAME": "SOUTHVALE",
+                "STREET_TYPE": "DR",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M4G",
+                "GEO_ID": "34128",
+                "APPLICATION_DATE": "2026-05-22",
+                "ISSUED_DATE": "2026-08-13",
+                "COMPLETED_DATE": null,
+                "STATUS": "Permit Issued",
+                "DWELLING_UNITS_CREATED": 0,
+                "DWELLING_UNITS_LOST": 0,
+                "EST_CONST_COST": 800000
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:permit:26 165188 PLB:rev:00",
+              "source": {
+                "_id": 4,
+                "PERMIT_NUM": "26 165188 PLB",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "Plumbing(PS)",
+                "STRUCTURE_TYPE": "SFD - Detached",
+                "STREET_NUM": "26",
+                "STREET_NAME": "SOUTHVALE",
+                "STREET_TYPE": "DR",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M4G",
+                "GEO_ID": "34128",
+                "APPLICATION_DATE": "2026-05-22",
+                "ISSUED_DATE": "2026-08-13",
+                "COMPLETED_DATE": null,
+                "STATUS": "Permit Issued",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": [
+                "EST_CONST_COST:invalid_numeric"
+              ]
+            },
+            {
+              "logical_id": "toronto:permit:26 165188 HVA:rev:00",
+              "source": {
+                "_id": 5,
+                "PERMIT_NUM": "26 165188 HVA",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "Mechanical(MS)",
+                "STRUCTURE_TYPE": "SFD - Detached",
+                "STREET_NUM": "26",
+                "STREET_NAME": "SOUTHVALE",
+                "STREET_TYPE": "DR",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M4G",
+                "GEO_ID": "34128",
+                "APPLICATION_DATE": "2026-09-04",
+                "ISSUED_DATE": "2026-09-22",
+                "COMPLETED_DATE": null,
+                "STATUS": "Permit Issued",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": [
+                "EST_CONST_COST:invalid_numeric"
+              ]
+            }
+          ]
+        },
+        {
+          "retrieved_at": "2026-10-28T01:37:34.803877+00:00",
+          "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=6d0229af-bc54-46de-9c2b-26759b01dd05&fields=_id%2CPERMIT_NUM%2CREVISION_NUM%2CPERMIT_TYPE%2CSTRUCTURE_TYPE%2CSTREET_NUM%2CSTREET_NAME%2CSTREET_TYPE%2CSTREET_DIRECTION%2CPOSTAL%2CGEO_ID%2CAPPLICATION_DATE%2CISSUED_DATE%2CCOMPLETED_DATE%2CSTATUS%2CDWELLING_UNITS_CREATED%2CDWELLING_UNITS_LOST%2CEST_CONST_COST&limit=5&offset=5&sort=_id+asc&include_total=true&total_estimation_threshold=1000000000",
+          "offset": 5,
+          "limit": 5,
+          "total": 200978,
+          "total_was_estimated": false,
+          "rows": [
+            {
+              "logical_id": "toronto:permit:22 232002 DEM:rev:00",
+              "source": {
+                "_id": 6,
+                "PERMIT_NUM": "22 232002 DEM",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "Demolition Folder (DM)",
+                "STRUCTURE_TYPE": "SFD - Detached",
+                "STREET_NUM": "113",
+                "STREET_NAME": "ALHART",
+                "STREET_TYPE": "DR",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M9V",
+                "GEO_ID": "9741572",
+                "APPLICATION_DATE": "2022-11-22",
+                "ISSUED_DATE": "2023-06-23",
+                "COMPLETED_DATE": null,
+                "STATUS": "Permit Issued",
+                "DWELLING_UNITS_CREATED": 0,
+                "DWELLING_UNITS_LOST": 1,
+                "EST_CONST_COST": 0
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:permit:21 153884 BLD:rev:00",
+              "source": {
+                "_id": 7,
+                "PERMIT_NUM": "21 153884 BLD",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "Small Residential Projects",
+                "STRUCTURE_TYPE": "SFD - Detached",
+                "STREET_NUM": "53",
+                "STREET_NAME": "WATSON",
+                "STREET_TYPE": "ST",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M1C",
+                "GEO_ID": "9848431",
+                "APPLICATION_DATE": "2021-05-12",
+                "ISSUED_DATE": "2021-06-30",
+                "COMPLETED_DATE": null,
+                "STATUS": "Inspection",
+                "DWELLING_UNITS_CREATED": 0,
+                "DWELLING_UNITS_LOST": 0,
+                "EST_CONST_COST": 150000
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:permit:21 153884 PLB:rev:00",
+              "source": {
+                "_id": 8,
+                "PERMIT_NUM": "21 153884 PLB",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "Plumbing(PS)",
+                "STRUCTURE_TYPE": "SFD - Detached",
+                "STREET_NUM": "53",
+                "STREET_NAME": "WATSON",
+                "STREET_TYPE": "ST",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M1C",
+                "GEO_ID": "9848431",
+                "APPLICATION_DATE": "2021-05-12",
+                "ISSUED_DATE": "2021-06-30",
+                "COMPLETED_DATE": null,
+                "STATUS": "Inspection",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": [
+                "EST_CONST_COST:invalid_numeric"
+              ]
+            },
+            {
+              "logical_id": "toronto:permit:21 153884 HVA:rev:00",
+              "source": {
+                "_id": 9,
+                "PERMIT_NUM": "21 153884 HVA",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "Mechanical(MS)",
+                "STRUCTURE_TYPE": "SFD - Detached",
+                "STREET_NUM": "53",
+                "STREET_NAME": "WATSON",
+                "STREET_TYPE": "ST",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M1C",
+                "GEO_ID": "9848431",
+                "APPLICATION_DATE": "2021-09-13",
+                "ISSUED_DATE": "2021-09-28",
+                "COMPLETED_DATE": null,
+                "STATUS": "Inspection",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": [
+                "EST_CONST_COST:invalid_numeric"
+              ]
+            },
+            {
+              "logical_id": "toronto:permit:22 164688 BLD:rev:00",
+              "source": {
+                "_id": 10,
+                "PERMIT_NUM": "22 164688 BLD",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "New Houses",
+                "STRUCTURE_TYPE": "SFD - Detached",
+                "STREET_NUM": "46",
+                "STREET_NAME": "DROMORE",
+                "STREET_TYPE": "CRES",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M2R",
+                "GEO_ID": "509456",
+                "APPLICATION_DATE": "2022-06-20",
+                "ISSUED_DATE": "2022-07-11",
+                "COMPLETED_DATE": null,
+                "STATUS": "Permit Issued",
+                "DWELLING_UNITS_CREATED": 1,
+                "DWELLING_UNITS_LOST": 0,
+                "EST_CONST_COST": 400000
+              },
+              "quality_flags": []
+            }
+          ]
+        }
+      ]
+    },
+    "cleared": {
+      "resource_id": "a96c0ba4-3026-402b-b09d-5b1268b8f810",
+      "package_id": "9e42a85b-180f-4dc5-b0d7-d46661a6c0ec",
+      "name": "Cleared Building Permits since 2017",
+      "source_metadata_modified": "2026-10-27T11:17:57.453028",
+      "schema": [
+        {
+          "id": "_id",
+          "type": "int"
+        },
+        {
+          "id": "PERMIT_NUM",
+          "type": "text",
+          "info": {
+            "notes": "Last two digits of calendar year, plus IBMS-generated sequence"
+          }
+        },
+        {
+          "id": "REVISION_NUM",
+          "type": "text",
+          "info": {
+            "notes": "Two digit number identifying revisions to permit application made after permit issuance"
+          }
+        },
+        {
+          "id": "PERMIT_TYPE",
+          "type": "text",
+          "info": {
+            "notes": "Text field describing the type of permit. The less descriptive permit type names here include:\n\n* Designated Structures: Designated structure, such as communication towers, crane runways, exterior tanks and supports, pedestrian bridges, retaining walls, satellite dishes and solar collectors.\n* Partial Permits: Permits issued for parts of a building; Excavation, Shoring, Structure, etc...\n* Authority to Occupy: Partial occupancy of a building"
+          }
+        },
+        {
+          "id": "STRUCTURE_TYPE",
+          "type": "text",
+          "info": {
+            "notes": "Identifies that type of structure the application relates to."
+          }
+        },
+        {
+          "id": "WORK",
+          "type": "text",
+          "info": {
+            "notes": "Overall description of the type of work covered by application."
+          }
+        },
+        {
+          "id": "STREET_NUM",
+          "type": "text",
+          "info": {
+            "notes": "Address - street number"
+          }
+        },
+        {
+          "id": "STREET_NAME",
+          "type": "text",
+          "info": {
+            "notes": "Address - street name"
+          }
+        },
+        {
+          "id": "STREET_TYPE",
+          "type": "text",
+          "info": {
+            "notes": "Address - street type"
+          }
+        },
+        {
+          "id": "STREET_DIRECTION",
+          "type": "text",
+          "info": {
+            "notes": "Address - street direction"
+          }
+        },
+        {
+          "id": "POSTAL",
+          "type": "text",
+          "info": {
+            "notes": "First 3 digits of postal code"
+          }
+        },
+        {
+          "id": "GEO_ID",
+          "type": "text",
+          "info": {
+            "notes": "City-defined, unique identifier for Property Address"
+          }
+        },
+        {
+          "id": "WARD_GRID",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "APPLICATION_DATE",
+          "type": "date",
+          "info": {
+            "notes": "Date that the application was received and entered into the city's permit application management system (IBMS)"
+          }
+        },
+        {
+          "id": "ISSUED_DATE",
+          "type": "date",
+          "info": {
+            "notes": "Date that the permit was issued."
+          }
+        },
+        {
+          "id": "COMPLETED_DATE",
+          "type": "date",
+          "info": {
+            "notes": "Date work is complete and permit is cleared"
+          }
+        },
+        {
+          "id": "STATUS",
+          "type": "text",
+          "info": {
+            "notes": "Current status of application / permit"
+          }
+        },
+        {
+          "id": "DESCRIPTION",
+          "type": "text",
+          "info": {
+            "notes": "Description of work proposed in application"
+          }
+        },
+        {
+          "id": "CURRENT_USE",
+          "type": "text",
+          "info": {
+            "notes": "Use of the property at the time of application submission"
+          }
+        },
+        {
+          "id": "PROPOSED_USE",
+          "type": "text",
+          "info": {
+            "notes": "Use of the property after completion of work covered by permit"
+          }
+        },
+        {
+          "id": "DWELLING_UNITS_CREATED",
+          "type": "text",
+          "info": {
+            "notes": "Number of residential dwelling units created by completion of permit work."
+          }
+        },
+        {
+          "id": "DWELLING_UNITS_LOST",
+          "type": "text",
+          "info": {
+            "notes": "Number of residential dwelling units lost by completion of permit work."
+          }
+        },
+        {
+          "id": "EST_CONST_COST",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "ASSEMBLY",
+          "type": "float8",
+          "info": {
+            "notes": "Assembly Occupancy area (in sq metres) covered by permit work. (eg Restaurant, Library, Theatre)"
+          }
+        },
+        {
+          "id": "INSTITUTIONAL",
+          "type": "float8",
+          "info": {
+            "notes": "Institutional Occupancy area (in sq metres) covered by permit work (eg Hospital, Nursing Home)"
+          }
+        },
+        {
+          "id": "RESIDENTIAL",
+          "type": "float8",
+          "info": {
+            "notes": "Residential Occupancy area (in sq metres) covered by permit work"
+          }
+        },
+        {
+          "id": "BUSINESS_AND_PERSONAL_SERVICES",
+          "type": "float8",
+          "info": {
+            "notes": "Business and Personal Services Occupancy area (in sq metres) covered by permit work (Office, Bank, Medical Clinic)"
+          }
+        },
+        {
+          "id": "MERCANTILE",
+          "type": "float8",
+          "info": {
+            "notes": "Mercantile Occupancy area (in sq metres) covered by permit work (eg Department Store, Supermarket)"
+          }
+        },
+        {
+          "id": "INDUSTRIAL",
+          "type": "float8",
+          "info": {
+            "notes": "Industrial Occupancy area (in sq metres) covered by permit work (eg Warehouse, Gas Station)"
+          }
+        },
+        {
+          "id": "INTERIOR_ALTERATIONS",
+          "type": "float8",
+          "info": {
+            "notes": "Floor area (in sq metres) covered by permit work"
+          }
+        },
+        {
+          "id": "DEMOLITION",
+          "type": "float8",
+          "info": {
+            "notes": "Floor area (in sq metres) covered by permit work"
+          }
+        },
+        {
+          "id": "BUILDER_NAME",
+          "type": "text",
+          "info": {
+            "notes": "Builder associated w the permit"
+          }
+        }
+      ],
+      "pages": [
+        {
+          "retrieved_at": "2026-10-28T01:37:42.438098+00:00",
+          "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=a96c0ba4-3026-402b-b09d-5b1268b8f810&fields=_id%2CPERMIT_NUM%2CREVISION_NUM%2CPERMIT_TYPE%2CSTRUCTURE_TYPE%2CSTREET_NUM%2CSTREET_NAME%2CSTREET_TYPE%2CSTREET_DIRECTION%2CPOSTAL%2CGEO_ID%2CAPPLICATION_DATE%2CISSUED_DATE%2CCOMPLETED_DATE%2CSTATUS%2CDWELLING_UNITS_CREATED%2CDWELLING_UNITS_LOST%2CEST_CONST_COST&limit=5&offset=0&sort=_id+asc&include_total=true&total_estimation_threshold=1000000000",
+          "offset": 0,
+          "limit": 5,
+          "total": 446667,
+          "total_was_estimated": false,
+          "rows": [
+            {
+              "logical_id": "toronto:permit:17 225341 ALT:rev:00",
+              "source": {
+                "_id": 1,
+                "PERMIT_NUM": "17 225341 ALT",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "AS Alternative Solution",
+                "STRUCTURE_TYPE": null,
+                "STREET_NUM": "310",
+                "STREET_NAME": "SPADINA",
+                "STREET_TYPE": "AVE",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M5T",
+                "GEO_ID": "14189029",
+                "APPLICATION_DATE": "2017-08-30",
+                "ISSUED_DATE": null,
+                "COMPLETED_DATE": "2017-10-31",
+                "STATUS": "Cancelled",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:permit:21 166181 ALT:rev:00",
+              "source": {
+                "_id": 2,
+                "PERMIT_NUM": "21 166181 ALT",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "AS Alternative Solution",
+                "STRUCTURE_TYPE": null,
+                "STREET_NUM": "2490-2504",
+                "STREET_NAME": "YONGE",
+                "STREET_TYPE": "ST",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M4P",
+                "GEO_ID": "14190172",
+                "APPLICATION_DATE": "2021-06-05",
+                "ISSUED_DATE": null,
+                "COMPLETED_DATE": "2023-05-03",
+                "STATUS": "Approved",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:permit:21 198972 ALT:rev:00",
+              "source": {
+                "_id": 3,
+                "PERMIT_NUM": "21 198972 ALT",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "AS Alternative Solution",
+                "STRUCTURE_TYPE": null,
+                "STREET_NUM": "740",
+                "STREET_NAME": "DUPONT",
+                "STREET_TYPE": "ST",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M6G",
+                "GEO_ID": "14200539",
+                "APPLICATION_DATE": "2021-08-16",
+                "ISSUED_DATE": null,
+                "COMPLETED_DATE": "2021-08-24",
+                "STATUS": "Approved",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:permit:21 131571 ALT:rev:00",
+              "source": {
+                "_id": 4,
+                "PERMIT_NUM": "21 131571 ALT",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "AS Alternative Solution",
+                "STRUCTURE_TYPE": null,
+                "STREET_NUM": "150",
+                "STREET_NAME": "STERLING",
+                "STREET_TYPE": "RD",
+                "STREET_DIRECTION": null,
+                "POSTAL": null,
+                "GEO_ID": "30082922",
+                "APPLICATION_DATE": "2021-03-24",
+                "ISSUED_DATE": null,
+                "COMPLETED_DATE": "2021-11-24",
+                "STATUS": "Approved",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:permit:21 131574 ALT:rev:00",
+              "source": {
+                "_id": 5,
+                "PERMIT_NUM": "21 131574 ALT",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "AS Alternative Solution",
+                "STRUCTURE_TYPE": null,
+                "STREET_NUM": "150",
+                "STREET_NAME": "STERLING",
+                "STREET_TYPE": "RD",
+                "STREET_DIRECTION": null,
+                "POSTAL": null,
+                "GEO_ID": "30082922",
+                "APPLICATION_DATE": "2021-03-24",
+                "ISSUED_DATE": null,
+                "COMPLETED_DATE": "2022-02-01",
+                "STATUS": "Approved",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": []
+            }
+          ]
+        },
+        {
+          "retrieved_at": "2026-10-28T01:37:44.698994+00:00",
+          "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=a96c0ba4-3026-402b-b09d-5b1268b8f810&fields=_id%2CPERMIT_NUM%2CREVISION_NUM%2CPERMIT_TYPE%2CSTRUCTURE_TYPE%2CSTREET_NUM%2CSTREET_NAME%2CSTREET_TYPE%2CSTREET_DIRECTION%2CPOSTAL%2CGEO_ID%2CAPPLICATION_DATE%2CISSUED_DATE%2CCOMPLETED_DATE%2CSTATUS%2CDWELLING_UNITS_CREATED%2CDWELLING_UNITS_LOST%2CEST_CONST_COST&limit=5&offset=5&sort=_id+asc&include_total=true&total_estimation_threshold=1000000000",
+          "offset": 5,
+          "limit": 5,
+          "total": 446667,
+          "total_was_estimated": false,
+          "rows": [
+            {
+              "logical_id": "toronto:permit:21 134165 ALT:rev:00",
+              "source": {
+                "_id": 6,
+                "PERMIT_NUM": "21 134165 ALT",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "AS Alternative Solution",
+                "STRUCTURE_TYPE": null,
+                "STREET_NUM": "215",
+                "STREET_NAME": "LAKE SHORE",
+                "STREET_TYPE": "BLVD",
+                "STREET_DIRECTION": "E",
+                "POSTAL": "M5A",
+                "GEO_ID": "829584",
+                "APPLICATION_DATE": "2021-03-30",
+                "ISSUED_DATE": null,
+                "COMPLETED_DATE": "2021-05-28",
+                "STATUS": "Approved",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:permit:21 161604 ALT:rev:00",
+              "source": {
+                "_id": 7,
+                "PERMIT_NUM": "21 161604 ALT",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "AS Alternative Solution",
+                "STRUCTURE_TYPE": null,
+                "STREET_NUM": "82",
+                "STREET_NAME": "BUTTONWOOD",
+                "STREET_TYPE": "AVE",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M6M",
+                "GEO_ID": "54248",
+                "APPLICATION_DATE": "2021-05-27",
+                "ISSUED_DATE": null,
+                "COMPLETED_DATE": "2021-06-17",
+                "STATUS": "Cancelled",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:permit:21 139300 ALT:rev:00",
+              "source": {
+                "_id": 8,
+                "PERMIT_NUM": "21 139300 ALT",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "AS Alternative Solution",
+                "STRUCTURE_TYPE": null,
+                "STREET_NUM": "1",
+                "STREET_NAME": "IBMS WARD 01",
+                "STREET_TYPE": null,
+                "STREET_DIRECTION": null,
+                "POSTAL": null,
+                "GEO_ID": null,
+                "APPLICATION_DATE": "2021-04-12",
+                "ISSUED_DATE": null,
+                "COMPLETED_DATE": "2021-08-27",
+                "STATUS": "Approved",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:permit:21 158712 ALT:rev:00",
+              "source": {
+                "_id": 9,
+                "PERMIT_NUM": "21 158712 ALT",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "AS Alternative Solution",
+                "STRUCTURE_TYPE": null,
+                "STREET_NUM": "165",
+                "STREET_NAME": "TAPSCOTT",
+                "STREET_TYPE": "RD",
+                "STREET_DIRECTION": null,
+                "POSTAL": null,
+                "GEO_ID": "30042920",
+                "APPLICATION_DATE": "2021-05-21",
+                "ISSUED_DATE": null,
+                "COMPLETED_DATE": "2022-06-30",
+                "STATUS": "Approved",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:permit:21 190929 ALT:rev:00",
+              "source": {
+                "_id": 10,
+                "PERMIT_NUM": "21 190929 ALT",
+                "REVISION_NUM": "00",
+                "PERMIT_TYPE": "AS Alternative Solution",
+                "STRUCTURE_TYPE": null,
+                "STREET_NUM": "470",
+                "STREET_NAME": "WILSON",
+                "STREET_TYPE": "AVE",
+                "STREET_DIRECTION": null,
+                "POSTAL": "M3H",
+                "GEO_ID": "9879294",
+                "APPLICATION_DATE": "2021-07-28",
+                "ISSUED_DATE": null,
+                "COMPLETED_DATE": "2021-08-27",
+                "STATUS": "Approved",
+                "DWELLING_UNITS_CREATED": null,
+                "DWELLING_UNITS_LOST": null,
+                "EST_CONST_COST": null
+              },
+              "quality_flags": []
+            }
+          ]
+        }
+      ]
+    },
+    "development": {
+      "resource_id": "8907d8ed-c515-4ce9-b674-9f8c6eefcf0d",
+      "package_id": "0aa7e480-9b48-4919-98e0-6af7615b7809",
+      "name": "Development Applications",
+      "source_metadata_modified": "2026-10-27T07:25:37.641104",
+      "schema": [
+        {
+          "id": "_id",
+          "type": "int"
+        },
+        {
+          "id": "APPLICATION_TYPE",
+          "type": "text",
+          "info": {
+            "notes": "2-letter code used to identify the type of application."
+          }
+        },
+        {
+          "id": "APPLICATION#",
+          "type": "text",
+          "info": {
+            "notes": "The application number provided to applicants to identify their application."
+          }
+        },
+        {
+          "id": "STREET_NUM",
+          "type": "text",
+          "info": {
+            "notes": "Street address number of the primary address for the application."
+          }
+        },
+        {
+          "id": "STREET_NAME",
+          "type": "text",
+          "info": {
+            "notes": "Street address name of the primary address for the application."
+          }
+        },
+        {
+          "id": "STREET_TYPE",
+          "type": "text",
+          "info": {
+            "notes": "Street type of the primary address of the application."
+          }
+        },
+        {
+          "id": "STREET_DIRECTION",
+          "type": "text",
+          "info": {
+            "notes": "Street direction of the primary address of the application."
+          }
+        },
+        {
+          "id": "POSTAL",
+          "type": "text",
+          "info": {
+            "notes": "First 3 characters of the postal code of the primary address of the application."
+          }
+        },
+        {
+          "id": "DATE_SUBMITTED",
+          "type": "timestamp",
+          "info": {
+            "notes": "The submission date of the application."
+          }
+        },
+        {
+          "id": "STATUS",
+          "type": "text",
+          "info": {
+            "notes": "The internal status of the application in the review process."
+          }
+        },
+        {
+          "id": "X",
+          "type": "text",
+          "info": {
+            "notes": "The NAD27 x coordinate of the primary address of the application."
+          }
+        },
+        {
+          "id": "Y",
+          "type": "text",
+          "info": {
+            "notes": "The NAD27 y coordinate of the primary address of the application."
+          }
+        },
+        {
+          "id": "DESCRIPTION",
+          "type": "text",
+          "info": {
+            "notes": "The written description of the application."
+          }
+        },
+        {
+          "id": "REFERENCE_FILE#",
+          "type": "text",
+          "info": {
+            "notes": "The reference file number of the application."
+          }
+        },
+        {
+          "id": "FOLDERRSN",
+          "type": "text",
+          "info": {
+            "notes": "The internal database identifier for the application."
+          }
+        },
+        {
+          "id": "WARD_NUMBER",
+          "type": "text",
+          "info": {
+            "notes": "The ward number of the primary address of the application."
+          }
+        },
+        {
+          "id": "WARD_NAME",
+          "type": "text",
+          "info": {
+            "notes": "The name of the ward of the primary address of the application."
+          }
+        },
+        {
+          "id": "COMMUNITY_MEETING_DATE",
+          "type": "timestamp",
+          "info": {
+            "notes": "The date of the community consultation meeting for the application."
+          }
+        },
+        {
+          "id": "COMMUNITY_MEETING_TIME",
+          "type": "text",
+          "info": {
+            "notes": "The time of the community consultation meeting for the application."
+          }
+        },
+        {
+          "id": "COMMUNITY_MEETING_LOCATION",
+          "type": "text",
+          "info": {
+            "notes": "The location of the community consultation meeting for the application."
+          }
+        },
+        {
+          "id": "APPLICATION_URL",
+          "type": "text",
+          "info": {
+            "notes": "The web URL for the AIC application details page for the application."
+          }
+        },
+        {
+          "id": "CONTACT_NAME",
+          "type": "text",
+          "info": {
+            "notes": "The name of the planner assigned to the application."
+          }
+        },
+        {
+          "id": "CONTACT_PHONE",
+          "type": "text",
+          "info": {
+            "notes": "The phone number of the planner assigned to the application."
+          }
+        },
+        {
+          "id": "CONTACT_EMAIL",
+          "type": "text",
+          "info": {
+            "notes": "The email address of the planner assigned to the application."
+          }
+        },
+        {
+          "id": "PARENT_FOLDER_NUMBER",
+          "type": "text",
+          "info": {
+            "notes": "The application number of the higher-level application associated with this application (if one exists)."
+          }
+        }
+      ],
+      "pages": [
+        {
+          "retrieved_at": "2026-10-28T01:37:46.928239+00:00",
+          "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=8907d8ed-c515-4ce9-b674-9f8c6eefcf0d&fields=_id%2CAPPLICATION_TYPE%2CAPPLICATION%23%2CDATE_SUBMITTED%2CSTATUS%2CX%2CY%2CFOLDERRSN%2CWARD_NUMBER%2CWARD_NAME&limit=5&offset=0&sort=_id+asc&include_total=true&total_estimation_threshold=1000000000",
+          "offset": 0,
+          "limit": 5,
+          "total": 26648,
+          "total_was_estimated": false,
+          "rows": [
+            {
+              "logical_id": "toronto:development:folder:5793653",
+              "source": {
+                "_id": 1,
+                "APPLICATION_TYPE": "SA",
+                "APPLICATION#": "26 127354 STE 19 SA",
+                "DATE_SUBMITTED": "2026-03-10T00:00:00",
+                "STATUS": "Under Review",
+                "X": "321069.471",
+                "Y": "4838603.738",
+                "FOLDERRSN": "5793653",
+                "WARD_NUMBER": "19",
+                "WARD_NAME": "Beaches-East York"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:development:folder:5793653",
+              "source": {
+                "_id": 2,
+                "APPLICATION_TYPE": "SA",
+                "APPLICATION#": "26 127354 STE 19 SA",
+                "DATE_SUBMITTED": "2026-03-10T00:00:00",
+                "STATUS": "Under Review",
+                "X": "321080.832",
+                "Y": "4838610.645",
+                "FOLDERRSN": "5793653",
+                "WARD_NUMBER": "19",
+                "WARD_NAME": "Beaches-East York"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:development:folder:5793927",
+              "source": {
+                "_id": 3,
+                "APPLICATION_TYPE": "SA",
+                "APPLICATION#": "26 127575 STE 04 SA",
+                "DATE_SUBMITTED": "2026-03-10T00:00:00",
+                "STATUS": "NOAC Issued",
+                "X": "309688.55",
+                "Y": "4832805.611",
+                "FOLDERRSN": "5793927",
+                "WARD_NUMBER": "04",
+                "WARD_NAME": "Parkdale-High Park"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:development:folder:5794364",
+              "source": {
+                "_id": 4,
+                "APPLICATION_TYPE": "CD",
+                "APPLICATION#": "26 127948 STE 09 CD",
+                "DATE_SUBMITTED": "2026-03-11T00:00:00",
+                "STATUS": "Amend Drft Plan App",
+                "X": "308317.563",
+                "Y": "4838793.563",
+                "FOLDERRSN": "5794364",
+                "WARD_NUMBER": "09",
+                "WARD_NAME": "Davenport"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:development:folder:5813181",
+              "source": {
+                "_id": 5,
+                "APPLICATION_TYPE": "SA",
+                "APPLICATION#": "26 143969 STE 12 SA",
+                "DATE_SUBMITTED": "2026-04-15T00:00:00",
+                "STATUS": "Closed",
+                "X": "311137.33",
+                "Y": "4838092.545",
+                "FOLDERRSN": "5813181",
+                "WARD_NUMBER": "12",
+                "WARD_NAME": "Toronto-St. Paul's"
+              },
+              "quality_flags": []
+            }
+          ]
+        },
+        {
+          "retrieved_at": "2026-10-28T01:37:51.695667+00:00",
+          "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=8907d8ed-c515-4ce9-b674-9f8c6eefcf0d&fields=_id%2CAPPLICATION_TYPE%2CAPPLICATION%23%2CDATE_SUBMITTED%2CSTATUS%2CX%2CY%2CFOLDERRSN%2CWARD_NUMBER%2CWARD_NAME&limit=5&offset=5&sort=_id+asc&include_total=true&total_estimation_threshold=1000000000",
+          "offset": 5,
+          "limit": 5,
+          "total": 26648,
+          "total_was_estimated": false,
+          "rows": [
+            {
+              "logical_id": "toronto:development:folder:5738511",
+              "source": {
+                "_id": 6,
+                "APPLICATION_TYPE": "OZ",
+                "APPLICATION#": "25 251661 NNY 08 OZ",
+                "DATE_SUBMITTED": "2025-11-10T00:00:00",
+                "STATUS": "Closed",
+                "X": "309554.68",
+                "Y": "4841963.878",
+                "FOLDERRSN": "5738511",
+                "WARD_NUMBER": "08",
+                "WARD_NAME": "Eglinton-Lawrence"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:development:folder:5724819",
+              "source": {
+                "_id": 7,
+                "APPLICATION_TYPE": "OZ",
+                "APPLICATION#": "25 239794 STE 10 OZ",
+                "DATE_SUBMITTED": "2025-10-15T00:00:00",
+                "STATUS": "Under Review",
+                "X": "314952.967",
+                "Y": "4833431.276",
+                "FOLDERRSN": "5724819",
+                "WARD_NUMBER": "10",
+                "WARD_NAME": "Spadina-Fort York"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:development:folder:5725239",
+              "source": {
+                "_id": 8,
+                "APPLICATION_TYPE": "OZ",
+                "APPLICATION#": "25 240145 STE 09 OZ",
+                "DATE_SUBMITTED": "2025-10-15T00:00:00",
+                "STATUS": "Closed",
+                "X": "309627.108",
+                "Y": "4836586.914",
+                "FOLDERRSN": "5725239",
+                "WARD_NUMBER": "09",
+                "WARD_NAME": "Davenport"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:development:folder:5739340",
+              "source": {
+                "_id": 9,
+                "APPLICATION_TYPE": "OZ",
+                "APPLICATION#": "25 252388 NNY 18 OZ",
+                "DATE_SUBMITTED": "2025-11-12T00:00:00",
+                "STATUS": "Closed",
+                "X": "311913.127",
+                "Y": "4846401.438",
+                "FOLDERRSN": "5739340",
+                "WARD_NUMBER": "18",
+                "WARD_NAME": "Willowdale"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:development:folder:5739340",
+              "source": {
+                "_id": 10,
+                "APPLICATION_TYPE": "OZ",
+                "APPLICATION#": "25 252388 NNY 18 OZ",
+                "DATE_SUBMITTED": "2025-11-12T00:00:00",
+                "STATUS": "Closed",
+                "X": "311904.399",
+                "Y": "4846398.917",
+                "FOLDERRSN": "5739340",
+                "WARD_NUMBER": "18",
+                "WARD_NAME": "Willowdale"
+              },
+              "quality_flags": []
+            }
+          ]
+        }
+      ]
+    },
+    "oar": {
+      "resource_id": "0b3756af-9caf-4f0f-ac28-9c6617adede4",
+      "package_id": "abedd8bc-e3dd-4d45-8e69-79165a76e4fa",
+      "name": "Address Points",
+      "source_metadata_modified": "2026-10-27T11:39:09.374637",
+      "schema": [
+        {
+          "id": "_id",
+          "type": "int"
+        },
+        {
+          "id": "ADDRESS_POINT_ID",
+          "type": "int4",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "ADDRESS_ID",
+          "type": "int4",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "ADDRESS_STRING_ID",
+          "type": "int4",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "LINEAR_NAME_ID",
+          "type": "float8",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "CENTRELINE_ID",
+          "type": "int4",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "MAINT_STAGE",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "ADDRESS_NUMBER",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "LINEAR_NAME_FULL",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "LO_NUM",
+          "type": "int4",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "LO_NUM_SUF",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "HI_NUM",
+          "type": "int4",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "HI_NUM_SUF",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "LINEAR_NAME",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "LINEAR_NAME_TYPE",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "LINEAR_NAME_DIR",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "LINEAR_NAME_DESC",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "CENTRELINE_SIDE",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "CENTRELINE_MEASURE",
+          "type": "float8",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "CENTRELINE_OFFSET",
+          "type": "float8",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "GENERAL_USE_CODE",
+          "type": "int4",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "GENERAL_USE",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "CLASS_FAMILY",
+          "type": "int4",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "CLASS_FAMILY_DESC",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "ADDRESS_CLASS",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "ADDRESS_CLASS_DESC",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "ADDRESS_POINT_ID_LINK",
+          "type": "int4",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "ADDRESS_ID_LINK",
+          "type": "int4",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "PLACE_NAME",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "PLACE_NAME_ALL",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "ADDRESS_STATUS",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "OBJECTID",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "MUNICIPALITY",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "MUNICIPALITY_NAME",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "WARD",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "WARD_NAME",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "ADDRESS_FULL",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        },
+        {
+          "id": "geometry",
+          "type": "text",
+          "info": {
+            "notes": ""
+          }
+        }
+      ],
+      "pages": [
+        {
+          "retrieved_at": "2026-10-28T01:37:53.981227+00:00",
+          "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=0b3756af-9caf-4f0f-ac28-9c6617adede4&fields=_id%2CADDRESS_POINT_ID%2CADDRESS_ID%2CADDRESS_NUMBER%2CLINEAR_NAME_FULL%2CADDRESS_STATUS%2CMUNICIPALITY_NAME%2Cgeometry&limit=5&offset=0&sort=_id+asc&include_total=true&total_estimation_threshold=1000000000",
+          "offset": 0,
+          "limit": 5,
+          "total": 525377,
+          "total_was_estimated": false,
+          "rows": [
+            {
+              "logical_id": "toronto:oar:1020891",
+              "source": {
+                "_id": 1,
+                "ADDRESS_POINT_ID": 1020891,
+                "ADDRESS_ID": 3732,
+                "ADDRESS_NUMBER": "32",
+                "LINEAR_NAME_FULL": "Nineteenth St",
+                "ADDRESS_STATUS": "None",
+                "MUNICIPALITY_NAME": "Etobicoke",
+                "geometry": "{\"type\": \"Point\", \"coordinates\": [-79.5190367341825, 43.5996761490216]}"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:oar:1020865",
+              "source": {
+                "_id": 2,
+                "ADDRESS_POINT_ID": 1020865,
+                "ADDRESS_ID": 3054,
+                "ADDRESS_NUMBER": "5",
+                "LINEAR_NAME_FULL": "Nineteenth St",
+                "ADDRESS_STATUS": "None",
+                "MUNICIPALITY_NAME": "Etobicoke",
+                "geometry": "{\"type\": \"Point\", \"coordinates\": [-79.5180804246363, 43.5987633869987]}"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:oar:30027101",
+              "source": {
+                "_id": 3,
+                "ADDRESS_POINT_ID": 30027101,
+                "ADDRESS_ID": 1510432,
+                "ADDRESS_NUMBER": "22",
+                "LINEAR_NAME_FULL": "Grand Ave",
+                "ADDRESS_STATUS": "None",
+                "MUNICIPALITY_NAME": "Etobicoke",
+                "geometry": "{\"type\": \"Point\", \"coordinates\": [-79.492300303578, 43.6217525669358]}"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:oar:1009464",
+              "source": {
+                "_id": 4,
+                "ADDRESS_POINT_ID": 1009464,
+                "ADDRESS_ID": 126,
+                "ADDRESS_NUMBER": "83",
+                "LINEAR_NAME_FULL": "James St",
+                "ADDRESS_STATUS": "None",
+                "MUNICIPALITY_NAME": "Etobicoke",
+                "geometry": "{\"type\": \"Point\", \"coordinates\": [-79.541492247137, 43.5897185622976]}"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:oar:1009461",
+              "source": {
+                "_id": 5,
+                "ADDRESS_POINT_ID": 1009461,
+                "ADDRESS_ID": 119,
+                "ADDRESS_NUMBER": "78",
+                "LINEAR_NAME_FULL": "James St",
+                "ADDRESS_STATUS": "None",
+                "MUNICIPALITY_NAME": "Etobicoke",
+                "geometry": "{\"type\": \"Point\", \"coordinates\": [-79.541319677753, 43.5901935506553]}"
+              },
+              "quality_flags": []
+            }
+          ]
+        },
+        {
+          "retrieved_at": "2026-10-28T01:37:56.061002+00:00",
+          "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=0b3756af-9caf-4f0f-ac28-9c6617adede4&fields=_id%2CADDRESS_POINT_ID%2CADDRESS_ID%2CADDRESS_NUMBER%2CLINEAR_NAME_FULL%2CADDRESS_STATUS%2CMUNICIPALITY_NAME%2Cgeometry&limit=5&offset=5&sort=_id+asc&include_total=true&total_estimation_threshold=1000000000",
+          "offset": 5,
+          "limit": 5,
+          "total": 525377,
+          "total_was_estimated": false,
+          "rows": [
+            {
+              "logical_id": "toronto:oar:7204387",
+              "source": {
+                "_id": 6,
+                "ADDRESS_POINT_ID": 7204387,
+                "ADDRESS_ID": 782570,
+                "ADDRESS_NUMBER": "101",
+                "LINEAR_NAME_FULL": "Ridgetop Rd",
+                "ADDRESS_STATUS": "None",
+                "MUNICIPALITY_NAME": "Scarborough",
+                "geometry": "{\"type\": \"Point\", \"coordinates\": [-79.2924600133836, 43.7700433371302]}"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:oar:2715089",
+              "source": {
+                "_id": 7,
+                "ADDRESS_POINT_ID": 2715089,
+                "ADDRESS_ID": 374538,
+                "ADDRESS_NUMBER": "48",
+                "LINEAR_NAME_FULL": "Knockbolt Cres",
+                "ADDRESS_STATUS": "None",
+                "MUNICIPALITY_NAME": "Scarborough",
+                "geometry": "{\"type\": \"Point\", \"coordinates\": [-79.2853423244299, 43.8035513111227]}"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:oar:14206828",
+              "source": {
+                "_id": 8,
+                "ADDRESS_POINT_ID": 14206828,
+                "ADDRESS_ID": 60009843,
+                "ADDRESS_NUMBER": "429",
+                "LINEAR_NAME_FULL": "Yonge St",
+                "ADDRESS_STATUS": "None",
+                "MUNICIPALITY_NAME": "former Toronto",
+                "geometry": "{\"type\": \"Point\", \"coordinates\": [-79.3824174294387, 43.6603979283914]}"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:oar:866014",
+              "source": {
+                "_id": 9,
+                "ADDRESS_POINT_ID": 866014,
+                "ADDRESS_ID": 71593,
+                "ADDRESS_NUMBER": "127",
+                "LINEAR_NAME_FULL": "Sellers Ave",
+                "ADDRESS_STATUS": "None",
+                "MUNICIPALITY_NAME": "former Toronto",
+                "geometry": "{\"type\": \"Point\", \"coordinates\": [-79.4464172505095, 43.6841577491145]}"
+              },
+              "quality_flags": []
+            },
+            {
+              "logical_id": "toronto:oar:11129803",
+              "source": {
+                "_id": 10,
+                "ADDRESS_POINT_ID": 11129803,
+                "ADDRESS_ID": 128348,
+                "ADDRESS_NUMBER": "11",
+                "LINEAR_NAME_FULL": "Kenwood Ave",
+                "ADDRESS_STATUS": "None",
+                "MUNICIPALITY_NAME": "former Toronto",
+                "geometry": "{\"type\": \"Point\", \"coordinates\": [-79.4219593126963, 43.6830028690654]}"
+              },
+              "quality_flags": []
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "estimated_total_observation": {
+    "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=6d0229af-bc54-46de-9c2b-26759b01dd05&fields=_id%2CPERMIT_NUM%2CREVISION_NUM%2CPERMIT_TYPE%2CSTRUCTURE_TYPE%2CSTREET_NUM%2CSTREET_NAME%2CSTREET_TYPE%2CSTREET_DIRECTION%2CPOSTAL%2CGEO_ID%2CAPPLICATION_DATE%2CISSUED_DATE%2CCOMPLETED_DATE%2CSTATUS%2CDWELLING_UNITS_CREATED%2CDWELLING_UNITS_LOST%2CEST_CONST_COST&limit=1&sort=_id+asc&include_total=true&total_estimation_threshold=1",
+    "retrieved_at": "2026-10-28T01:37:58.751188+00:00",
+    "total": 200978,
+    "total_was_estimated": true
+  },
+  "development-null-folder": {
+    "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=8907d8ed-c515-4ce9-b674-9f8c6eefcf0d&fields=_id%2CAPPLICATION_TYPE%2CAPPLICATION%23%2CFOLDERRSN%2CDATE_SUBMITTED%2CX%2CY&filters=%7B%22FOLDERRSN%22%3A+null%7D&limit=5&sort=_id+asc",
+    "retrieved_at": "2026-10-28T01:39:08.115265+00:00",
+    "total": 0,
+    "rows": []
+  },
+  "development-null-first": {
+    "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=8907d8ed-c515-4ce9-b674-9f8c6eefcf0d&fields=_id%2CAPPLICATION_TYPE%2CAPPLICATION%23%2CFOLDERRSN%2CDATE_SUBMITTED%2CX%2CY&limit=5&sort=FOLDERRSN+asc+nulls+first%2C+_id+asc",
+    "retrieved_at": "2026-10-28T01:39:54.135846+00:00",
+    "total": 26648,
+    "rows": [
+      {
+        "_id": 5737,
+        "APPLICATION_TYPE": "OZ",
+        "APPLICATION#": "08 100769 STE 20 OZ",
+        "FOLDERRSN": "2046677",
+        "DATE_SUBMITTED": "2008-01-04T00:00:00",
+        "X": "314351.711",
+        "Y": "4833353.983"
+      },
+      {
+        "_id": 9980,
+        "APPLICATION_TYPE": "OZ",
+        "APPLICATION#": "08 100769 STE 20 OZ",
+        "FOLDERRSN": "2046677",
+        "DATE_SUBMITTED": "2008-01-04T00:00:00",
+        "X": "314345.456",
+        "Y": "4833338.005"
+      },
+      {
+        "_id": 9981,
+        "APPLICATION_TYPE": "OZ",
+        "APPLICATION#": "08 100769 STE 20 OZ",
+        "FOLDERRSN": "2046677",
+        "DATE_SUBMITTED": "2008-01-04T00:00:00",
+        "X": "314340.88",
+        "Y": "4833339.539"
+      },
+      {
+        "_id": 12348,
+        "APPLICATION_TYPE": "OZ",
+        "APPLICATION#": "08 100769 STE 20 OZ",
+        "FOLDERRSN": "2046677",
+        "DATE_SUBMITTED": "2008-01-04T00:00:00",
+        "X": "314344.58",
+        "Y": "4833315.681"
+      },
+      {
+        "_id": 5246,
+        "APPLICATION_TYPE": "SA",
+        "APPLICATION#": "08 101216 NNY 16 SA",
+        "FOLDERRSN": "2047191",
+        "DATE_SUBMITTED": "2008-01-08T00:00:00",
+        "X": "311325.871",
+        "Y": "4842780.811"
+      }
+    ]
+  },
+  "join-ADDRESS_POINT_ID": {
+    "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=0b3756af-9caf-4f0f-ac28-9c6617adede4&fields=_id%2CADDRESS_POINT_ID%2CADDRESS_ID%2CADDRESS_NUMBER%2CLINEAR_NAME_FULL%2Cgeometry&filters=%7B%22ADDRESS_POINT_ID%22%3A+8741300%7D&limit=5&sort=_id+asc",
+    "retrieved_at": "2026-10-28T01:39:12.314524+00:00",
+    "total": 1,
+    "rows": [
+      {
+        "_id": 115170,
+        "ADDRESS_POINT_ID": 8741300,
+        "ADDRESS_ID": 116497,
+        "ADDRESS_NUMBER": "31",
+        "LINEAR_NAME_FULL": "Balmoral Ave",
+        "geometry": "{\"type\": \"Point\", \"coordinates\": [-79.3946489819515, 43.6854433951154]}"
+      }
+    ]
+  },
+  "join-ADDRESS_ID": {
+    "source_url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=0b3756af-9caf-4f0f-ac28-9c6617adede4&fields=_id%2CADDRESS_POINT_ID%2CADDRESS_ID%2CADDRESS_NUMBER%2CLINEAR_NAME_FULL%2Cgeometry&filters=%7B%22ADDRESS_ID%22%3A+8741300%7D&limit=5&sort=_id+asc",
+    "retrieved_at": "2026-10-28T01:39:14.886540+00:00",
+    "total": 0,
+    "rows": []
+  }
+}
