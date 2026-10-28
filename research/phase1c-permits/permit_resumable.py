@@ -12,17 +12,12 @@ import json
 import os
 from pathlib import Path
 import tempfile
-import time
-from typing import Any, Callable
-from urllib.error import HTTPError, URLError
+from typing import Any
 
 import permit_collector as collector
 
 
 CHECKPOINT_SCHEMA = 1
-DEFAULT_RETRIES = 2
-MAX_RETRIES = 2
-MAX_BACKOFF_SECONDS = 5.0
 DEFAULT_OVERLAP_ROWS = 3
 
 
@@ -65,68 +60,6 @@ def _copy_prefix_atomically(source: Path, destination: Path, byte_count: int) ->
         raise
 
 
-def _is_timeout(exc: BaseException) -> bool:
-    if isinstance(exc, TimeoutError):
-        return True
-    if isinstance(exc, URLError):
-        return isinstance(exc.reason, TimeoutError) or "timed out" in str(exc.reason).lower()
-    if isinstance(exc, collector.CollectionError):
-        return "timed out" in str(exc).lower()
-    return False
-
-
-def _retryable(exc: BaseException) -> bool:
-    if isinstance(exc, HTTPError):
-        return exc.code in {502, 503, 504}
-    if _is_timeout(exc):
-        return True
-    if isinstance(exc, collector.CollectionError):
-        return any(str(exc).startswith(f"CKAN returned HTTP {status}") for status in (502, 503, 504))
-    return False
-
-
-def _retry_delay(exc: BaseException, attempt: int) -> float:
-    if isinstance(exc, HTTPError):
-        retry_after = exc.headers.get("Retry-After") if exc.headers else None
-        if retry_after is not None:
-            try:
-                return min(MAX_BACKOFF_SECONDS, max(0.0, float(retry_after)))
-            except ValueError:
-                pass
-    return min(MAX_BACKOFF_SECONDS, 0.5 * (2 ** attempt))
-
-
-def _fetch_with_backoff(
-    fetch_page: Callable[[int, int], dict[str, Any]],
-    offset: int,
-    limit: int,
-    *,
-    retries: int,
-    sleep: Callable[[float], None],
-) -> dict[str, Any]:
-    for attempt in range(retries + 1):
-        try:
-            return fetch_page(offset, limit)
-        except HTTPError as exc:
-            if exc.code in {401, 403}:
-                raise collector.CollectionError(f"CKAN access denied (HTTP {exc.code}); resume stopped") from exc
-            if not _retryable(exc) or attempt >= retries:
-                if _retryable(exc):
-                    raise collector.CollectionError(f"CKAN retry bound exhausted (HTTP {exc.code})") from exc
-                raise
-            sleep(_retry_delay(exc, attempt))
-        except Exception as exc:
-            message = str(exc).lower()
-            if "http 401" in message or "http 403" in message or "access denied" in message:
-                raise collector.CollectionError("CKAN access denied; resume stopped") from exc
-            if not _retryable(exc) or attempt >= retries:
-                if _retryable(exc):
-                    raise collector.CollectionError("CKAN retry bound exhausted after timeout/transient failure") from exc
-                raise
-            sleep(_retry_delay(exc, attempt))
-    raise collector.CollectionError("CKAN retry bound exhausted")
-
-
 def _load_checkpoint(path: Path) -> dict[str, Any]:
     try:
         checkpoint = json.loads(path.read_text(encoding="utf-8"))
@@ -167,8 +100,6 @@ def collect_resumable_snapshot(
     max_pages: int = collector.MAX_PAGES,
     max_snapshot_bytes: int = collector.MAX_SNAPSHOT_BYTES,
     overlap_rows: int = DEFAULT_OVERLAP_ROWS,
-    retries: int = DEFAULT_RETRIES,
-    sleep: Callable[[float], None] = time.sleep,
 ) -> dict[str, Any]:
     """Acquire one complete snapshot with atomic page checkpoints and safe resume.
 
@@ -186,8 +117,6 @@ def collect_resumable_snapshot(
     if type(overlap_rows) is not int or not 1 <= overlap_rows <= collector.MAX_PAGE_SIZE:
         raise collector.CollectionError("Resume overlap is outside the bounded range")
     overlap_limit = min(overlap_rows, page_size)
-    if type(retries) is not int or not 0 <= retries <= MAX_RETRIES:
-        raise collector.CollectionError("Retry count exceeds the bounded maximum")
     if type(max_rows) is not int or max_rows < 0 or type(max_pages) is not int or max_pages < 1:
         raise collector.CollectionError("Invalid source row/page limit")
     if type(max_snapshot_bytes) is not int or max_snapshot_bytes < 1:
@@ -251,10 +180,7 @@ def collect_resumable_snapshot(
             overlap_offset = offset - len(expected_overlap)
             if not expected_overlap:
                 raise collector.CollectionError("Resume checkpoint has no overlap proof")
-            response = _fetch_with_backoff(
-                lambda offset, limit: client.page(source_key, offset=offset, limit=limit),
-                overlap_offset, len(expected_overlap), retries=retries, sleep=sleep,
-            )
+            response = client.page(source_key, offset=overlap_offset, limit=len(expected_overlap))
             result = collector._validate_response(response, fields=source["fields"], required_fields=source["required_fields"], limit=page_size)
             if result["total"] != total or len(result["records"]) != len(expected_overlap):
                 raise collector.CollectionError("Resume overlap page does not match the checkpoint count")
@@ -282,10 +208,7 @@ def collect_resumable_snapshot(
 
     while offset < total:
         request_limit = min(page_size, total - offset)
-        response = _fetch_with_backoff(
-            lambda page_offset, limit: client.page(source_key, offset=page_offset, limit=limit),
-            offset, request_limit, retries=retries, sleep=sleep,
-        )
+        response = client.page(source_key, offset=offset, limit=request_limit)
         result = collector._validate_response(response, fields=source["fields"], required_fields=source["required_fields"], limit=page_size)
         if result["total"] != total:
             raise collector.CollectionError("Source total changed during resumed pagination")
@@ -334,13 +257,20 @@ def collect_resumable_snapshot(
         }
         collector._atomic_write_text(checkpoint_path, json.dumps(checkpoint, sort_keys=True, separators=(",", ":")) + "\n")
 
-    total_after, generation_after = client.metadata(source_key)
-    if total_after != total or generation_after != generation:
-        raise collector.CollectionError("Source generation or count changed before EOF certification")
     if row_count != total or partial_path.stat().st_size != byte_count or collector._file_sha256(partial_path) != prefix_hash:
         raise collector.CollectionError("Completed resume candidate failed final count/hash certification")
     if offset and (last_id is None or not overlap):
         raise collector.CollectionError("Completed snapshot is missing final source-ID proof")
+
+    eof_response = client.page(source_key, offset=total, limit=1)
+    eof_result = collector._validate_response(
+        eof_response, fields=source["fields"], required_fields=source["required_fields"], limit=1,
+    )
+    if eof_result["total"] != total or eof_result["records"]:
+        raise collector.CollectionError("Source EOF certification returned unexpected rows or count")
+    total_after, generation_after = client.metadata(source_key)
+    if total_after != total or generation_after != generation:
+        raise collector.CollectionError("Source generation or count changed before EOF certification")
 
     content_hash = prefix_hash
     snapshot_name = f"{source_key}-{content_hash}.jsonl"
@@ -388,3 +318,4 @@ def collect_resumable_snapshot(
     checkpoint_path.unlink(missing_ok=True)
     partial_path.unlink(missing_ok=True)
     return manifest
+
