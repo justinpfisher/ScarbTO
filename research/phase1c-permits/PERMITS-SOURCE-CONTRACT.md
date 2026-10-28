@@ -1,9 +1,10 @@
 # Toronto permits and development application prototype
 
-This prototype includes synthetic adapter tests and a bounded, GET-only CKAN
-snapshot collector. It has not completed a live full-dataset run. No large CSV
-download, geocoder, CRS converter, schedule, or public exporter is included.
-ScarbTO public export remains disabled.
+This prototype includes synthetic adapter tests, a hash-pinned sanitized
+source-qualification fixture, and a bounded, GET-only CKAN snapshot collector.
+It has not completed a live full-dataset run. No large CSV download, geocoder,
+CRS converter, schedule, or public exporter is included. ScarbTO public export
+remains disabled.
 
 ## Researched source packages
 
@@ -25,8 +26,13 @@ source-specific fields (including the `FOLDERRSN` column even where an
 individual row's value is null) and a nonempty generation marker, and requires stable
 resource generation and row counts before and after pagination. It writes
 content-addressed JSONL candidates, verifies an existing file before reuse,
-and advances one manifest pointer atomically. It does not
-schedule refreshes or enable public output. The current bounded request to the
+and advances one manifest pointer atomically. It does not schedule refreshes
+or enable public output. Permit allowlists include
+`EST_CONST_COST`, `DWELLING_UNITS_CREATED`, `DWELLING_UNITS_LOST`, and
+planning `X`/`Y` source columns. The latter are retained only in the
+protected local source snapshot. The normalized candidate uses a one-way
+location key and explicit source CRS instead of exposing projected values or
+pretending they are WGS84. The current bounded request to the
 permit collector has not completed a full live snapshot. A separate beach-data
 request returned an HTML 403/404 response; that result does not establish a
 permit-source failure. A later minimal permit query succeeded, but it did not
@@ -63,6 +69,11 @@ appears in active or cleared collections. An identical overlap is deduplicated;
 conflicting values for the same identity are quarantined. Active and cleared
 source collection and raw status are preserved. Application, issuance, and
 completion dates remain separate.
+Costs and dwelling-unit counts accept only finite, nonnegative decimal source
+values (comma grouping allowed); unit counts must be integral. Null/blank values
+remain unknown. Malformed values become null with a field-specific
+`invalid_numeric` quality flag, and raw numeric prose is not copied to the
+normalized candidate.
 No status, cleared-source membership, disappearance, or completion date alone
 is converted to a claim that construction occurred. Conflicting active/cleared
 or same-key records are quarantined.
@@ -80,10 +91,11 @@ integer point ID. A bounded live OAR lookup confirmed
 and matching before/after totals. It identifies application `21 191603 ESC 20
 SA` and six address rows at 1552, 1572, 1554, 1562, 1564, and 1570 Kingston
 Road. This proves only this bounded filtered query, not a full import or
-general refresh completeness. No transformation of planning X/Y values is
-attempted. Those fields are NAD27
-MTM10 and require independently validated coordinate conversion; this
-prototype avoids them. OAR points must have already-qualified WGS84 fields
+general refresh completeness. Planning X/Y fields are NAD27 MTM10 and are not
+converted or exposed as map coordinates. The normalized candidate retains
+only an opaque hash of each validated source X/Y pair and the explicit CRS
+label, so distinct location rows remain distinguishable without exposing
+projected values as longitude/latitude. OAR points must have already-qualified WGS84 fields
 before they can be passed to the normalizer. Ward values are restricted to
 current Scarborough wards 20–25; a ward-grid code such as E2532 is not a ward
 number. Polygon boundary validation is still required before map activation.
@@ -143,7 +155,29 @@ issuances, never newly observed changes: no delta/tombstone contract has been
 verified. Absence from a replacement snapshot means only absent from that
 snapshot.
 
+The committed fixture bundle
+`tests/fixtures/safe-source-fixture.json` is 63,863 bytes with SHA-256
+`87861152b6c3bd1e5a0e3eb03be3e90bc4aba7c0cd3fcc49aaff815aef334818`.
+Its paired `normalization-contract.json` is 5,593 bytes with SHA-256
+`1401a66eed410edbcc99eb86970803b7d0d0be72ae5ddb3178f96f1bcc1dd45d`.
+This fixture contains allowlisted source samples and bounded response metadata,
+not complete feed snapshots. It omits contact values and unreviewed free text.
+Regressions exercise multiple projected location observations under one
+application, numeric zero and invalid-value handling, the permit
+`GEO_ID`/OAR `ADDRESS_POINT_ID` distinction, an estimated total that matches
+its numeric count, and a cancelled cleared row that is not labelled
+construction-complete. One grouping test substitutes Ward 20 only to exercise
+the storage path for a Toronto-wide Ward 19 sample, and the OAR join regression
+uses that same out-of-scope Ward 19 point while testing the
+`ADDRESS_POINT_ID` key. These are test-only scope substitutions, not
+Scarborough geography assertions. No such substitution is applied to source
+data or publication candidates.
+
 Official catalogue terms: [Toronto Open Data Licence](https://open.toronto.ca/open-data-licence/).
+Any future public use must include the attribution “Contains information
+licensed under the Open Government Licence – Toronto.” This does not imply City
+endorsement. The portal licence and CKAN's unspecified licence metadata remain
+documented as a discrepancy.
 Bounded live qualification confirmed OAR point 331669 and a filtered planning
 query for folder 4970049. A six-row filtered completeness check returned IDs
 230-235 across two pages with matching totals and unchanged metadata; the source
@@ -153,11 +187,13 @@ downloaded.
 
 ## Tests and activation gates
 
-Run `python -m unittest discover -s tests -v`. Tests use invented fixture
-records and no production/private data. Before live integration, recheck
+Run `python -m unittest discover -s tests -v`. Tests combine deterministic
+synthetic cases with the hash-pinned safe source fixture; they do not include
+contact values or unreviewed free text. Before live integration, recheck
 package/resource metadata and complete pagination, validate source field
 mapping, generation stability, CRS/geography against known points and current
 ward/neighbourhood polygons, refresh-failure rollback, and the public allowlist
 with a privacy/source-rights review. Qualify full-scale memory and runtime
 before any large ingest; do not run concurrent heavy imports. Public export
 remains disabled until those gates pass.
+
