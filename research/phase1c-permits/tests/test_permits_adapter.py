@@ -1,7 +1,21 @@
 import json
+from hashlib import sha256
+from pathlib import Path
 import unittest
 
 import permits_adapter as permits
+
+FIXTURE_PATH = Path(__file__).parent / "fixtures" / "safe-source-fixture.json"
+CONTRACT_PATH = Path(__file__).parent / "fixtures" / "normalization-contract.json"
+QUALIFIED_FIXTURE = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+
+
+def qualified_rows(feed):
+    return [
+        item["source"]
+        for page in QUALIFIED_FIXTURE["feeds"][feed]["pages"]
+        for item in page["rows"]
+    ]
 
 
 POINTS = [
@@ -93,6 +107,116 @@ def dev_row(**overrides):
 
 
 class PermitContractTests(unittest.TestCase):
+    def test_source_qualification_fixture_and_contract_are_hash_pinned(self):
+        self.assertEqual(
+            sha256(FIXTURE_PATH.read_bytes()).hexdigest(),
+            "87861152b6c3bd1e5a0e3eb03be3e90bc4aba7c0cd3fcc49aaff815aef334818",
+        )
+        self.assertEqual(
+            sha256(CONTRACT_PATH.read_bytes()).hexdigest(),
+            "1401a66eed410edbcc99eb86970803b7d0d0be72ae5ddb3178f96f1bcc1dd45d",
+        )
+
+    def test_qualified_fixture_keeps_distinct_projected_locations_under_one_application(self):
+        rows = qualified_rows("development")
+        # The sampled source rows are Ward 19, outside this Scarborough adapter's
+        # production filter. For this storage-only regression, assign a test
+        # scope ward without treating the source locations as Scarborough data.
+        rows = [dict(row, WARD_NUMBER="20") for row in rows[:2]]
+        record = next(
+            item for item in permits.normalize_development_applications(rows)["records"]
+            if item["record_key"] == "development:folder:5793653"
+        )
+        self.assertEqual(record["application_number"], "26 127354 STE 19 SA")
+        self.assertEqual(len(record["locations"]), 2)
+        source_pairs = {
+            (item["X"], item["Y"])
+            for item in qualified_rows("development")[:2]
+        }
+        self.assertEqual(len(source_pairs), 2)
+        self.assertEqual(
+            len({item["source_location_key"] for item in record["locations"]}), 2
+        )
+        for item in record["locations"]:
+            self.assertEqual(
+                item["source_coordinate_reference_system"],
+                permits.PLANNING_XY_SOURCE_CRS,
+            )
+            self.assertEqual(item["coordinate_source"], "projected_source_only")
+            self.assertNotIn("source_x", item)
+            self.assertNotIn("source_y", item)
+            self.assertNotIn("longitude", item)
+            self.assertNotIn("latitude", item)
+
+    def test_qualified_fixture_numeric_fields_preserve_zero_and_quarantine_invalid_text(self):
+        rows = qualified_rows("active")
+        source = next(row for row in rows if row["PERMIT_NUM"] == "19 255349 BLD")
+        normalized = permits.normalize_permits(
+            [source], source_collection="active", address_points=[]
+        )["records"][0]
+        self.assertEqual(normalized["estimated_cost"], 0)
+        self.assertEqual(normalized["dwelling_units_created"], 0)
+        self.assertEqual(normalized["dwelling_units_lost"], 0)
+
+        malformed = dict(source, EST_CONST_COST="available on request")
+        result = permits.normalize_permits(
+            [malformed], source_collection="active", address_points=[]
+        )["records"][0]
+        self.assertIsNone(result["estimated_cost"])
+        self.assertIn("EST_CONST_COST:invalid_numeric", result["quality_flags"])
+        self.assertNotIn("available on request", json.dumps(result))
+        grouped = dict(source, EST_CONST_COST="1,234,567.50")
+        grouped_result = permits.normalize_permits(
+            [grouped], source_collection="active", address_points=[]
+        )["records"][0]
+        self.assertEqual(grouped_result["estimated_cost"], 1234567.5)
+        self.assertEqual(grouped_result["quality_flags"], [])
+
+    def test_qualified_fixture_join_uses_oar_address_point_id_not_address_id(self):
+        source = next(
+            row for row in qualified_rows("active")
+            if row["GEO_ID"] == "8741300"
+        )
+        evidence = QUALIFIED_FIXTURE["join-ADDRESS_POINT_ID"]["rows"][0]
+        self.assertEqual(evidence["ADDRESS_POINT_ID"], 8741300)
+        self.assertEqual(evidence["ADDRESS_ID"], 116497)
+        # The qualified point is Toronto Ward 19, outside the production
+        # Scarborough scope. This test-only ward value exercises the join key;
+        # it is not a source-ward assertion or publication fixture.
+        geometry = json.loads(evidence["geometry"])
+        longitude, latitude = geometry["coordinates"]
+        point = {
+            "ADDRESS_POINT_ID": evidence["ADDRESS_POINT_ID"],
+            "ADDRESS_ID": evidence["ADDRESS_ID"],
+            "address": f"{evidence['ADDRESS_NUMBER']} {evidence['LINEAR_NAME_FULL']}",
+            "longitude": longitude,
+            "latitude": latitude,
+            "WARD_NUMBER": 25,
+        }
+        joined = permits.normalize_permits(
+            [source], source_collection="active", address_points=[point]
+        )["records"][0]
+        self.assertEqual(joined["locations"][0]["address_point_id"], 8741300)
+        self.assertEqual(joined["address"], "31 Balmoral Ave")
+
+        wrong_key = dict(point, ADDRESS_POINT_ID=evidence["ADDRESS_ID"])
+        missed = permits.normalize_permits(
+            [source], source_collection="active", address_points=[wrong_key]
+        )
+        self.assertEqual(missed["location_accounting"]["permit_rows_unlocated"], 1)
+        self.assertEqual(
+            QUALIFIED_FIXTURE["join-ADDRESS_ID"]["total"], 0
+        )
+
+    def test_qualified_cancelled_cleared_row_does_not_claim_construction_completed(self):
+        source = qualified_rows("cleared")[0]
+        result = permits.normalize_permits(
+            [source], source_collection="cleared", address_points=[]
+        )["records"][0]
+        self.assertEqual(result["status"], "Cancelled")
+        self.assertEqual(result["completed_date"], "2017-10-31")
+        self.assertEqual(result["construction_state"], "not_inferred")
+
     def test_datastore_snapshot_requires_stable_complete_pagination(self):
         pages = [
             {"offset": 0, "limit": 2, "records": [{"_id": 1}, {"_id": 2}]},
@@ -525,4 +649,5 @@ class PermitContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
