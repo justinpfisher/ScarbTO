@@ -27,7 +27,7 @@ MAX_PAGE_BYTES = 16 * 1024 * 1024
 MAX_PAGES = 1000
 MAX_ROWS = 1_000_000
 MAX_SNAPSHOT_BYTES = 512 * 1024 * 1024
-RETRYABLE_HTTP = {429, 502, 503, 504}
+RETRYABLE_HTTP = {502, 503, 504}
 
 SOURCE_RESOURCES = {
     "active_permits": {
@@ -158,6 +158,7 @@ class TorontoCKAN:
         max_page_bytes: int = MAX_PAGE_BYTES,
         retries: int = 2,
         sleep: Callable[[float], None] = time.sleep,
+        opener: Callable[..., Any] | None = None,
     ) -> None:
         if timeout_seconds <= 0 or max_page_bytes < 1024 or retries < 0 or retries > 2:
             raise ValueError("Invalid CKAN client bounds")
@@ -165,6 +166,7 @@ class TorontoCKAN:
         self.max_page_bytes = max_page_bytes
         self.retries = retries
         self.sleep = sleep
+        self.opener = opener or _open_no_redirect
 
     def _get_json(self, action: str, params: dict[str, Any]) -> dict[str, Any]:
         query = dict(params)
@@ -178,7 +180,7 @@ class TorontoCKAN:
         request = Request(url, headers={"Accept": "application/json", "User-Agent": "ScarbTO-open-data-client/1.0"})
         for attempt in range(self.retries + 1):
             try:
-                with _open_no_redirect(request, timeout=self.timeout_seconds) as response:
+                with self.opener(request, timeout=self.timeout_seconds) as response:
                     if urlparse(response.geturl()).hostname != API_HOST or urlparse(response.geturl()).scheme != "https":
                         raise CollectionError("CKAN redirected outside the qualified host")
                     length = response.headers.get("Content-Length")
@@ -211,8 +213,14 @@ class TorontoCKAN:
                     delay = 0.5 * (2 ** attempt)
                 self.sleep(delay)
             except (TimeoutError, URLError) as exc:
+                is_timeout = isinstance(exc, TimeoutError) or (
+                    isinstance(exc, URLError)
+                    and (isinstance(exc.reason, TimeoutError) or "timed out" in str(exc.reason).lower())
+                )
+                if not is_timeout:
+                    raise CollectionError("CKAN transport failed outside the retryable timeout scope") from exc
                 if attempt >= self.retries:
-                    raise CollectionError("CKAN request timed out or failed at transport") from exc
+                    raise CollectionError("CKAN request timed out after bounded retries") from exc
                 self.sleep(0.5 * (2 ** attempt))
         raise CollectionError("CKAN retry bound exhausted")
 
@@ -410,4 +418,5 @@ def collect_snapshot(
         except OSError:
             pass
         raise
+
 
