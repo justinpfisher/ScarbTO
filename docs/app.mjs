@@ -2,6 +2,7 @@ import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, cityDin
 import {beginListRedraw, finishListRedraw, revealSelectedRecord} from './list-focus.mjs';
 import {beachPreviewFeature, renderBeachSamplePreview, validateBeachSamplePreview} from './beach-history.mjs';
 import {SelectedCallsClient, selectedCallsPolicy} from './selected-calls.mjs';
+import {cameraBoundsForViewport, COUNCIL_BOUNDARY_BOUNDS, outsideMask, validateCouncilBoundary} from './boundary.mjs';
 
 const $ = id => document.getElementById(id);
 const SCARB_BOUNDS = [[-79.43,43.65],[-79.09,43.89]];
@@ -21,6 +22,7 @@ const selectedCallsClient = new SelectedCallsClient();
 let selectedCallsViewState = {status:'unavailable',reason:'not loaded',counts:[]};
 let selectedCallsExpiryTimer=null, selectedCallsExpiryDeadlineMono=null, selectedCallsExpiryFetchedAt=null;
 let mapUnavailable = false;
+let councilBoundary = null;
 
 function clearSelectedCallsExpiry(){
   clearTimeout(selectedCallsExpiryTimer);selectedCallsExpiryTimer=null;
@@ -260,7 +262,12 @@ function selectPlace(id, move, revealSelection = false) {
   if(move&&map)map.easeTo({center:[item.longitude,item.latitude],zoom:Math.max(map.getZoom(),14),duration:450});
   updateSource();renderList({revealSelection});
 }
-function fitAll() {if(map)map.fitBounds(SCARB_BOUNDS,{padding:28,duration:350,maxZoom:11.2});}
+function currentBoundaryCamera() {
+  if (!councilBoundary) return SCARB_BOUNDS;
+  const box=$('map').getBoundingClientRect();
+  return cameraBoundsForViewport(Math.max(320,box.width),Math.max(280,box.height));
+}
+function fitAll() {if(map)map.fitBounds(councilBoundary?COUNCIL_BOUNDARY_BOUNDS:SCARB_BOUNDS,{padding:councilBoundary?24:28,duration:350,maxZoom:11.2});}
 function selectNeighbourhood(){
   if(!map||!state.neighbourhood)return;
   const matched=shapes.features.filter(f=>f.properties?.AREA_NAME===state.neighbourhood);
@@ -288,19 +295,35 @@ function setMapUnavailable(error) {
   if(error)console.warn('Interactive map unavailable:',error?.message||error);
   performFilters();
 }
-function initMap() {
+async function initMap() {
   if(typeof maplibregl==='undefined'){
     setMapUnavailable();
     return;
   }
   try{
+    try{
+      const boundaryResponse=await fetch('data/scarborough-council-boundary.geojson',{cache:'force-cache'});
+      if(!boundaryResponse.ok)throw new Error(`HTTP ${boundaryResponse.status}`);
+      const candidate=await boundaryResponse.json();
+      councilBoundary=validateCouncilBoundary(candidate);
+    }catch(error){console.warn('Official Scarborough boundary overlay unavailable:',error?.message||error);}
     map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/liberty',center:[-79.255,43.775],zoom:10.45,
-      maxBounds:[[-79.65,43.52],[-78.96,43.98]],attributionControl:true});
+      maxBounds:currentBoundaryCamera(),attributionControl:true});
     map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-left');
     map.getCanvas().addEventListener('webglcontextlost',event=>{event.preventDefault();setMapUnavailable(new Error('WebGL context lost'));},{once:true});
     map.on('load',()=>{
       try{
         if(!map)return;
+        if(councilBoundary){
+          const mask=outsideMask(councilBoundary);
+          map.addSource('scarborough-mask',{type:'geojson',data:mask});
+          map.addLayer({id:'scarborough-outside-mask',type:'fill',source:'scarborough-mask',paint:{'fill-color':'#edf0eb','fill-opacity':0.48}});
+          map.addSource('scarborough-boundary',{type:'geojson',data:{type:'FeatureCollection',features:[councilBoundary]}});
+          map.addLayer({id:'scarborough-boundary-line',type:'line',source:'scarborough-boundary',paint:{'line-color':'#2d6657','line-width':['interpolate',['linear'],['zoom'],8,1.2,12,2.5],'line-opacity':0.9}});
+          const applyCameraBounds=()=>map?.setMaxBounds(currentBoundaryCamera());
+          map.on('resize',applyCameraBounds);
+          map.fitBounds(COUNCIL_BOUNDARY_BOUNDS,{padding:24,duration:0,maxZoom:11.2});
+        }
         map.addSource('places',{type:'geojson',data:{type:'FeatureCollection',features:[]},cluster:true,clusterMaxZoom:13,clusterRadius:38});
         map.addLayer({id:'clusters',type:'circle',source:'places',filter:['has','point_count'],paint:{'circle-color':'#174d43','circle-radius':['step',['get','point_count'],18,30,23,150,29],'circle-opacity':.90,'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
         map.addLayer({id:'cluster-count',type:'symbol',source:'places',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-size':12},paint:{'text-color':'#fff'}});
@@ -400,7 +423,7 @@ async function loadDineSafeSnapshot() {
   }
 }
 function boot() {
-  bindControls();syncControls();initMap();
+  bindControls();syncControls();void initMap();
   // Each feed loads independently so an optional beach request never holds DineSafe hostage.
   void loadBeachPreview();
   void loadDineSafeSnapshot();

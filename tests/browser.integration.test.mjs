@@ -34,6 +34,7 @@ const snapshot = {
   establishments: [
     {id: 'fixture-a', establishment_id: 'fixture-a', name: 'Fixture Cafe', address: '10 Test Road', status: 'Pass', inspection_date: '2026-10-26', longitude: -79.255, latitude: 43.775, neighbourhood: 'Agincourt'},
     {id: 'fixture-b', establishment_id: 'fixture-b', name: 'Fixture Bakery', address: '20 Sample Avenue', status: 'Conditional Pass', inspection_date: '2026-10-25', longitude: -79.29, latitude: 43.73, neighbourhood: 'Woburn'},
+  {id: 'boundary-edge-fixture', establishment_id: 'boundary-edge-fixture', name: 'Boundary Edge Fixture', address: '30 Boundary Road', status: 'Pass', inspection_date: '2026-10-24', longitude: -79.344, latitude: 43.671, neighbourhood: 'Test area'},
   ],
   activity: [],
 };
@@ -187,10 +188,30 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await installLocalRoutes(page, origin);
   await page.goto(origin, {waitUntil: 'networkidle'});
   await waitForMap(page);
+  await page.waitForFunction(() => window.__scarbMap.getSource('scarborough-mask') && window.__scarbMap.getSource('scarborough-boundary'));
+  const boundaryState=await page.evaluate(()=>{
+    const map=window.__scarbMap;
+    const layers=map.getStyle().layers.map(layer=>layer.id);
+    const bounds=map.getBounds();
+    return {
+      layerOrder:['scarborough-outside-mask','scarborough-boundary-line','clusters','single'].map(id=>layers.indexOf(id)),
+      camera:[[bounds.getWest(),bounds.getSouth()],[bounds.getEast(),bounds.getNorth()]],
+      sourceFeatures:map.getSource('scarborough-boundary')._data?.features?.length,
+      maskFeatureCount:map.getSource('scarborough-mask')._data?.features?.length,
+      maskPolygonRings:map.getSource('scarborough-mask')._data?.features?.[0]?.geometry?.coordinates?.length,
+    };
+  });
+  assert.ok(boundaryState.layerOrder.every(index=>index>=0));
+  assert.ok(boundaryState.layerOrder[0]<boundaryState.layerOrder[1]&&boundaryState.layerOrder[1]<boundaryState.layerOrder[2]&&boundaryState.layerOrder[2]<boundaryState.layerOrder[3],'outside mask and boundary draw below establishment pins');
+  assert.equal(boundaryState.sourceFeatures,1,'display uses the independent official council feature');
+  assert.equal(boundaryState.maskFeatureCount,1);
+  assert.equal(boundaryState.maskPolygonRings,2,'outside mask retains the council boundary as its interior hole');
+  assert.ok(boundaryState.camera[0][0]<=-79.3413178929128&&boundaryState.camera[0][1]<=43.6716713902779&&boundaryState.camera[1][0]>=-79.115243188678&&boundaryState.camera[1][1]>=43.8554571861712,'initial camera fits the complete official display boundary');
   if (mobile) await page.getByRole('button', {name: 'Filters'}).click();
   await page.getByRole('button', {name: 'All establishments'}).click();
   await page.getByRole('button', {name: 'Fixture Cafe'}).waitFor();
-  assert.equal(await page.getByRole('button', {name: 'Fixture Bakery'}).count(), 1, `${name}: both synthetic records are listed`);
+  assert.equal(await page.getByRole('button', {name: 'Fixture Bakery'}).count(), 1, `${name}: synthetic records are listed`);
+  assert.equal(await page.getByRole('button', {name: 'Boundary Edge Fixture'}).count(), 1, `${name}: the display boundary does not filter the list`);
 
   const initialCenter = await page.evaluate(() => window.__scarbMap.getCenter().toArray());
   await page.getByRole('button', {name: 'Fixture Bakery'}).click();
@@ -246,7 +267,18 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   if (!mobile) {
     await page.setViewportSize({width: 1024, height: 768});
     await page.waitForFunction(() => Math.abs(document.querySelector('#map canvas').getBoundingClientRect().width - document.querySelector('#map').clientWidth) < 2);
+    await page.getByRole('button', {name: 'Show all Scarborough'}).click();
+    await page.waitForFunction(() => {
+      const bounds=window.__scarbMap.getBounds();
+      return bounds.getWest()<=-79.3413178929128&&bounds.getSouth()<=43.6716713902779&&bounds.getEast()>=-79.115243188678&&bounds.getNorth()>=43.8554571861712;
+    });
     await page.setViewportSize({width, height});
+    await page.waitForFunction(() => Math.abs(document.querySelector('#map canvas').getBoundingClientRect().width - document.querySelector('#map').clientWidth) < 2);
+    await page.getByRole('button', {name: 'Show all Scarborough'}).click();
+    await page.waitForFunction(() => {
+      const bounds=window.__scarbMap.getBounds();
+      return bounds.getWest()<=-79.3413178929128&&bounds.getSouth()<=43.6716713902779&&bounds.getEast()>=-79.115243188678&&bounds.getNorth()>=43.8554571861712;
+    });
   }
 
   const dimensions = await page.evaluate(() => ({

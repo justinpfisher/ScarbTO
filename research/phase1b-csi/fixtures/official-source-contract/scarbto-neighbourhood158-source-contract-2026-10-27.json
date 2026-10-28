@@ -1,0 +1,3683 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-10-27T17:56:20.174497+00:00",
+  "purpose": "Authoritative current Toronto 158 code/name registry and source-derived Scarborough neighbourhood/ward crosswalk for TPS HOOD_158 aggregate validation; no incident data",
+  "geography": {
+    "publisher": "City of Toronto, Social Development, Finance & Administration",
+    "citation": "Toronto Social Planning Neighbourhoods v3.0, City of Toronto 2022",
+    "effective_date": "2022-04-12",
+    "count": 158,
+    "publisher_package_id": "fc443770-ef0a-4025-9c2c-2cb558bfab00",
+    "publisher_datastore_resource_id": "5e6095fc-1bef-4776-887c-28d37f722c51",
+    "dataset_url": "https://open.toronto.ca/dataset/neighbourhoods/",
+    "methodology_url": "https://www.toronto.ca/city-government/data-research-maps/neighbourhoods-communities/neighbourhood-profiles/about-toronto-neighbourhoods/",
+    "package_last_refreshed": "2026-02-20 19:15:31.440337",
+    "current_geometry_cache_last_modified": "2026-02-20T19:15:17.845927",
+    "ckan_version": null,
+    "licence_url": "https://open.toronto.ca/open-data-licence/",
+    "licence_note": "The official catalogue licence link is evidence; CKAN licence fields can be missing."
+  },
+  "identifier_contract": {
+    "primary_key": "AREA_SHORT_CODE",
+    "format": "exact publisher three-digit string",
+    "regex": "^[0-9]{3}$",
+    "required_validation": "Exact membership in registry; 158 is the number of records, not an upper code bound",
+    "preserve_fields": [
+      "AREA_SHORT_CODE",
+      "AREA_LONG_CODE",
+      "AREA_NAME",
+      "AREA_ID",
+      "AREA_ATTR_ID",
+      "OBJECTID"
+    ],
+    "retired_140_codes_not_in_current_registry": [
+      "014",
+      "017",
+      "026",
+      "045",
+      "051",
+      "075",
+      "076",
+      "077",
+      "082",
+      "093",
+      "104",
+      "117",
+      "127",
+      "131",
+      "132",
+      "137"
+    ],
+    "valid_domain_examples": [
+      "001",
+      "109",
+      "119",
+      "159",
+      "174"
+    ],
+    "do_not_join_on": "Neighbourhood name or an integer range; names and punctuation are display attributes",
+    "unknown_policy": "Retain raw value and flag/quarantine null, unassigned, deprecated or unknown values explicitly. Never silently cast to 000, relabel or drop them from reconciliation."
+  },
+  "sources": {
+    "registry": {
+      "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=5e6095fc-1bef-4776-887c-28d37f722c51&limit=159&fields=AREA_ID%2CAREA_ATTR_ID%2CPARENT_AREA_ID%2CAREA_SHORT_CODE%2CAREA_LONG_CODE%2CAREA_NAME%2CAREA_DESC%2CCLASSIFICATION%2CCLASSIFICATION_CODE%2COBJECTID&sort=AREA_SHORT_CODE+asc",
+      "retrieved_at": "2026-10-27T17:49:50.004075+00:00",
+      "bytes": 46049,
+      "sha256": "0372257953dac9d6630d6db2a845150a96367282d87ad3cbbe9a61c8d434d115"
+    },
+    "geometry_native2952": {
+      "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/fc443770-ef0a-4025-9c2c-2cb558bfab00/resource/bbd28fd8-73dc-4bf9-a310-e4c347230549/download/neighbourhoods-2952.gpkg",
+      "retrieved_at": "2026-10-27T17:49:50.801634+00:00",
+      "bytes": 987136,
+      "sha256": "1d1ff516bfcf2ceedf048c97cc877df06a2a5cc14f0dcbdabba624214dfcbadf",
+      "resource": {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2025-06-30T20:44:59.776999",
+        "datastore_active": false,
+        "datastore_resource_id": "5e6095fc-1bef-4776-887c-28d37f722c51",
+        "format": "gpkg",
+        "hash": "",
+        "id": "bbd28fd8-73dc-4bf9-a310-e4c347230549",
+        "is_datastore_cache_file": true,
+        "last_modified": "2026-02-20T19:15:17.845927",
+        "metadata_modified": "2026-02-20T19:15:18.055567",
+        "mimetype": "application/octet-stream",
+        "mimetype_inner": null,
+        "name": "Neighbourhoods - 2952.gpkg",
+        "package_id": "fc443770-ef0a-4025-9c2c-2cb558bfab00",
+        "position": 8,
+        "resource_type": null,
+        "size": 987136,
+        "state": "active",
+        "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/fc443770-ef0a-4025-9c2c-2cb558bfab00/resource/bbd28fd8-73dc-4bf9-a310-e4c347230549/download/neighbourhoods-2952.gpkg",
+        "url_type": "upload"
+      }
+    },
+    "scarborough_council": {
+      "file": "scarborough-boundary.official.geojson",
+      "bytes": 189059,
+      "sha256": "f4e58c66254f2aea1b20c2994e4edc7a9840c170ed45e7841751151f44165aa2",
+      "AREA_ID": 2476922,
+      "OBJECTID": 17503889,
+      "source_retrieval": {
+        "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=62518267-abdb-462a-89d3-4f44e43e41c1&filters=%7B%22AREA_ID%22%3A2476922%7D&limit=2",
+        "retrieved_at": "2026-10-27T16:26:29.475787+00:00",
+        "http_status": 200,
+        "byte_count": 200371,
+        "sha256": "1519bb722a07c9cbfad3bc7f0da7ecc155422d0962e6d46c7fdd909a5ea8abce"
+      }
+    },
+    "scarborough_wards": {
+      "file": "scarborough-wards20-25.geojson",
+      "bytes": 254918,
+      "sha256": "1d4ffa55e11a192e34785249b033572c3648844fe557590c57331b2ef0dea34f",
+      "codes": [
+        "20",
+        "21",
+        "22",
+        "23",
+        "24",
+        "25"
+      ],
+      "source_retrieval": {
+        "url": "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search?resource_id=7672dac5-b383-4d7c-90ec-291dc69d37bf&filters=%7B%22AREA_SHORT_CODE%22%3A%5B%2220%22%2C%2221%22%2C%2222%22%2C%2223%22%2C%2224%22%2C%2225%22%5D%7D&limit=7&sort=AREA_SHORT_CODE+asc",
+        "retrieved_at": "2026-10-27T16:17:25.291574+00:00",
+        "http_status": 200,
+        "byte_count": 270180,
+        "sha256": "7dcbfa15a900e05f6de638fcb36d822fbcb5e08057e0e0b5ccb95c600ee3b3ca"
+      }
+    }
+  },
+  "registry": [
+    {
+      "AREA_SHORT_CODE": "001",
+      "AREA_LONG_CODE": "001",
+      "AREA_NAME": "West Humber-Clairville",
+      "AREA_DESC": "West Humber-Clairville (1)",
+      "AREA_ID": 2502213,
+      "AREA_ATTR_ID": 26022728,
+      "OBJECTID": 17827185
+    },
+    {
+      "AREA_SHORT_CODE": "002",
+      "AREA_LONG_CODE": "002",
+      "AREA_NAME": "Mount Olive-Silverstone-Jamestown",
+      "AREA_DESC": "Mount Olive-Silverstone-Jamestown (2)",
+      "AREA_ID": 2502214,
+      "AREA_ATTR_ID": 26022729,
+      "OBJECTID": 17827169
+    },
+    {
+      "AREA_SHORT_CODE": "003",
+      "AREA_LONG_CODE": "003",
+      "AREA_NAME": "Thistletown-Beaumond Heights",
+      "AREA_DESC": "Thistletown-Beaumond Heights (3)",
+      "AREA_ID": 2502215,
+      "AREA_ATTR_ID": 26022730,
+      "OBJECTID": 17827153
+    },
+    {
+      "AREA_SHORT_CODE": "004",
+      "AREA_LONG_CODE": "004",
+      "AREA_NAME": "Rexdale-Kipling",
+      "AREA_DESC": "Rexdale-Kipling (4)",
+      "AREA_ID": 2502216,
+      "AREA_ATTR_ID": 26022731,
+      "OBJECTID": 17827137
+    },
+    {
+      "AREA_SHORT_CODE": "005",
+      "AREA_LONG_CODE": "005",
+      "AREA_NAME": "Elms-Old Rexdale",
+      "AREA_DESC": "Elms-Old Rexdale (5)",
+      "AREA_ID": 2502217,
+      "AREA_ATTR_ID": 26022732,
+      "OBJECTID": 17827121
+    },
+    {
+      "AREA_SHORT_CODE": "006",
+      "AREA_LONG_CODE": "006",
+      "AREA_NAME": "Kingsview Village-The Westway",
+      "AREA_DESC": "Kingsview Village-The Westway (6)",
+      "AREA_ID": 2502218,
+      "AREA_ATTR_ID": 26022733,
+      "OBJECTID": 17827105
+    },
+    {
+      "AREA_SHORT_CODE": "007",
+      "AREA_LONG_CODE": "007",
+      "AREA_NAME": "Willowridge-Martingrove-Richview",
+      "AREA_DESC": "Willowridge-Martingrove-Richview (7)",
+      "AREA_ID": 2502219,
+      "AREA_ATTR_ID": 26022734,
+      "OBJECTID": 17827089
+    },
+    {
+      "AREA_SHORT_CODE": "008",
+      "AREA_LONG_CODE": "008",
+      "AREA_NAME": "Humber Heights-Westmount",
+      "AREA_DESC": "Humber Heights-Westmount (8)",
+      "AREA_ID": 2502220,
+      "AREA_ATTR_ID": 26022735,
+      "OBJECTID": 17827073
+    },
+    {
+      "AREA_SHORT_CODE": "009",
+      "AREA_LONG_CODE": "009",
+      "AREA_NAME": "Edenbridge-Humber Valley",
+      "AREA_DESC": "Edenbridge-Humber Valley (9)",
+      "AREA_ID": 2502221,
+      "AREA_ATTR_ID": 26022736,
+      "OBJECTID": 17827057
+    },
+    {
+      "AREA_SHORT_CODE": "010",
+      "AREA_LONG_CODE": "010",
+      "AREA_NAME": "Princess-Rosethorn",
+      "AREA_DESC": "Princess-Rosethorn (10)",
+      "AREA_ID": 2502222,
+      "AREA_ATTR_ID": 26022737,
+      "OBJECTID": 17827041
+    },
+    {
+      "AREA_SHORT_CODE": "011",
+      "AREA_LONG_CODE": "011",
+      "AREA_NAME": "Eringate-Centennial-West Deane",
+      "AREA_DESC": "Eringate-Centennial-West Deane (11)",
+      "AREA_ID": 2502223,
+      "AREA_ATTR_ID": 26022738,
+      "OBJECTID": 17827025
+    },
+    {
+      "AREA_SHORT_CODE": "012",
+      "AREA_LONG_CODE": "012",
+      "AREA_NAME": "Markland Wood",
+      "AREA_DESC": "Markland Wood (12)",
+      "AREA_ID": 2502224,
+      "AREA_ATTR_ID": 26022739,
+      "OBJECTID": 17827009
+    },
+    {
+      "AREA_SHORT_CODE": "013",
+      "AREA_LONG_CODE": "013",
+      "AREA_NAME": "Etobicoke West Mall",
+      "AREA_DESC": "Etobicoke West Mall (13)",
+      "AREA_ID": 2502225,
+      "AREA_ATTR_ID": 26022740,
+      "OBJECTID": 17826993
+    },
+    {
+      "AREA_SHORT_CODE": "015",
+      "AREA_LONG_CODE": "015",
+      "AREA_NAME": "Kingsway South",
+      "AREA_DESC": "Kingsway South (15)",
+      "AREA_ID": 2502226,
+      "AREA_ATTR_ID": 26022741,
+      "OBJECTID": 17826977
+    },
+    {
+      "AREA_SHORT_CODE": "016",
+      "AREA_LONG_CODE": "016",
+      "AREA_NAME": "Stonegate-Queensway",
+      "AREA_DESC": "Stonegate-Queensway (16)",
+      "AREA_ID": 2502227,
+      "AREA_ATTR_ID": 26022742,
+      "OBJECTID": 17826961
+    },
+    {
+      "AREA_SHORT_CODE": "018",
+      "AREA_LONG_CODE": "018",
+      "AREA_NAME": "New Toronto",
+      "AREA_DESC": "New Toronto (18)",
+      "AREA_ID": 2502228,
+      "AREA_ATTR_ID": 26022743,
+      "OBJECTID": 17826945
+    },
+    {
+      "AREA_SHORT_CODE": "019",
+      "AREA_LONG_CODE": "019",
+      "AREA_NAME": "Long Branch",
+      "AREA_DESC": "Long Branch (19)",
+      "AREA_ID": 2502229,
+      "AREA_ATTR_ID": 26022744,
+      "OBJECTID": 17826929
+    },
+    {
+      "AREA_SHORT_CODE": "020",
+      "AREA_LONG_CODE": "020",
+      "AREA_NAME": "Alderwood",
+      "AREA_DESC": "Alderwood (20)",
+      "AREA_ID": 2502230,
+      "AREA_ATTR_ID": 26022745,
+      "OBJECTID": 17826913
+    },
+    {
+      "AREA_SHORT_CODE": "021",
+      "AREA_LONG_CODE": "021",
+      "AREA_NAME": "Humber Summit",
+      "AREA_DESC": "Humber Summit (21)",
+      "AREA_ID": 2502209,
+      "AREA_ATTR_ID": 26022724,
+      "OBJECTID": 17827249
+    },
+    {
+      "AREA_SHORT_CODE": "022",
+      "AREA_LONG_CODE": "022",
+      "AREA_NAME": "Humbermede",
+      "AREA_DESC": "Humbermede (22)",
+      "AREA_ID": 2502210,
+      "AREA_ATTR_ID": 26022725,
+      "OBJECTID": 17827233
+    },
+    {
+      "AREA_SHORT_CODE": "023",
+      "AREA_LONG_CODE": "023",
+      "AREA_NAME": "Pelmo Park-Humberlea",
+      "AREA_DESC": "Pelmo Park-Humberlea (23)",
+      "AREA_ID": 2502211,
+      "AREA_ATTR_ID": 26022726,
+      "OBJECTID": 17827217
+    },
+    {
+      "AREA_SHORT_CODE": "024",
+      "AREA_LONG_CODE": "024",
+      "AREA_NAME": "Black Creek",
+      "AREA_DESC": "Black Creek (24)",
+      "AREA_ID": 2502212,
+      "AREA_ATTR_ID": 26022727,
+      "OBJECTID": 17827201
+    },
+    {
+      "AREA_SHORT_CODE": "025",
+      "AREA_LONG_CODE": "025",
+      "AREA_NAME": "Glenfield-Jane Heights",
+      "AREA_DESC": "Glenfield-Jane Heights (25)",
+      "AREA_ID": 2502240,
+      "AREA_ATTR_ID": 26022755,
+      "OBJECTID": 17826753
+    },
+    {
+      "AREA_SHORT_CODE": "027",
+      "AREA_LONG_CODE": "027",
+      "AREA_NAME": "York University Heights",
+      "AREA_DESC": "York University Heights (27)",
+      "AREA_ID": 2502241,
+      "AREA_ATTR_ID": 26022756,
+      "OBJECTID": 17826737
+    },
+    {
+      "AREA_SHORT_CODE": "028",
+      "AREA_LONG_CODE": "028",
+      "AREA_NAME": "Rustic",
+      "AREA_DESC": "Rustic (28)",
+      "AREA_ID": 2502242,
+      "AREA_ATTR_ID": 26022757,
+      "OBJECTID": 17826721
+    },
+    {
+      "AREA_SHORT_CODE": "029",
+      "AREA_LONG_CODE": "029",
+      "AREA_NAME": "Maple Leaf",
+      "AREA_DESC": "Maple Leaf (29)",
+      "AREA_ID": 2502243,
+      "AREA_ATTR_ID": 26022758,
+      "OBJECTID": 17826705
+    },
+    {
+      "AREA_SHORT_CODE": "030",
+      "AREA_LONG_CODE": "030",
+      "AREA_NAME": "Brookhaven-Amesbury",
+      "AREA_DESC": "Brookhaven-Amesbury (30)",
+      "AREA_ID": 2502244,
+      "AREA_ATTR_ID": 26022759,
+      "OBJECTID": 17826689
+    },
+    {
+      "AREA_SHORT_CODE": "031",
+      "AREA_LONG_CODE": "031",
+      "AREA_NAME": "Yorkdale-Glen Park",
+      "AREA_DESC": "Yorkdale-Glen Park (31)",
+      "AREA_ID": 2502245,
+      "AREA_ATTR_ID": 26022760,
+      "OBJECTID": 17826673
+    },
+    {
+      "AREA_SHORT_CODE": "032",
+      "AREA_LONG_CODE": "032",
+      "AREA_NAME": "Englemount-Lawrence",
+      "AREA_DESC": "Englemount-Lawrence (32)",
+      "AREA_ID": 2502246,
+      "AREA_ATTR_ID": 26022761,
+      "OBJECTID": 17826657
+    },
+    {
+      "AREA_SHORT_CODE": "033",
+      "AREA_LONG_CODE": "033",
+      "AREA_NAME": "Clanton Park",
+      "AREA_DESC": "Clanton Park (33)",
+      "AREA_ID": 2502247,
+      "AREA_ATTR_ID": 26022762,
+      "OBJECTID": 17826641
+    },
+    {
+      "AREA_SHORT_CODE": "034",
+      "AREA_LONG_CODE": "034",
+      "AREA_NAME": "Bathurst Manor",
+      "AREA_DESC": "Bathurst Manor (34)",
+      "AREA_ID": 2502248,
+      "AREA_ATTR_ID": 26022763,
+      "OBJECTID": 17826625
+    },
+    {
+      "AREA_SHORT_CODE": "035",
+      "AREA_LONG_CODE": "035",
+      "AREA_NAME": "Westminster-Branson",
+      "AREA_DESC": "Westminster-Branson (35)",
+      "AREA_ID": 2502249,
+      "AREA_ATTR_ID": 26022764,
+      "OBJECTID": 17826609
+    },
+    {
+      "AREA_SHORT_CODE": "036",
+      "AREA_LONG_CODE": "036",
+      "AREA_NAME": "Newtonbrook West",
+      "AREA_DESC": "Newtonbrook West (36)",
+      "AREA_ID": 2502250,
+      "AREA_ATTR_ID": 26022765,
+      "OBJECTID": 17826593
+    },
+    {
+      "AREA_SHORT_CODE": "037",
+      "AREA_LONG_CODE": "037",
+      "AREA_NAME": "Willowdale West",
+      "AREA_DESC": "Willowdale West (37)",
+      "AREA_ID": 2502251,
+      "AREA_ATTR_ID": 26022766,
+      "OBJECTID": 17826577
+    },
+    {
+      "AREA_SHORT_CODE": "038",
+      "AREA_LONG_CODE": "038",
+      "AREA_NAME": "Lansing-Westgate",
+      "AREA_DESC": "Lansing-Westgate (38)",
+      "AREA_ID": 2502252,
+      "AREA_ATTR_ID": 26022767,
+      "OBJECTID": 17826561
+    },
+    {
+      "AREA_SHORT_CODE": "039",
+      "AREA_LONG_CODE": "039",
+      "AREA_NAME": "Bedford Park-Nortown",
+      "AREA_DESC": "Bedford Park-Nortown (39)",
+      "AREA_ID": 2502253,
+      "AREA_ATTR_ID": 26022768,
+      "OBJECTID": 17826545
+    },
+    {
+      "AREA_SHORT_CODE": "040",
+      "AREA_LONG_CODE": "040",
+      "AREA_NAME": "St.Andrew-Windfields",
+      "AREA_DESC": "St.Andrew-Windfields (40)",
+      "AREA_ID": 2502254,
+      "AREA_ATTR_ID": 26022769,
+      "OBJECTID": 17826529
+    },
+    {
+      "AREA_SHORT_CODE": "041",
+      "AREA_LONG_CODE": "041",
+      "AREA_NAME": "Bridle Path-Sunnybrook-York Mills",
+      "AREA_DESC": "Bridle Path-Sunnybrook-York Mills (41)",
+      "AREA_ID": 2502255,
+      "AREA_ATTR_ID": 26022770,
+      "OBJECTID": 17826513
+    },
+    {
+      "AREA_SHORT_CODE": "042",
+      "AREA_LONG_CODE": "042",
+      "AREA_NAME": "Banbury-Don Mills",
+      "AREA_DESC": "Banbury-Don Mills (42)",
+      "AREA_ID": 2502256,
+      "AREA_ATTR_ID": 26022771,
+      "OBJECTID": 17826497
+    },
+    {
+      "AREA_SHORT_CODE": "043",
+      "AREA_LONG_CODE": "043",
+      "AREA_NAME": "Victoria Village",
+      "AREA_DESC": "Victoria Village (43)",
+      "AREA_ID": 2502257,
+      "AREA_ATTR_ID": 26022772,
+      "OBJECTID": 17826481
+    },
+    {
+      "AREA_SHORT_CODE": "044",
+      "AREA_LONG_CODE": "044",
+      "AREA_NAME": "Flemingdon Park",
+      "AREA_DESC": "Flemingdon Park (44)",
+      "AREA_ID": 2502258,
+      "AREA_ATTR_ID": 26022773,
+      "OBJECTID": 17826465
+    },
+    {
+      "AREA_SHORT_CODE": "046",
+      "AREA_LONG_CODE": "046",
+      "AREA_NAME": "Pleasant View",
+      "AREA_DESC": "Pleasant View (46)",
+      "AREA_ID": 2502259,
+      "AREA_ATTR_ID": 26022774,
+      "OBJECTID": 17826449
+    },
+    {
+      "AREA_SHORT_CODE": "047",
+      "AREA_LONG_CODE": "047",
+      "AREA_NAME": "Don Valley Village",
+      "AREA_DESC": "Don Valley Village (47)",
+      "AREA_ID": 2502260,
+      "AREA_ATTR_ID": 26022775,
+      "OBJECTID": 17826433
+    },
+    {
+      "AREA_SHORT_CODE": "048",
+      "AREA_LONG_CODE": "048",
+      "AREA_NAME": "Hillcrest Village",
+      "AREA_DESC": "Hillcrest Village (48)",
+      "AREA_ID": 2502231,
+      "AREA_ATTR_ID": 26022746,
+      "OBJECTID": 17826897
+    },
+    {
+      "AREA_SHORT_CODE": "049",
+      "AREA_LONG_CODE": "049",
+      "AREA_NAME": "Bayview Woods-Steeles",
+      "AREA_DESC": "Bayview Woods-Steeles (49)",
+      "AREA_ID": 2502232,
+      "AREA_ATTR_ID": 26022747,
+      "OBJECTID": 17826881
+    },
+    {
+      "AREA_SHORT_CODE": "050",
+      "AREA_LONG_CODE": "050",
+      "AREA_NAME": "Newtonbrook East",
+      "AREA_DESC": "Newtonbrook East (50)",
+      "AREA_ID": 2502233,
+      "AREA_ATTR_ID": 26022748,
+      "OBJECTID": 17826865
+    },
+    {
+      "AREA_SHORT_CODE": "052",
+      "AREA_LONG_CODE": "052",
+      "AREA_NAME": "Bayview Village",
+      "AREA_DESC": "Bayview Village (52)",
+      "AREA_ID": 2502234,
+      "AREA_ATTR_ID": 26022749,
+      "OBJECTID": 17826849
+    },
+    {
+      "AREA_SHORT_CODE": "053",
+      "AREA_LONG_CODE": "053",
+      "AREA_NAME": "Henry Farm",
+      "AREA_DESC": "Henry Farm (53)",
+      "AREA_ID": 2502235,
+      "AREA_ATTR_ID": 26022750,
+      "OBJECTID": 17826833
+    },
+    {
+      "AREA_SHORT_CODE": "054",
+      "AREA_LONG_CODE": "054",
+      "AREA_NAME": "O'Connor-Parkview",
+      "AREA_DESC": "O'Connor-Parkview (54)",
+      "AREA_ID": 2502236,
+      "AREA_ATTR_ID": 26022751,
+      "OBJECTID": 17826817
+    },
+    {
+      "AREA_SHORT_CODE": "055",
+      "AREA_LONG_CODE": "055",
+      "AREA_NAME": "Thorncliffe Park",
+      "AREA_DESC": "Thorncliffe Park (55)",
+      "AREA_ID": 2502237,
+      "AREA_ATTR_ID": 26022752,
+      "OBJECTID": 17826801
+    },
+    {
+      "AREA_SHORT_CODE": "056",
+      "AREA_LONG_CODE": "056",
+      "AREA_NAME": "Leaside-Bennington",
+      "AREA_DESC": "Leaside-Bennington (56)",
+      "AREA_ID": 2502238,
+      "AREA_ATTR_ID": 26022753,
+      "OBJECTID": 17826785
+    },
+    {
+      "AREA_SHORT_CODE": "057",
+      "AREA_LONG_CODE": "057",
+      "AREA_NAME": "Broadview North",
+      "AREA_DESC": "Broadview North (57)",
+      "AREA_ID": 2502239,
+      "AREA_ATTR_ID": 26022754,
+      "OBJECTID": 17826769
+    },
+    {
+      "AREA_SHORT_CODE": "058",
+      "AREA_LONG_CODE": "058",
+      "AREA_NAME": "Old East York",
+      "AREA_DESC": "Old East York (58)",
+      "AREA_ID": 2502269,
+      "AREA_ATTR_ID": 26022784,
+      "OBJECTID": 17826289
+    },
+    {
+      "AREA_SHORT_CODE": "059",
+      "AREA_LONG_CODE": "059",
+      "AREA_NAME": "Danforth East York",
+      "AREA_DESC": "Danforth East York (59)",
+      "AREA_ID": 2502270,
+      "AREA_ATTR_ID": 26022785,
+      "OBJECTID": 17826273
+    },
+    {
+      "AREA_SHORT_CODE": "060",
+      "AREA_LONG_CODE": "060",
+      "AREA_NAME": "Woodbine-Lumsden",
+      "AREA_DESC": "Woodbine-Lumsden (60)",
+      "AREA_ID": 2502271,
+      "AREA_ATTR_ID": 26022786,
+      "OBJECTID": 17826257
+    },
+    {
+      "AREA_SHORT_CODE": "061",
+      "AREA_LONG_CODE": "061",
+      "AREA_NAME": "Taylor-Massey",
+      "AREA_DESC": "Taylor-Massey (61)",
+      "AREA_ID": 2502272,
+      "AREA_ATTR_ID": 26022787,
+      "OBJECTID": 17826241
+    },
+    {
+      "AREA_SHORT_CODE": "062",
+      "AREA_LONG_CODE": "062",
+      "AREA_NAME": "East End-Danforth",
+      "AREA_DESC": "East End-Danforth (62)",
+      "AREA_ID": 2502273,
+      "AREA_ATTR_ID": 26022788,
+      "OBJECTID": 17826225
+    },
+    {
+      "AREA_SHORT_CODE": "063",
+      "AREA_LONG_CODE": "063",
+      "AREA_NAME": "The Beaches",
+      "AREA_DESC": "The Beaches (63)",
+      "AREA_ID": 2502274,
+      "AREA_ATTR_ID": 26022789,
+      "OBJECTID": 17826209
+    },
+    {
+      "AREA_SHORT_CODE": "064",
+      "AREA_LONG_CODE": "064",
+      "AREA_NAME": "Woodbine Corridor",
+      "AREA_DESC": "Woodbine Corridor (64)",
+      "AREA_ID": 2502275,
+      "AREA_ATTR_ID": 26022790,
+      "OBJECTID": 17826193
+    },
+    {
+      "AREA_SHORT_CODE": "065",
+      "AREA_LONG_CODE": "065",
+      "AREA_NAME": "Greenwood-Coxwell",
+      "AREA_DESC": "Greenwood-Coxwell (65)",
+      "AREA_ID": 2502276,
+      "AREA_ATTR_ID": 26022791,
+      "OBJECTID": 17826177
+    },
+    {
+      "AREA_SHORT_CODE": "066",
+      "AREA_LONG_CODE": "066",
+      "AREA_NAME": "Danforth",
+      "AREA_DESC": "Danforth (66)",
+      "AREA_ID": 2502277,
+      "AREA_ATTR_ID": 26022792,
+      "OBJECTID": 17826161
+    },
+    {
+      "AREA_SHORT_CODE": "067",
+      "AREA_LONG_CODE": "067",
+      "AREA_NAME": "Playter Estates-Danforth",
+      "AREA_DESC": "Playter Estates-Danforth (67)",
+      "AREA_ID": 2502278,
+      "AREA_ATTR_ID": 26022793,
+      "OBJECTID": 17826145
+    },
+    {
+      "AREA_SHORT_CODE": "068",
+      "AREA_LONG_CODE": "068",
+      "AREA_NAME": "North Riverdale",
+      "AREA_DESC": "North Riverdale (68)",
+      "AREA_ID": 2502279,
+      "AREA_ATTR_ID": 26022794,
+      "OBJECTID": 17826129
+    },
+    {
+      "AREA_SHORT_CODE": "069",
+      "AREA_LONG_CODE": "069",
+      "AREA_NAME": "Blake-Jones",
+      "AREA_DESC": "Blake-Jones (69)",
+      "AREA_ID": 2502280,
+      "AREA_ATTR_ID": 26022795,
+      "OBJECTID": 17826113
+    },
+    {
+      "AREA_SHORT_CODE": "070",
+      "AREA_LONG_CODE": "070",
+      "AREA_NAME": "South Riverdale",
+      "AREA_DESC": "South Riverdale (70)",
+      "AREA_ID": 2502281,
+      "AREA_ATTR_ID": 26022796,
+      "OBJECTID": 17826097
+    },
+    {
+      "AREA_SHORT_CODE": "071",
+      "AREA_LONG_CODE": "071",
+      "AREA_NAME": "Cabbagetown-South St.James Town",
+      "AREA_DESC": "Cabbagetown-South St.James Town (71)",
+      "AREA_ID": 2502282,
+      "AREA_ATTR_ID": 26022797,
+      "OBJECTID": 17826081
+    },
+    {
+      "AREA_SHORT_CODE": "072",
+      "AREA_LONG_CODE": "072",
+      "AREA_NAME": "Regent Park",
+      "AREA_DESC": "Regent Park (72)",
+      "AREA_ID": 2502283,
+      "AREA_ATTR_ID": 26022798,
+      "OBJECTID": 17826065
+    },
+    {
+      "AREA_SHORT_CODE": "073",
+      "AREA_LONG_CODE": "073",
+      "AREA_NAME": "Moss Park",
+      "AREA_DESC": "Moss Park (73)",
+      "AREA_ID": 2502284,
+      "AREA_ATTR_ID": 26022799,
+      "OBJECTID": 17826049
+    },
+    {
+      "AREA_SHORT_CODE": "074",
+      "AREA_LONG_CODE": "074",
+      "AREA_NAME": "North St.James Town",
+      "AREA_DESC": "North St.James Town (74)",
+      "AREA_ID": 2502285,
+      "AREA_ATTR_ID": 26022800,
+      "OBJECTID": 17826033
+    },
+    {
+      "AREA_SHORT_CODE": "078",
+      "AREA_LONG_CODE": "078",
+      "AREA_NAME": "Kensington-Chinatown",
+      "AREA_DESC": "Kensington-Chinatown (78)",
+      "AREA_ID": 2502286,
+      "AREA_ATTR_ID": 26022801,
+      "OBJECTID": 17826017
+    },
+    {
+      "AREA_SHORT_CODE": "079",
+      "AREA_LONG_CODE": "079",
+      "AREA_NAME": "University",
+      "AREA_DESC": "University (79)",
+      "AREA_ID": 2502287,
+      "AREA_ATTR_ID": 26022802,
+      "OBJECTID": 17826001
+    },
+    {
+      "AREA_SHORT_CODE": "080",
+      "AREA_LONG_CODE": "080",
+      "AREA_NAME": "Palmerston-Little Italy",
+      "AREA_DESC": "Palmerston-Little Italy (80)",
+      "AREA_ID": 2502288,
+      "AREA_ATTR_ID": 26022803,
+      "OBJECTID": 17825985
+    },
+    {
+      "AREA_SHORT_CODE": "081",
+      "AREA_LONG_CODE": "081",
+      "AREA_NAME": "Trinity-Bellwoods",
+      "AREA_DESC": "Trinity-Bellwoods (81)",
+      "AREA_ID": 2502261,
+      "AREA_ATTR_ID": 26022776,
+      "OBJECTID": 17826417
+    },
+    {
+      "AREA_SHORT_CODE": "083",
+      "AREA_LONG_CODE": "083",
+      "AREA_NAME": "Dufferin Grove",
+      "AREA_DESC": "Dufferin Grove (83)",
+      "AREA_ID": 2502262,
+      "AREA_ATTR_ID": 26022777,
+      "OBJECTID": 17826401
+    },
+    {
+      "AREA_SHORT_CODE": "084",
+      "AREA_LONG_CODE": "084",
+      "AREA_NAME": "Little Portugal",
+      "AREA_DESC": "Little Portugal (84)",
+      "AREA_ID": 2502263,
+      "AREA_ATTR_ID": 26022778,
+      "OBJECTID": 17826385
+    },
+    {
+      "AREA_SHORT_CODE": "085",
+      "AREA_LONG_CODE": "085",
+      "AREA_NAME": "South Parkdale",
+      "AREA_DESC": "South Parkdale (85)",
+      "AREA_ID": 2502264,
+      "AREA_ATTR_ID": 26022779,
+      "OBJECTID": 17826369
+    },
+    {
+      "AREA_SHORT_CODE": "086",
+      "AREA_LONG_CODE": "086",
+      "AREA_NAME": "Roncesvalles",
+      "AREA_DESC": "Roncesvalles (86)",
+      "AREA_ID": 2502265,
+      "AREA_ATTR_ID": 26022780,
+      "OBJECTID": 17826353
+    },
+    {
+      "AREA_SHORT_CODE": "087",
+      "AREA_LONG_CODE": "087",
+      "AREA_NAME": "High Park-Swansea",
+      "AREA_DESC": "High Park-Swansea (87)",
+      "AREA_ID": 2502266,
+      "AREA_ATTR_ID": 26022781,
+      "OBJECTID": 17826337
+    },
+    {
+      "AREA_SHORT_CODE": "088",
+      "AREA_LONG_CODE": "088",
+      "AREA_NAME": "High Park North",
+      "AREA_DESC": "High Park North (88)",
+      "AREA_ID": 2502267,
+      "AREA_ATTR_ID": 26022782,
+      "OBJECTID": 17826321
+    },
+    {
+      "AREA_SHORT_CODE": "089",
+      "AREA_LONG_CODE": "089",
+      "AREA_NAME": "Runnymede-Bloor West Village",
+      "AREA_DESC": "Runnymede-Bloor West Village (89)",
+      "AREA_ID": 2502268,
+      "AREA_ATTR_ID": 26022783,
+      "OBJECTID": 17826305
+    },
+    {
+      "AREA_SHORT_CODE": "090",
+      "AREA_LONG_CODE": "090",
+      "AREA_NAME": "Junction Area",
+      "AREA_DESC": "Junction Area (90)",
+      "AREA_ID": 2502300,
+      "AREA_ATTR_ID": 26022815,
+      "OBJECTID": 17825793
+    },
+    {
+      "AREA_SHORT_CODE": "091",
+      "AREA_LONG_CODE": "091",
+      "AREA_NAME": "Weston-Pelham Park",
+      "AREA_DESC": "Weston-Pelham Park (91)",
+      "AREA_ID": 2502301,
+      "AREA_ATTR_ID": 26022816,
+      "OBJECTID": 17825777
+    },
+    {
+      "AREA_SHORT_CODE": "092",
+      "AREA_LONG_CODE": "092",
+      "AREA_NAME": "Corso Italia-Davenport",
+      "AREA_DESC": "Corso Italia-Davenport (92)",
+      "AREA_ID": 2502302,
+      "AREA_ATTR_ID": 26022817,
+      "OBJECTID": 17825761
+    },
+    {
+      "AREA_SHORT_CODE": "094",
+      "AREA_LONG_CODE": "094",
+      "AREA_NAME": "Wychwood",
+      "AREA_DESC": "Wychwood (94)",
+      "AREA_ID": 2502303,
+      "AREA_ATTR_ID": 26022818,
+      "OBJECTID": 17825745
+    },
+    {
+      "AREA_SHORT_CODE": "095",
+      "AREA_LONG_CODE": "095",
+      "AREA_NAME": "Annex",
+      "AREA_DESC": "Annex (95)",
+      "AREA_ID": 2502304,
+      "AREA_ATTR_ID": 26022819,
+      "OBJECTID": 17825729
+    },
+    {
+      "AREA_SHORT_CODE": "096",
+      "AREA_LONG_CODE": "096",
+      "AREA_NAME": "Casa Loma",
+      "AREA_DESC": "Casa Loma (96)",
+      "AREA_ID": 2502305,
+      "AREA_ATTR_ID": 26022820,
+      "OBJECTID": 17825713
+    },
+    {
+      "AREA_SHORT_CODE": "097",
+      "AREA_LONG_CODE": "097",
+      "AREA_NAME": "Yonge-St.Clair",
+      "AREA_DESC": "Yonge-St.Clair (97)",
+      "AREA_ID": 2502306,
+      "AREA_ATTR_ID": 26022821,
+      "OBJECTID": 17825697
+    },
+    {
+      "AREA_SHORT_CODE": "098",
+      "AREA_LONG_CODE": "098",
+      "AREA_NAME": "Rosedale-Moore Park",
+      "AREA_DESC": "Rosedale-Moore Park (98)",
+      "AREA_ID": 2502307,
+      "AREA_ATTR_ID": 26022822,
+      "OBJECTID": 17825681
+    },
+    {
+      "AREA_SHORT_CODE": "099",
+      "AREA_LONG_CODE": "099",
+      "AREA_NAME": "Mount Pleasant East",
+      "AREA_DESC": "Mount Pleasant East (99)",
+      "AREA_ID": 2502308,
+      "AREA_ATTR_ID": 26022823,
+      "OBJECTID": 17825665
+    },
+    {
+      "AREA_SHORT_CODE": "100",
+      "AREA_LONG_CODE": "100",
+      "AREA_NAME": "Yonge-Eglinton",
+      "AREA_DESC": "Yonge-Eglinton (100)",
+      "AREA_ID": 2502309,
+      "AREA_ATTR_ID": 26022824,
+      "OBJECTID": 17825649
+    },
+    {
+      "AREA_SHORT_CODE": "101",
+      "AREA_LONG_CODE": "101",
+      "AREA_NAME": "Forest Hill South",
+      "AREA_DESC": "Forest Hill South (101)",
+      "AREA_ID": 2502310,
+      "AREA_ATTR_ID": 26022825,
+      "OBJECTID": 17825633
+    },
+    {
+      "AREA_SHORT_CODE": "102",
+      "AREA_LONG_CODE": "102",
+      "AREA_NAME": "Forest Hill North",
+      "AREA_DESC": "Forest Hill North (102)",
+      "AREA_ID": 2502311,
+      "AREA_ATTR_ID": 26022826,
+      "OBJECTID": 17825617
+    },
+    {
+      "AREA_SHORT_CODE": "103",
+      "AREA_LONG_CODE": "103",
+      "AREA_NAME": "Lawrence Park South",
+      "AREA_DESC": "Lawrence Park South (103)",
+      "AREA_ID": 2502312,
+      "AREA_ATTR_ID": 26022827,
+      "OBJECTID": 17825601
+    },
+    {
+      "AREA_SHORT_CODE": "105",
+      "AREA_LONG_CODE": "105",
+      "AREA_NAME": "Lawrence Park North",
+      "AREA_DESC": "Lawrence Park North (105)",
+      "AREA_ID": 2502313,
+      "AREA_ATTR_ID": 26022828,
+      "OBJECTID": 17825585
+    },
+    {
+      "AREA_SHORT_CODE": "106",
+      "AREA_LONG_CODE": "106",
+      "AREA_NAME": "Humewood-Cedarvale",
+      "AREA_DESC": "Humewood-Cedarvale (106)",
+      "AREA_ID": 2502314,
+      "AREA_ATTR_ID": 26022829,
+      "OBJECTID": 17825569
+    },
+    {
+      "AREA_SHORT_CODE": "107",
+      "AREA_LONG_CODE": "107",
+      "AREA_NAME": "Oakwood Village",
+      "AREA_DESC": "Oakwood Village (107)",
+      "AREA_ID": 2502315,
+      "AREA_ATTR_ID": 26022830,
+      "OBJECTID": 17825553
+    },
+    {
+      "AREA_SHORT_CODE": "108",
+      "AREA_LONG_CODE": "108",
+      "AREA_NAME": "Briar Hill-Belgravia",
+      "AREA_DESC": "Briar Hill-Belgravia (108)",
+      "AREA_ID": 2502316,
+      "AREA_ATTR_ID": 26022831,
+      "OBJECTID": 17825537
+    },
+    {
+      "AREA_SHORT_CODE": "109",
+      "AREA_LONG_CODE": "109",
+      "AREA_NAME": "Caledonia-Fairbank",
+      "AREA_DESC": "Caledonia-Fairbank (109)",
+      "AREA_ID": 2502317,
+      "AREA_ATTR_ID": 26022832,
+      "OBJECTID": 17825521
+    },
+    {
+      "AREA_SHORT_CODE": "110",
+      "AREA_LONG_CODE": "110",
+      "AREA_NAME": "Keelesdale-Eglinton West",
+      "AREA_DESC": "Keelesdale-Eglinton West (110)",
+      "AREA_ID": 2502289,
+      "AREA_ATTR_ID": 26022804,
+      "OBJECTID": 17825969
+    },
+    {
+      "AREA_SHORT_CODE": "111",
+      "AREA_LONG_CODE": "111",
+      "AREA_NAME": "Rockcliffe-Smythe",
+      "AREA_DESC": "Rockcliffe-Smythe (111)",
+      "AREA_ID": 2502290,
+      "AREA_ATTR_ID": 26022805,
+      "OBJECTID": 17825953
+    },
+    {
+      "AREA_SHORT_CODE": "112",
+      "AREA_LONG_CODE": "112",
+      "AREA_NAME": "Beechborough-Greenbrook",
+      "AREA_DESC": "Beechborough-Greenbrook (112)",
+      "AREA_ID": 2502291,
+      "AREA_ATTR_ID": 26022806,
+      "OBJECTID": 17825937
+    },
+    {
+      "AREA_SHORT_CODE": "113",
+      "AREA_LONG_CODE": "113",
+      "AREA_NAME": "Weston",
+      "AREA_DESC": "Weston (113)",
+      "AREA_ID": 2502292,
+      "AREA_ATTR_ID": 26022807,
+      "OBJECTID": 17825921
+    },
+    {
+      "AREA_SHORT_CODE": "114",
+      "AREA_LONG_CODE": "114",
+      "AREA_NAME": "Lambton Baby Point",
+      "AREA_DESC": "Lambton Baby Point (114)",
+      "AREA_ID": 2502293,
+      "AREA_ATTR_ID": 26022808,
+      "OBJECTID": 17825905
+    },
+    {
+      "AREA_SHORT_CODE": "115",
+      "AREA_LONG_CODE": "115",
+      "AREA_NAME": "Mount Dennis",
+      "AREA_DESC": "Mount Dennis (115)",
+      "AREA_ID": 2502294,
+      "AREA_ATTR_ID": 26022809,
+      "OBJECTID": 17825889
+    },
+    {
+      "AREA_SHORT_CODE": "116",
+      "AREA_LONG_CODE": "116",
+      "AREA_NAME": "Steeles",
+      "AREA_DESC": "Steeles (116)",
+      "AREA_ID": 2502295,
+      "AREA_ATTR_ID": 26022810,
+      "OBJECTID": 17825873
+    },
+    {
+      "AREA_SHORT_CODE": "118",
+      "AREA_LONG_CODE": "118",
+      "AREA_NAME": "Tam O'Shanter-Sullivan",
+      "AREA_DESC": "Tam O'Shanter-Sullivan (118)",
+      "AREA_ID": 2502296,
+      "AREA_ATTR_ID": 26022811,
+      "OBJECTID": 17825857
+    },
+    {
+      "AREA_SHORT_CODE": "119",
+      "AREA_LONG_CODE": "119",
+      "AREA_NAME": "Wexford/Maryvale",
+      "AREA_DESC": "Wexford/Maryvale (119)",
+      "AREA_ID": 2502297,
+      "AREA_ATTR_ID": 26022812,
+      "OBJECTID": 17825841
+    },
+    {
+      "AREA_SHORT_CODE": "120",
+      "AREA_LONG_CODE": "120",
+      "AREA_NAME": "Clairlea-Birchmount",
+      "AREA_DESC": "Clairlea-Birchmount (120)",
+      "AREA_ID": 2502298,
+      "AREA_ATTR_ID": 26022813,
+      "OBJECTID": 17825825
+    },
+    {
+      "AREA_SHORT_CODE": "121",
+      "AREA_LONG_CODE": "121",
+      "AREA_NAME": "Oakridge",
+      "AREA_DESC": "Oakridge (121)",
+      "AREA_ID": 2502299,
+      "AREA_ATTR_ID": 26022814,
+      "OBJECTID": 17825809
+    },
+    {
+      "AREA_SHORT_CODE": "122",
+      "AREA_LONG_CODE": "122",
+      "AREA_NAME": "Birchcliffe-Cliffside",
+      "AREA_DESC": "Birchcliffe-Cliffside (122)",
+      "AREA_ID": 2502330,
+      "AREA_ATTR_ID": 26022845,
+      "OBJECTID": 17825313
+    },
+    {
+      "AREA_SHORT_CODE": "123",
+      "AREA_LONG_CODE": "123",
+      "AREA_NAME": "Cliffcrest",
+      "AREA_DESC": "Cliffcrest (123)",
+      "AREA_ID": 2502331,
+      "AREA_ATTR_ID": 26022846,
+      "OBJECTID": 17825297
+    },
+    {
+      "AREA_SHORT_CODE": "124",
+      "AREA_LONG_CODE": "124",
+      "AREA_NAME": "Kennedy Park",
+      "AREA_DESC": "Kennedy Park (124)",
+      "AREA_ID": 2502332,
+      "AREA_ATTR_ID": 26022847,
+      "OBJECTID": 17825281
+    },
+    {
+      "AREA_SHORT_CODE": "125",
+      "AREA_LONG_CODE": "125",
+      "AREA_NAME": "Ionview",
+      "AREA_DESC": "Ionview (125)",
+      "AREA_ID": 2502333,
+      "AREA_ATTR_ID": 26022848,
+      "OBJECTID": 17825265
+    },
+    {
+      "AREA_SHORT_CODE": "126",
+      "AREA_LONG_CODE": "126",
+      "AREA_NAME": "Dorset Park",
+      "AREA_DESC": "Dorset Park (126)",
+      "AREA_ID": 2502334,
+      "AREA_ATTR_ID": 26022849,
+      "OBJECTID": 17825249
+    },
+    {
+      "AREA_SHORT_CODE": "128",
+      "AREA_LONG_CODE": "128",
+      "AREA_NAME": "Agincourt South-Malvern West",
+      "AREA_DESC": "Agincourt South-Malvern West (128)",
+      "AREA_ID": 2502335,
+      "AREA_ATTR_ID": 26022850,
+      "OBJECTID": 17825233
+    },
+    {
+      "AREA_SHORT_CODE": "129",
+      "AREA_LONG_CODE": "129",
+      "AREA_NAME": "Agincourt North",
+      "AREA_DESC": "Agincourt North (129)",
+      "AREA_ID": 2502336,
+      "AREA_ATTR_ID": 26022851,
+      "OBJECTID": 17825217
+    },
+    {
+      "AREA_SHORT_CODE": "130",
+      "AREA_LONG_CODE": "130",
+      "AREA_NAME": "Milliken",
+      "AREA_DESC": "Milliken (130)",
+      "AREA_ID": 2502337,
+      "AREA_ATTR_ID": 26022852,
+      "OBJECTID": 17825201
+    },
+    {
+      "AREA_SHORT_CODE": "133",
+      "AREA_LONG_CODE": "133",
+      "AREA_NAME": "Centennial Scarborough",
+      "AREA_DESC": "Centennial Scarborough (133)",
+      "AREA_ID": 2502338,
+      "AREA_ATTR_ID": 26022853,
+      "OBJECTID": 17825185
+    },
+    {
+      "AREA_SHORT_CODE": "134",
+      "AREA_LONG_CODE": "134",
+      "AREA_NAME": "Highland Creek",
+      "AREA_DESC": "Highland Creek (134)",
+      "AREA_ID": 2502339,
+      "AREA_ATTR_ID": 26022854,
+      "OBJECTID": 17825169
+    },
+    {
+      "AREA_SHORT_CODE": "135",
+      "AREA_LONG_CODE": "135",
+      "AREA_NAME": "Morningside",
+      "AREA_DESC": "Morningside (135)",
+      "AREA_ID": 2502340,
+      "AREA_ATTR_ID": 26022855,
+      "OBJECTID": 17825153
+    },
+    {
+      "AREA_SHORT_CODE": "136",
+      "AREA_LONG_CODE": "136",
+      "AREA_NAME": "West Hill",
+      "AREA_DESC": "West Hill (136)",
+      "AREA_ID": 2502341,
+      "AREA_ATTR_ID": 26022856,
+      "OBJECTID": 17825137
+    },
+    {
+      "AREA_SHORT_CODE": "138",
+      "AREA_LONG_CODE": "138",
+      "AREA_NAME": "Eglinton East",
+      "AREA_DESC": "Eglinton East (138)",
+      "AREA_ID": 2502342,
+      "AREA_ATTR_ID": 26022857,
+      "OBJECTID": 17825121
+    },
+    {
+      "AREA_SHORT_CODE": "139",
+      "AREA_LONG_CODE": "139",
+      "AREA_NAME": "Scarborough Village",
+      "AREA_DESC": "Scarborough Village (139)",
+      "AREA_ID": 2502343,
+      "AREA_ATTR_ID": 26022858,
+      "OBJECTID": 17825105
+    },
+    {
+      "AREA_SHORT_CODE": "140",
+      "AREA_LONG_CODE": "140",
+      "AREA_NAME": "Guildwood",
+      "AREA_DESC": "Guildwood (140)",
+      "AREA_ID": 2502344,
+      "AREA_ATTR_ID": 26022859,
+      "OBJECTID": 17825089
+    },
+    {
+      "AREA_SHORT_CODE": "141",
+      "AREA_LONG_CODE": "141",
+      "AREA_NAME": "Golfdale-Cedarbrae-Woburn",
+      "AREA_DESC": "Golfdale-Cedarbrae-Woburn (141)",
+      "AREA_ID": 2502345,
+      "AREA_ATTR_ID": 26022860,
+      "OBJECTID": 17825073
+    },
+    {
+      "AREA_SHORT_CODE": "142",
+      "AREA_LONG_CODE": "142",
+      "AREA_NAME": "Woburn North",
+      "AREA_DESC": "Woburn North (142)",
+      "AREA_ID": 2502346,
+      "AREA_ATTR_ID": 26022861,
+      "OBJECTID": 17825057
+    },
+    {
+      "AREA_SHORT_CODE": "143",
+      "AREA_LONG_CODE": "143",
+      "AREA_NAME": "West Rouge",
+      "AREA_DESC": "West Rouge (143)",
+      "AREA_ID": 2502347,
+      "AREA_ATTR_ID": 26022862,
+      "OBJECTID": 17825041
+    },
+    {
+      "AREA_SHORT_CODE": "144",
+      "AREA_LONG_CODE": "144",
+      "AREA_NAME": "Morningside Heights",
+      "AREA_DESC": "Morningside Heights (144)",
+      "AREA_ID": 2502348,
+      "AREA_ATTR_ID": 26022863,
+      "OBJECTID": 17825025
+    },
+    {
+      "AREA_SHORT_CODE": "145",
+      "AREA_LONG_CODE": "145",
+      "AREA_NAME": "Malvern West",
+      "AREA_DESC": "Malvern West (145)",
+      "AREA_ID": 2502349,
+      "AREA_ATTR_ID": 26022864,
+      "OBJECTID": 17825009
+    },
+    {
+      "AREA_SHORT_CODE": "146",
+      "AREA_LONG_CODE": "146",
+      "AREA_NAME": "Malvern East",
+      "AREA_DESC": "Malvern East (146)",
+      "AREA_ID": 2502350,
+      "AREA_ATTR_ID": 26022865,
+      "OBJECTID": 17824993
+    },
+    {
+      "AREA_SHORT_CODE": "147",
+      "AREA_LONG_CODE": "147",
+      "AREA_NAME": "L'Amoreaux West",
+      "AREA_DESC": "L'Amoreaux West (147)",
+      "AREA_ID": 2502351,
+      "AREA_ATTR_ID": 26022866,
+      "OBJECTID": 17824977
+    },
+    {
+      "AREA_SHORT_CODE": "148",
+      "AREA_LONG_CODE": "148",
+      "AREA_NAME": "East L'Amoreaux",
+      "AREA_DESC": "East L'Amoreaux (148)",
+      "AREA_ID": 2502352,
+      "AREA_ATTR_ID": 26022867,
+      "OBJECTID": 17824961
+    },
+    {
+      "AREA_SHORT_CODE": "149",
+      "AREA_LONG_CODE": "149",
+      "AREA_NAME": "Parkwoods-O'Connor Hills",
+      "AREA_DESC": "Parkwoods-O'Connor Hills (149)",
+      "AREA_ID": 2502353,
+      "AREA_ATTR_ID": 26022868,
+      "OBJECTID": 17824945
+    },
+    {
+      "AREA_SHORT_CODE": "150",
+      "AREA_LONG_CODE": "150",
+      "AREA_NAME": "Fenside-Parkwoods",
+      "AREA_DESC": "Fenside-Parkwoods (150)",
+      "AREA_ID": 2502354,
+      "AREA_ATTR_ID": 26022869,
+      "OBJECTID": 17824929
+    },
+    {
+      "AREA_SHORT_CODE": "151",
+      "AREA_LONG_CODE": "151",
+      "AREA_NAME": "Yonge-Doris",
+      "AREA_DESC": "Yonge-Doris (151)",
+      "AREA_ID": 2502355,
+      "AREA_ATTR_ID": 26022870,
+      "OBJECTID": 17824913
+    },
+    {
+      "AREA_SHORT_CODE": "152",
+      "AREA_LONG_CODE": "152",
+      "AREA_NAME": "East Willowdale",
+      "AREA_DESC": "East Willowdale (152)",
+      "AREA_ID": 2502356,
+      "AREA_ATTR_ID": 26022871,
+      "OBJECTID": 17824897
+    },
+    {
+      "AREA_SHORT_CODE": "153",
+      "AREA_LONG_CODE": "153",
+      "AREA_NAME": "Avondale",
+      "AREA_DESC": "Avondale (153)",
+      "AREA_ID": 2502357,
+      "AREA_ATTR_ID": 26022872,
+      "OBJECTID": 17824881
+    },
+    {
+      "AREA_SHORT_CODE": "154",
+      "AREA_LONG_CODE": "154",
+      "AREA_NAME": "Oakdale-Beverley Heights",
+      "AREA_DESC": "Oakdale-Beverley Heights (154)",
+      "AREA_ID": 2502358,
+      "AREA_ATTR_ID": 26022873,
+      "OBJECTID": 17824865
+    },
+    {
+      "AREA_SHORT_CODE": "155",
+      "AREA_LONG_CODE": "155",
+      "AREA_NAME": "Downsview",
+      "AREA_DESC": "Downsview (155)",
+      "AREA_ID": 2502359,
+      "AREA_ATTR_ID": 26022874,
+      "OBJECTID": 17824849
+    },
+    {
+      "AREA_SHORT_CODE": "156",
+      "AREA_LONG_CODE": "156",
+      "AREA_NAME": "Bendale-Glen Andrew",
+      "AREA_DESC": "Bendale-Glen Andrew (156)",
+      "AREA_ID": 2502360,
+      "AREA_ATTR_ID": 26022875,
+      "OBJECTID": 17824833
+    },
+    {
+      "AREA_SHORT_CODE": "157",
+      "AREA_LONG_CODE": "157",
+      "AREA_NAME": "Bendale South",
+      "AREA_DESC": "Bendale South (157)",
+      "AREA_ID": 2502318,
+      "AREA_ATTR_ID": 26022833,
+      "OBJECTID": 17825505
+    },
+    {
+      "AREA_SHORT_CODE": "158",
+      "AREA_LONG_CODE": "158",
+      "AREA_NAME": "Islington",
+      "AREA_DESC": "Islington (158)",
+      "AREA_ID": 2502319,
+      "AREA_ATTR_ID": 26022834,
+      "OBJECTID": 17825489
+    },
+    {
+      "AREA_SHORT_CODE": "159",
+      "AREA_LONG_CODE": "159",
+      "AREA_NAME": "Etobicoke City Centre",
+      "AREA_DESC": "Etobicoke City Centre (159)",
+      "AREA_ID": 2502320,
+      "AREA_ATTR_ID": 26022835,
+      "OBJECTID": 17825473
+    },
+    {
+      "AREA_SHORT_CODE": "160",
+      "AREA_LONG_CODE": "160",
+      "AREA_NAME": "Mimico-Queensway",
+      "AREA_DESC": "Mimico-Queensway (160)",
+      "AREA_ID": 2502321,
+      "AREA_ATTR_ID": 26022836,
+      "OBJECTID": 17825457
+    },
+    {
+      "AREA_SHORT_CODE": "161",
+      "AREA_LONG_CODE": "161",
+      "AREA_NAME": "Humber Bay Shores",
+      "AREA_DESC": "Humber Bay Shores (161)",
+      "AREA_ID": 2502322,
+      "AREA_ATTR_ID": 26022837,
+      "OBJECTID": 17825441
+    },
+    {
+      "AREA_SHORT_CODE": "162",
+      "AREA_LONG_CODE": "162",
+      "AREA_NAME": "West Queen West",
+      "AREA_DESC": "West Queen West (162)",
+      "AREA_ID": 2502323,
+      "AREA_ATTR_ID": 26022838,
+      "OBJECTID": 17825425
+    },
+    {
+      "AREA_SHORT_CODE": "163",
+      "AREA_LONG_CODE": "163",
+      "AREA_NAME": "Fort York-Liberty Village",
+      "AREA_DESC": "Fort York-Liberty Village (163)",
+      "AREA_ID": 2502324,
+      "AREA_ATTR_ID": 26022839,
+      "OBJECTID": 17825409
+    },
+    {
+      "AREA_SHORT_CODE": "164",
+      "AREA_LONG_CODE": "164",
+      "AREA_NAME": "Wellington Place",
+      "AREA_DESC": "Wellington Place (164)",
+      "AREA_ID": 2502325,
+      "AREA_ATTR_ID": 26022840,
+      "OBJECTID": 17825393
+    },
+    {
+      "AREA_SHORT_CODE": "165",
+      "AREA_LONG_CODE": "165",
+      "AREA_NAME": "Harbourfront-CityPlace",
+      "AREA_DESC": "Harbourfront-CityPlace (165)",
+      "AREA_ID": 2502326,
+      "AREA_ATTR_ID": 26022841,
+      "OBJECTID": 17825377
+    },
+    {
+      "AREA_SHORT_CODE": "166",
+      "AREA_LONG_CODE": "166",
+      "AREA_NAME": "St Lawrence-East Bayfront-The Islands",
+      "AREA_DESC": "St Lawrence-East Bayfront-The Islands (166)",
+      "AREA_ID": 2502327,
+      "AREA_ATTR_ID": 26022842,
+      "OBJECTID": 17825361
+    },
+    {
+      "AREA_SHORT_CODE": "167",
+      "AREA_LONG_CODE": "167",
+      "AREA_NAME": "Church-Wellesley",
+      "AREA_DESC": "Church-Wellesley (167)",
+      "AREA_ID": 2502328,
+      "AREA_ATTR_ID": 26022843,
+      "OBJECTID": 17825345
+    },
+    {
+      "AREA_SHORT_CODE": "168",
+      "AREA_LONG_CODE": "168",
+      "AREA_NAME": "Downtown Yonge East",
+      "AREA_DESC": "Downtown Yonge East (168)",
+      "AREA_ID": 2502329,
+      "AREA_ATTR_ID": 26022844,
+      "OBJECTID": 17825329
+    },
+    {
+      "AREA_SHORT_CODE": "169",
+      "AREA_LONG_CODE": "169",
+      "AREA_NAME": "Bay-Cloverhill",
+      "AREA_DESC": "Bay-Cloverhill (169)",
+      "AREA_ID": 2502361,
+      "AREA_ATTR_ID": 26022876,
+      "OBJECTID": 17824817
+    },
+    {
+      "AREA_SHORT_CODE": "170",
+      "AREA_LONG_CODE": "170",
+      "AREA_NAME": "Yonge-Bay Corridor",
+      "AREA_DESC": "Yonge-Bay Corridor (170)",
+      "AREA_ID": 2502362,
+      "AREA_ATTR_ID": 26022877,
+      "OBJECTID": 17824801
+    },
+    {
+      "AREA_SHORT_CODE": "171",
+      "AREA_LONG_CODE": "171",
+      "AREA_NAME": "Junction-Wallace Emerson",
+      "AREA_DESC": "Junction-Wallace Emerson (171)",
+      "AREA_ID": 2502363,
+      "AREA_ATTR_ID": 26022878,
+      "OBJECTID": 17824785
+    },
+    {
+      "AREA_SHORT_CODE": "172",
+      "AREA_LONG_CODE": "172",
+      "AREA_NAME": "Dovercourt Village",
+      "AREA_DESC": "Dovercourt Village (172)",
+      "AREA_ID": 2502364,
+      "AREA_ATTR_ID": 26022879,
+      "OBJECTID": 17824769
+    },
+    {
+      "AREA_SHORT_CODE": "173",
+      "AREA_LONG_CODE": "173",
+      "AREA_NAME": "North Toronto",
+      "AREA_DESC": "North Toronto (173)",
+      "AREA_ID": 2502365,
+      "AREA_ATTR_ID": 26022880,
+      "OBJECTID": 17824753
+    },
+    {
+      "AREA_SHORT_CODE": "174",
+      "AREA_LONG_CODE": "174",
+      "AREA_NAME": "South Eglinton-Davisville",
+      "AREA_DESC": "South Eglinton-Davisville (174)",
+      "AREA_ID": 2502366,
+      "AREA_ATTR_ID": 26022881,
+      "OBJECTID": 17824737
+    }
+  ],
+  "scarborough_selection": {
+    "publisher_supplied_membership_attribute": false,
+    "method": "Overlay complete official158 native geometries with the qualified official Scarborough Community Council polygon; select when intersection area / neighbourhood area >=0.5",
+    "area_crs": "EPSG:2952",
+    "threshold": 0.5,
+    "selected_codes": [
+      "116",
+      "118",
+      "119",
+      "120",
+      "121",
+      "122",
+      "123",
+      "124",
+      "125",
+      "126",
+      "128",
+      "129",
+      "130",
+      "133",
+      "134",
+      "135",
+      "136",
+      "138",
+      "139",
+      "140",
+      "141",
+      "142",
+      "143",
+      "144",
+      "145",
+      "146",
+      "147",
+      "148",
+      "156",
+      "157"
+    ],
+    "selected_count": 30,
+    "not_selected_by": [
+      "business coverage",
+      "neighbourhood name",
+      "any-touch intersection",
+      "integer range"
+    ],
+    "minimum_selected_council_fraction": 0.9880204959230655,
+    "maximum_unselected_council_fraction": 0.00015542902893962888,
+    "whole_neighbourhood_aggregate_warning": "This is a selected-neighbourhood geography, not exact administrative Scarborough. Preserve whole TPS neighbourhood aggregates; do not apportion crime counts by polygon area or infer the incident location. If exact administrative totals are required, this crosswalk alone is insufficient.",
+    "cross_boundary_rule": "Retain all measured council and ward overlaps; do not force neighbourhoods into one ward. Bordering slivers do not make Pleasant View or other outside neighbourhoods members.",
+    "display_rule": "Keep original neighbourhood identifiers/names. Council display mask does not filter aggregate records or justify clipping their counts.",
+    "point_on_surface_cross_check": "All 158 point-on-surface classifications agree with majority-area classifications"
+  },
+  "spatial_crosswalk": [
+    {
+      "code": "001",
+      "selected": false,
+      "area_m2": 30153992.02002146,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "002",
+      "selected": false,
+      "area_m2": 4638914.160854283,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "003",
+      "selected": false,
+      "area_m2": 3340458.6516942745,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "004",
+      "selected": false,
+      "area_m2": 2506336.8301356165,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "005",
+      "selected": false,
+      "area_m2": 2931852.0035180617,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "006",
+      "selected": false,
+      "area_m2": 5064692.677327373,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "007",
+      "selected": false,
+      "area_m2": 5518927.220356457,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "008",
+      "selected": false,
+      "area_m2": 2803422.791456419,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "009",
+      "selected": false,
+      "area_m2": 5513023.077383158,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "010",
+      "selected": false,
+      "area_m2": 5172717.729262188,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "011",
+      "selected": false,
+      "area_m2": 8648076.224003498,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "012",
+      "selected": false,
+      "area_m2": 2954742.433548039,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "013",
+      "selected": false,
+      "area_m2": 1796896.8929162417,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "015",
+      "selected": false,
+      "area_m2": 2638813.707415897,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "016",
+      "selected": false,
+      "area_m2": 7947853.098048029,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "018",
+      "selected": false,
+      "area_m2": 3484531.868647755,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "019",
+      "selected": false,
+      "area_m2": 2262491.3822151506,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "020",
+      "selected": false,
+      "area_m2": 4979680.203324281,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "021",
+      "selected": false,
+      "area_m2": 7969051.224889396,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "022",
+      "selected": false,
+      "area_m2": 4422842.738371313,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "023",
+      "selected": false,
+      "area_m2": 4277302.876550481,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "024",
+      "selected": false,
+      "area_m2": 3454725.12341052,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "025",
+      "selected": false,
+      "area_m2": 5151973.210041976,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "027",
+      "selected": false,
+      "area_m2": 13249607.739993602,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "028",
+      "selected": false,
+      "area_m2": 2096881.1708114613,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "029",
+      "selected": false,
+      "area_m2": 2527080.5647144895,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "030",
+      "selected": false,
+      "area_m2": 3508132.7457933296,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "031",
+      "selected": false,
+      "area_m2": 6039639.730895741,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "032",
+      "selected": false,
+      "area_m2": 3478859.3234395627,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "033",
+      "selected": false,
+      "area_m2": 4167180.8323839176,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "034",
+      "selected": false,
+      "area_m2": 4761418.835663211,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "035",
+      "selected": false,
+      "area_m2": 3668632.1297848,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "036",
+      "selected": false,
+      "area_m2": 4696640.619465461,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "037",
+      "selected": false,
+      "area_m2": 2884022.9816683847,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "038",
+      "selected": false,
+      "area_m2": 5347377.9585837945,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "039",
+      "selected": false,
+      "area_m2": 5519406.79057233,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "040",
+      "selected": false,
+      "area_m2": 7346904.426860677,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "041",
+      "selected": false,
+      "area_m2": 8840975.294675026,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "042",
+      "selected": false,
+      "area_m2": 10042669.202519616,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "043",
+      "selected": false,
+      "area_m2": 4755962.157753844,
+      "council_overlap_m2": 77.8314633187465,
+      "council_overlap_fraction": 1.6365029984911594e-05,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 27.959225311875343,
+          "fraction_of_neighbourhood": 5.878773712758049e-06
+        },
+        {
+          "ward_code": "21",
+          "overlap_m2": 49.94386277763169,
+          "fraction_of_neighbourhood": 1.0501316268088074e-05
+        }
+      ],
+      "membership_state": "minor_overlap_not_selected"
+    },
+    {
+      "code": "044",
+      "selected": false,
+      "area_m2": 2473681.635107738,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "046",
+      "selected": false,
+      "area_m2": 2967940.933211715,
+      "council_overlap_m2": 181.9390857060239,
+      "council_overlap_fraction": 6.130145100601483e-05,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [
+        {
+          "ward_code": "22",
+          "overlap_m2": 181.99214455380888,
+          "fraction_of_neighbourhood": 6.13193283320732e-05
+        }
+      ],
+      "membership_state": "minor_overlap_not_selected"
+    },
+    {
+      "code": "047",
+      "selected": false,
+      "area_m2": 4213178.692758154,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "048",
+      "selected": false,
+      "area_m2": 5396504.86414527,
+      "council_overlap_m2": 60.18280450627208,
+      "council_overlap_fraction": 1.11521820180559e-05,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [
+        {
+          "ward_code": "22",
+          "overlap_m2": 60.14419071003795,
+          "fraction_of_neighbourhood": 1.1145026683778213e-05
+        }
+      ],
+      "membership_state": "minor_overlap_not_selected"
+    },
+    {
+      "code": "049",
+      "selected": false,
+      "area_m2": 4089699.054629147,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "050",
+      "selected": false,
+      "area_m2": 4085472.7107549743,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "052",
+      "selected": false,
+      "area_m2": 5160056.9163441,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "053",
+      "selected": false,
+      "area_m2": 2593996.8240195625,
+      "council_overlap_m2": 403.182407429842,
+      "council_overlap_fraction": 0.00015542902893962888,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [
+        {
+          "ward_code": "22",
+          "overlap_m2": 403.183813294796,
+          "fraction_of_neighbourhood": 0.0001554295709082778
+        }
+      ],
+      "membership_state": "minor_overlap_not_selected"
+    },
+    {
+      "code": "054",
+      "selected": false,
+      "area_m2": 4877446.625692599,
+      "council_overlap_m2": 53.64665266254906,
+      "council_overlap_fraction": 1.0998921521756522e-05,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 53.51231571415428,
+          "fraction_of_neighbourhood": 1.0971379047444832e-05
+        }
+      ],
+      "membership_state": "minor_overlap_not_selected"
+    },
+    {
+      "code": "055",
+      "selected": false,
+      "area_m2": 3126885.2195404484,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "056",
+      "selected": false,
+      "area_m2": 4785826.130342915,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "057",
+      "selected": false,
+      "area_m2": 1746276.896637179,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "058",
+      "selected": false,
+      "area_m2": 2350249.5176957184,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "059",
+      "selected": false,
+      "area_m2": 2188959.849518873,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "060",
+      "selected": false,
+      "area_m2": 1196456.7267247364,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "061",
+      "selected": false,
+      "area_m2": 1063038.3010695623,
+      "council_overlap_m2": 61.96064446607488,
+      "council_overlap_fraction": 5.8286370682725147e-05,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 61.92216193416971,
+          "fraction_of_neighbourhood": 5.8250170169661355e-05
+        }
+      ],
+      "membership_state": "minor_overlap_not_selected"
+    },
+    {
+      "code": "062",
+      "selected": false,
+      "area_m2": 2639362.1306440174,
+      "council_overlap_m2": 27.030856820106692,
+      "council_overlap_fraction": 1.0241435423456284e-05,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 27.002836596664793,
+          "fraction_of_neighbourhood": 1.0230819137378457e-05
+        }
+      ],
+      "membership_state": "minor_overlap_not_selected"
+    },
+    {
+      "code": "063",
+      "selected": false,
+      "area_m2": 3596238.991366461,
+      "council_overlap_m2": 7.285580982534725,
+      "council_overlap_fraction": 2.025888991255953e-06,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 7.285580982534725,
+          "fraction_of_neighbourhood": 2.025888991255953e-06
+        }
+      ],
+      "membership_state": "minor_overlap_not_selected"
+    },
+    {
+      "code": "064",
+      "selected": false,
+      "area_m2": 1595906.6122741709,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "065",
+      "selected": false,
+      "area_m2": 1675427.26372453,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "066",
+      "selected": false,
+      "area_m2": 1119853.2483286392,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "067",
+      "selected": false,
+      "area_m2": 887740.1227643844,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "068",
+      "selected": false,
+      "area_m2": 1786364.9943766845,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "069",
+      "selected": false,
+      "area_m2": 941362.0856113022,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "070",
+      "selected": false,
+      "area_m2": 11031962.532986606,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "071",
+      "selected": false,
+      "area_m2": 1418168.189367159,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "072",
+      "selected": false,
+      "area_m2": 650389.6716899696,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "073",
+      "selected": false,
+      "area_m2": 1397148.9059378505,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "074",
+      "selected": false,
+      "area_m2": 423999.0891341644,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "078",
+      "selected": false,
+      "area_m2": 1534917.121432941,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "079",
+      "selected": false,
+      "area_m2": 1405475.4115872886,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "080",
+      "selected": false,
+      "area_m2": 1435544.0902024917,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "081",
+      "selected": false,
+      "area_m2": 1729959.8884994918,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "083",
+      "selected": false,
+      "area_m2": 1388220.7745730411,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "084",
+      "selected": false,
+      "area_m2": 1216584.6456622528,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "085",
+      "selected": false,
+      "area_m2": 2287508.3721726257,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "086",
+      "selected": false,
+      "area_m2": 1504824.4872494275,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "087",
+      "selected": false,
+      "area_m2": 5358817.929800248,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "088",
+      "selected": false,
+      "area_m2": 1882682.4821853978,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "089",
+      "selected": false,
+      "area_m2": 1593988.164088088,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "090",
+      "selected": false,
+      "area_m2": 2632526.1179895145,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "091",
+      "selected": false,
+      "area_m2": 1456211.105144985,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "092",
+      "selected": false,
+      "area_m2": 1889762.3704578131,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "094",
+      "selected": false,
+      "area_m2": 1682385.9005510733,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "095",
+      "selected": false,
+      "area_m2": 2790841.336869738,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "096",
+      "selected": false,
+      "area_m2": 1922789.2714486532,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "097",
+      "selected": false,
+      "area_m2": 1161593.0912743248,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "098",
+      "selected": false,
+      "area_m2": 4662422.674484005,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "099",
+      "selected": false,
+      "area_m2": 3093946.1970597506,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "100",
+      "selected": false,
+      "area_m2": 1650682.8615782848,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "101",
+      "selected": false,
+      "area_m2": 2480373.4112571646,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "102",
+      "selected": false,
+      "area_m2": 1572021.5796342148,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "103",
+      "selected": false,
+      "area_m2": 3243031.252083976,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "105",
+      "selected": false,
+      "area_m2": 2290367.5930026546,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "106",
+      "selected": false,
+      "area_m2": 1871555.3810261004,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "107",
+      "selected": false,
+      "area_m2": 2219842.3128386335,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "108",
+      "selected": false,
+      "area_m2": 1828123.1611362342,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "109",
+      "selected": false,
+      "area_m2": 1544896.043269856,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "110",
+      "selected": false,
+      "area_m2": 1751029.4949003104,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "111",
+      "selected": false,
+      "area_m2": 5072147.8928124355,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "112",
+      "selected": false,
+      "area_m2": 1834006.5093335963,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "113",
+      "selected": false,
+      "area_m2": 2566257.895028996,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "114",
+      "selected": false,
+      "area_m2": 1782584.9061949123,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "115",
+      "selected": false,
+      "area_m2": 2129873.844611082,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "116",
+      "selected": true,
+      "area_m2": 4561812.677179049,
+      "council_overlap_m2": 4558943.871571898,
+      "council_overlap_fraction": 0.9993711259514224,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "22",
+          "overlap_m2": 4558943.871571898,
+          "fraction_of_neighbourhood": 0.9993711259514224
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "118",
+      "selected": true,
+      "area_m2": 5422706.57521076,
+      "council_overlap_m2": 5422706.575210819,
+      "council_overlap_fraction": 1.0000000000000109,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "22",
+          "overlap_m2": 5422706.575210819,
+          "fraction_of_neighbourhood": 1.0000000000000109
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "119",
+      "selected": true,
+      "area_m2": 10265613.687097486,
+      "council_overlap_m2": 10265576.139556266,
+      "council_overlap_fraction": 0.9999963423968246,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "21",
+          "overlap_m2": 10263497.803398378,
+          "fraction_of_neighbourhood": 0.9997938862922762
+        },
+        {
+          "ward_code": "22",
+          "overlap_m2": 2078.3712655830313,
+          "fraction_of_neighbourhood": 0.00020245952447979493
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "120",
+      "selected": true,
+      "area_m2": 7398938.607474182,
+      "council_overlap_m2": 7398938.607473772,
+      "council_overlap_fraction": 0.9999999999999446,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 7396880.320738178,
+          "fraction_of_neighbourhood": 0.999721813243061
+        },
+        {
+          "ward_code": "21",
+          "overlap_m2": 2058.28673560312,
+          "fraction_of_neighbourhood": 0.00027818675688481885
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "121",
+      "selected": true,
+      "area_m2": 1878458.69311353,
+      "council_overlap_m2": 1878456.700015746,
+      "council_overlap_fraction": 0.9999989389717265,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 1878456.700015746,
+          "fraction_of_neighbourhood": 0.9999989389717265
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "122",
+      "selected": true,
+      "area_m2": 6009836.330914336,
+      "council_overlap_m2": 5937841.472086439,
+      "council_overlap_fraction": 0.9880204959230655,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 5937841.669407854,
+          "fraction_of_neighbourhood": 0.9880205287561419
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "123",
+      "selected": true,
+      "area_m2": 7191658.0083730295,
+      "council_overlap_m2": 7189381.393693538,
+      "council_overlap_fraction": 0.999683436743399,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 7185969.8524535615,
+          "fraction_of_neighbourhood": 0.9992090619558319
+        },
+        {
+          "ward_code": "21",
+          "overlap_m2": 3407.354035761673,
+          "fraction_of_neighbourhood": 0.0004737925568477525
+        },
+        {
+          "ward_code": "24",
+          "overlap_m2": 4.152775701808423,
+          "fraction_of_neighbourhood": 5.77443434736951e-07
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "124",
+      "selected": true,
+      "area_m2": 3581295.415337691,
+      "council_overlap_m2": 3581295.4153378624,
+      "council_overlap_fraction": 1.0000000000000477,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 3579638.7216300387,
+          "fraction_of_neighbourhood": 0.9995374037839612
+        },
+        {
+          "ward_code": "21",
+          "overlap_m2": 1656.693707376835,
+          "fraction_of_neighbourhood": 0.00046259621596187714
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "125",
+      "selected": true,
+      "area_m2": 1953154.4725216825,
+      "council_overlap_m2": 1953154.4725216534,
+      "council_overlap_fraction": 0.9999999999999851,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 398218.2231875565,
+          "fraction_of_neighbourhood": 0.20388465366665245
+        },
+        {
+          "ward_code": "21",
+          "overlap_m2": 1554936.2493339744,
+          "fraction_of_neighbourhood": 0.79611534633327
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "126",
+      "selected": true,
+      "area_m2": 6012963.59193337,
+      "council_overlap_m2": 6012963.591933295,
+      "council_overlap_fraction": 0.9999999999999876,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "21",
+          "overlap_m2": 6011320.026066825,
+          "fraction_of_neighbourhood": 0.9997266629272876
+        },
+        {
+          "ward_code": "22",
+          "overlap_m2": 1643.541345804144,
+          "fraction_of_neighbourhood": 0.00027333299473308306
+        },
+        {
+          "ward_code": "23",
+          "overlap_m2": 0.024520675774738265,
+          "fraction_of_neighbourhood": 4.077968442655088e-09
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "128",
+      "selected": true,
+      "area_m2": 7874106.800765915,
+      "council_overlap_m2": 7874106.800766122,
+      "council_overlap_fraction": 1.0000000000000262,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "22",
+          "overlap_m2": 2067232.3007328026,
+          "fraction_of_neighbourhood": 0.26253546631241054
+        },
+        {
+          "ward_code": "23",
+          "overlap_m2": 5806874.511995565,
+          "fraction_of_neighbourhood": 0.7374645352068034
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "129",
+      "selected": true,
+      "area_m2": 7262963.693868788,
+      "council_overlap_m2": 7262963.693868767,
+      "council_overlap_fraction": 0.999999999999997,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "23",
+          "overlap_m2": 7262963.693868767,
+          "fraction_of_neighbourhood": 0.999999999999997
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "130",
+      "selected": true,
+      "area_m2": 9479313.311346412,
+      "council_overlap_m2": 9474639.608440684,
+      "council_overlap_fraction": 0.9995069576505997,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "22",
+          "overlap_m2": 2189733.6576965777,
+          "fraction_of_neighbourhood": 0.231001295745288
+        },
+        {
+          "ward_code": "23",
+          "overlap_m2": 7284905.9584677685,
+          "fraction_of_neighbourhood": 0.768505662720103
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "133",
+      "selected": true,
+      "area_m2": 5468827.762839943,
+      "council_overlap_m2": 5468651.735379985,
+      "council_overlap_fraction": 0.9999678125792963,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "25",
+          "overlap_m2": 5468651.72784262,
+          "fraction_of_neighbourhood": 0.9999678112010549
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "134",
+      "selected": true,
+      "area_m2": 5248615.993104023,
+      "council_overlap_m2": 5248615.993104054,
+      "council_overlap_fraction": 1.0000000000000058,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "24",
+          "overlap_m2": 66.88803648381145,
+          "fraction_of_neighbourhood": 1.2743937939390756e-05
+        },
+        {
+          "ward_code": "25",
+          "overlap_m2": 5248549.105067594,
+          "fraction_of_neighbourhood": 0.9999872560620711
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "135",
+      "selected": true,
+      "area_m2": 5740819.206629664,
+      "council_overlap_m2": 5740819.206629731,
+      "council_overlap_fraction": 1.0000000000000118,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "23",
+          "overlap_m2": 880.8904223353602,
+          "fraction_of_neighbourhood": 0.0001534433311047459
+        },
+        {
+          "ward_code": "24",
+          "overlap_m2": 5738359.3769924315,
+          "fraction_of_neighbourhood": 0.9995715194036434
+        },
+        {
+          "ward_code": "25",
+          "overlap_m2": 1578.939214907974,
+          "fraction_of_neighbourhood": 0.0002750372652538107
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "136",
+      "selected": true,
+      "area_m2": 9626396.135283498,
+      "council_overlap_m2": 9626396.135283617,
+      "council_overlap_fraction": 1.0000000000000124,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "24",
+          "overlap_m2": 2950529.391054498,
+          "fraction_of_neighbourhood": 0.3065040488246648
+        },
+        {
+          "ward_code": "25",
+          "overlap_m2": 6675866.744229713,
+          "fraction_of_neighbourhood": 0.6934959511754093
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "138",
+      "selected": true,
+      "area_m2": 3223660.388434565,
+      "council_overlap_m2": 3223660.3884346397,
+      "council_overlap_fraction": 1.000000000000023,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 502545.5906095803,
+          "fraction_of_neighbourhood": 0.15589284541651746
+        },
+        {
+          "ward_code": "21",
+          "overlap_m2": 2721068.123231879,
+          "fraction_of_neighbourhood": 0.8440926758271987
+        },
+        {
+          "ward_code": "24",
+          "overlap_m2": 46.67267387473885,
+          "fraction_of_neighbourhood": 1.4478160926065623e-05
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "139",
+      "selected": true,
+      "area_m2": 3151881.8019497185,
+      "council_overlap_m2": 3151827.1391085535,
+      "council_overlap_fraction": 0.999982657077708,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "20",
+          "overlap_m2": 1302481.8809561152,
+          "fraction_of_neighbourhood": 0.413239443227349
+        },
+        {
+          "ward_code": "24",
+          "overlap_m2": 1849344.967094317,
+          "fraction_of_neighbourhood": 0.5867431215061216
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "140",
+      "selected": true,
+      "area_m2": 3806438.5925311632,
+      "council_overlap_m2": 3806357.7270284104,
+      "council_overlap_fraction": 0.9999787556003369,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "24",
+          "overlap_m2": 3434383.543692126,
+          "fraction_of_neighbourhood": 0.9022563901151411
+        },
+        {
+          "ward_code": "25",
+          "overlap_m2": 371974.18189695047,
+          "fraction_of_neighbourhood": 0.09772236510706435
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "141",
+      "selected": true,
+      "area_m2": 6035650.295811463,
+      "council_overlap_m2": 6035650.295811631,
+      "council_overlap_fraction": 1.0000000000000278,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "21",
+          "overlap_m2": 191904.8997811738,
+          "fraction_of_neighbourhood": 0.031795231727449365
+        },
+        {
+          "ward_code": "24",
+          "overlap_m2": 5843745.396030523,
+          "fraction_of_neighbourhood": 0.9682047682725893
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "142",
+      "selected": true,
+      "area_m2": 6299922.6950191045,
+      "council_overlap_m2": 6299922.695019362,
+      "council_overlap_fraction": 1.0000000000000409,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "21",
+          "overlap_m2": 39.830196036434245,
+          "fraction_of_neighbourhood": 6.322330918111918e-06
+        },
+        {
+          "ward_code": "23",
+          "overlap_m2": 2498.2762077369844,
+          "fraction_of_neighbourhood": 0.0003965566450064842
+        },
+        {
+          "ward_code": "24",
+          "overlap_m2": 6297384.588615525,
+          "fraction_of_neighbourhood": 0.9995971210241061
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "143",
+      "selected": true,
+      "area_m2": 8583584.356361108,
+      "council_overlap_m2": 8580417.436261788,
+      "council_overlap_fraction": 0.9996310492251441,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "25",
+          "overlap_m2": 8580082.619485818,
+          "fraction_of_neighbourhood": 0.9995920425861843
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "144",
+      "selected": true,
+      "area_m2": 28957644.701624446,
+      "council_overlap_m2": 28950613.648071177,
+      "council_overlap_fraction": 0.9997571952544582,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "23",
+          "overlap_m2": 5024990.180725172,
+          "fraction_of_neighbourhood": 0.17352896730731984
+        },
+        {
+          "ward_code": "25",
+          "overlap_m2": 23925623.312011436,
+          "fraction_of_neighbourhood": 0.8262282225829393
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "145",
+      "selected": true,
+      "area_m2": 4030252.889657537,
+      "council_overlap_m2": 4030252.8896577503,
+      "council_overlap_fraction": 1.0000000000000528,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "23",
+          "overlap_m2": 3719809.0261209193,
+          "fraction_of_neighbourhood": 0.9229716169093803
+        },
+        {
+          "ward_code": "25",
+          "overlap_m2": 310443.84442504775,
+          "fraction_of_neighbourhood": 0.07702837834859219
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "146",
+      "selected": true,
+      "area_m2": 4832809.508834479,
+      "council_overlap_m2": 4832809.508834334,
+      "council_overlap_fraction": 0.9999999999999699,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "23",
+          "overlap_m2": 1332914.228887147,
+          "fraction_of_neighbourhood": 0.27580524877931795
+        },
+        {
+          "ward_code": "25",
+          "overlap_m2": 3499895.2799472883,
+          "fraction_of_neighbourhood": 0.7241947512206729
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "147",
+      "selected": true,
+      "area_m2": 3461332.4513843646,
+      "council_overlap_m2": 3461332.4513844103,
+      "council_overlap_fraction": 1.000000000000013,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "22",
+          "overlap_m2": 3461332.4513844103,
+          "fraction_of_neighbourhood": 1.000000000000013
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "148",
+      "selected": true,
+      "area_m2": 3694866.937069212,
+      "council_overlap_m2": 3694866.9370692894,
+      "council_overlap_fraction": 1.0000000000000209,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "22",
+          "overlap_m2": 3694866.9370692894,
+          "fraction_of_neighbourhood": 1.0000000000000209
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "149",
+      "selected": false,
+      "area_m2": 4147639.1950825583,
+      "council_overlap_m2": 2.3644459787756205,
+      "council_overlap_fraction": 5.700703141148121e-07,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [
+        {
+          "ward_code": "21",
+          "overlap_m2": 2.3654201105237007,
+          "fraction_of_neighbourhood": 5.703051782633704e-07
+        }
+      ],
+      "membership_state": "minor_overlap_not_selected"
+    },
+    {
+      "code": "150",
+      "selected": false,
+      "area_m2": 3316048.734919077,
+      "council_overlap_m2": 48.652179915155784,
+      "council_overlap_fraction": 1.4671732475711962e-05,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [
+        {
+          "ward_code": "21",
+          "overlap_m2": 48.565097629092634,
+          "fraction_of_neighbourhood": 1.4645471617375911e-05
+        },
+        {
+          "ward_code": "22",
+          "overlap_m2": 0.05835930157968505,
+          "fraction_of_neighbourhood": 1.7599048218182842e-08
+        }
+      ],
+      "membership_state": "minor_overlap_not_selected"
+    },
+    {
+      "code": "151",
+      "selected": false,
+      "area_m2": 471811.11265274696,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "152",
+      "selected": false,
+      "area_m2": 3514475.6106816083,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "153",
+      "selected": false,
+      "area_m2": 1031882.5915951282,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "154",
+      "selected": false,
+      "area_m2": 6686786.384810906,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "155",
+      "selected": false,
+      "area_m2": 8284728.74566932,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "156",
+      "selected": true,
+      "area_m2": 4913847.729518237,
+      "council_overlap_m2": 4913847.729518214,
+      "council_overlap_fraction": 0.9999999999999954,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "21",
+          "overlap_m2": 4911906.323602626,
+          "fraction_of_neighbourhood": 0.9996049112584526
+        },
+        {
+          "ward_code": "23",
+          "overlap_m2": 1900.5592297306284,
+          "fraction_of_neighbourhood": 0.00038677617507634147
+        },
+        {
+          "ward_code": "24",
+          "overlap_m2": 40.84668572177179,
+          "fraction_of_neighbourhood": 8.312566438801001e-06
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "157",
+      "selected": true,
+      "area_m2": 2543903.061834385,
+      "council_overlap_m2": 2543903.0618343367,
+      "council_overlap_fraction": 0.999999999999981,
+      "point_on_surface_in_council": true,
+      "ward_overlaps": [
+        {
+          "ward_code": "21",
+          "overlap_m2": 2543721.3568062927,
+          "fraction_of_neighbourhood": 0.9999285723458498
+        },
+        {
+          "ward_code": "24",
+          "overlap_m2": 181.70502808410674,
+          "fraction_of_neighbourhood": 7.142765414696302e-05
+        }
+      ],
+      "membership_state": "majority_area_selected"
+    },
+    {
+      "code": "158",
+      "selected": false,
+      "area_m2": 6106819.9429632425,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "159",
+      "selected": false,
+      "area_m2": 10137294.46995431,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "160",
+      "selected": false,
+      "area_m2": 5481940.742227918,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "161",
+      "selected": false,
+      "area_m2": 1578482.1780431762,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "162",
+      "selected": false,
+      "area_m2": 901926.3388758621,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "163",
+      "selected": false,
+      "area_m2": 2340003.8642264856,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "164",
+      "selected": false,
+      "area_m2": 979824.607302119,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "165",
+      "selected": false,
+      "area_m2": 1138547.3336909872,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "166",
+      "selected": false,
+      "area_m2": 11316246.427801264,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "167",
+      "selected": false,
+      "area_m2": 556287.3441527869,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "168",
+      "selected": false,
+      "area_m2": 808677.69809458,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "169",
+      "selected": false,
+      "area_m2": 690677.8042230057,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "170",
+      "selected": false,
+      "area_m2": 1118930.7125261065,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "171",
+      "selected": false,
+      "area_m2": 2223342.272734048,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "172",
+      "selected": false,
+      "area_m2": 1503311.962808372,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "173",
+      "selected": false,
+      "area_m2": 402107.38300075755,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    },
+    {
+      "code": "174",
+      "selected": false,
+      "area_m2": 944487.7521051606,
+      "council_overlap_m2": 0.0,
+      "council_overlap_fraction": 0.0,
+      "point_on_surface_in_council": false,
+      "ward_overlaps": [],
+      "membership_state": "no_positive_area_overlap"
+    }
+  ],
+  "qa": {
+    "registry_count": 158,
+    "registry_unique_codes": 158,
+    "native_geometry_count": 158,
+    "native_geometry_type": "158 MultiPolygon features",
+    "all_native_geometries_valid": true,
+    "all_registry_geometry_code_name_area_id_matches": true,
+    "majority_and_point_on_surface_agreement_count": 158,
+    "positive_council_overlap_count": 40,
+    "selected_count": 30,
+    "substantial_multiward_examples": {
+      "125": "Ionview overlaps wards 20 and 21",
+      "128": "Agincourt South-Malvern West overlaps wards 22 and 23",
+      "144": "Morningside Heights overlaps wards 23 and 25"
+    },
+    "largest_selected_outside_fraction_example": {
+      "code": "122",
+      "name": "Birchcliffe-Cliffside",
+      "council_overlap_fraction": 0.9880204959230655
+    },
+    "reproducibility": "GDAL 3.10.3/GEOS 3.13.1; source neighbourhood geometries remain native EPSG:2952; council/wards transformed from EPSG:4326 to EPSG:2952; exact polygon intersections without simplification, snapping, ring deletion or geometry repair"
+  },
+  "tps_join_contract": {
+    "metadata_source": {
+      "url": "https://services.arcgis.com/S9th0jAJ7bqgIRjw/arcgis/rest/services/Major_Crime_Indicators_Open_Data/FeatureServer/0?f=pjson",
+      "retrieved_at": "2026-10-27T17:52:25.382064+00:00",
+      "bytes": 20799,
+      "sha256": "eb0e909c77bd32164113b3250254da460fb0b0fe7d7293441ea04f9c576d598b"
+    },
+    "service_item_id": "0a239a5563a344a3bbf8452504ed8d68",
+    "layer_name": "CSI_OPEN_DATA",
+    "last_edit_epoch_ms": 1791465791683,
+    "last_edit_utc": "2026-10-08T13:23:11.683000+00:00",
+    "source_field": "HOOD_158",
+    "target_field": "registry.AREA_SHORT_CODE",
+    "publisher_label_field": "NEIGHBOURHOOD_158",
+    "fields": [
+      {
+        "name": "CSI_CATEGORY",
+        "type": "esriFieldTypeString",
+        "alias": "CSI_CATEGORY",
+        "sqlType": "sqlTypeOther",
+        "length": 16,
+        "nullable": true,
+        "editable": true,
+        "domain": null,
+        "defaultValue": null
+      },
+      {
+        "name": "HOOD_158",
+        "type": "esriFieldTypeString",
+        "alias": "HOOD_158",
+        "sqlType": "sqlTypeOther",
+        "length": 4,
+        "nullable": true,
+        "editable": true,
+        "domain": null,
+        "defaultValue": null
+      },
+      {
+        "name": "NEIGHBOURHOOD_158",
+        "type": "esriFieldTypeString",
+        "alias": "NEIGHBOURHOOD_158",
+        "sqlType": "sqlTypeOther",
+        "length": 100,
+        "nullable": true,
+        "editable": true,
+        "domain": null,
+        "defaultValue": null
+      },
+      {
+        "name": "HOOD_140",
+        "type": "esriFieldTypeString",
+        "alias": "HOOD_140",
+        "sqlType": "sqlTypeOther",
+        "length": 4,
+        "nullable": true,
+        "editable": true,
+        "domain": null,
+        "defaultValue": null
+      },
+      {
+        "name": "NEIGHBOURHOOD_140",
+        "type": "esriFieldTypeString",
+        "alias": "NEIGHBOURHOOD_140",
+        "sqlType": "sqlTypeOther",
+        "length": 100,
+        "nullable": true,
+        "editable": true,
+        "domain": null,
+        "defaultValue": null
+      }
+    ],
+    "preserve_code_padding": true,
+    "historical_rule": "Use HOOD_158 for this 158-model aggregate even when the incident/report date predates 2022. HOOD_140 is a different simultaneously published geography; do not mix it, rename deprecated codes or reconstruct 158 counts from 140 aggregates.",
+    "name_rule": "Join on verified code, retain TPS name for provenance and City name for the registry; flag display-name differences rather than fuzzy-matching names.",
+    "scope": "Metadata only was read; no TPS incident records or statistics were downloaded in this qualification",
+    "publisher_caveat": "TPS says locations are privacy-offset and neighbourhood/division counts may not be exact; the dataset is preliminary offence/victim-level data, not necessarily unique incidents.",
+    "licence_name": "Open Government Licence - Ontario, per TPS metadata"
+  },
+  "limits": {
+    "legacy_140_to158_split_conversion": "Not implemented or relied on. An optional five-retired-neighbourhood probe returned HTTP 502; current 158 registry, geometries and crosswalk are verified independently.",
+    "not_verified": [
+      "Exact administrative crime totals",
+      "TPS raw incident membership",
+      "Rendered frontend behaviour"
+    ],
+    "no_repository_or_external_publication": true
+  }
+}

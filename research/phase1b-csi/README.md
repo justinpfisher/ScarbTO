@@ -51,18 +51,28 @@ premises or addresses, reverse-geocode, publish individual locations, rank
 neighbourhood safety, or imply live dispatch.
 
 The candidate's `0-4` band is a conservative direct-republication choice for
-this prototype, not a legal minimum or an anonymity guarantee. A complete,
-versioned HOOD_158 registry and the qualified Scarborough subset/crosswalk are
-not yet included. The synthetic registry does not qualify those prerequisites.
-No real grouped result payload or CSI feature rows were downloaded for this
-change. No public CSI output has been enabled.
+this prototype, not a legal minimum or an anonymity guarantee. The complete
+City HOOD_158 registry and a separately documented 30-neighbourhood
+majority-area Scarborough overlay are now included in the hash-pinned
+`fixtures/official-source-contract` artifact. Join by the exact three-digit
+`AREA_SHORT_CODE`; preserve source code and publisher display name separately.
+The overlay is not a publisher-supplied membership field and does not prorate
+neighbourhood counts. Projection groups are reconciled across Toronto, then
+only selected whole-neighbourhood cells are emitted. The registry does not
+qualify a full recurring source refresh, public map integration, or public
+release. No public CSI output has been enabled.
 
 The candidate carries this attribution wording:
 
 > Contains information licensed under the Open Government Licence - Ontario.
 
-Official references remain in the source metadata and privacy proposal.
-Recheck applicable terms and item restrictions before any future activation.
+Official references remain in the source metadata and privacy proposal. The
+contract records Toronto Social Planning Neighbourhoods v3.0 (effective
+2022-04-12), source resource identity and hashes, the crosswalk method, and its
+spatial validation. Keep the documented selection distinction visible in any
+future output; do not treat the overlay as an official Scarborough
+administrative boundary. Recheck applicable terms and item restrictions
+before any future activation.
 
 ## Tests
 
@@ -72,8 +82,9 @@ Run the standard-library synthetic suite with:
 python -m unittest discover -s tests -v
 ```
 
-Coverage includes code/name separation, nonconsecutive registry identifiers,
-mixed assigned/NSA groups, count controls and source-version stability,
-quarter coverage, the 4/5 band boundary, unknown/duplicate group rejection,
-and recursive output-key allowlisting. No network access is used.
+Coverage includes code/name separation, the hash-pinned 158-area registry,
+the selected 30-code overlay, nonconsecutive registry identifiers, mixed
+assigned/NSA groups, count controls and source-version stability, quarter
+coverage, the 4/5 band boundary, unknown/duplicate group rejection, and
+recursive output-key allowlisting. No network access is used.
 

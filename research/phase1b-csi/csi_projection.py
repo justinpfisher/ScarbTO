@@ -192,6 +192,7 @@ def build_projection_candidate(
     statistics: dict[str, Any],
     *,
     neighbourhood_registry: dict[str, str],
+    selected_neighbourhood_codes: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     """Validate a count-controlled grouped response and emit a disabled candidate.
 
@@ -234,6 +235,9 @@ def build_projection_candidate(
         raise csi.ContractError("Source count changed or is invalid across grouped query")
     report_quarter = _validate_query_bounds(statistics["query_bounds"])
     registry = _validate_registry(neighbourhood_registry)
+    selected_codes = tuple(sorted(registry)) if selected_neighbourhood_codes is None else tuple(selected_neighbourhood_codes)
+    if not selected_codes or len(set(selected_codes)) != len(selected_codes) or any(code not in registry for code in selected_codes):
+        raise csi.ContractError("Selected neighbourhoods must be unique members of the verified registry")
 
     try:
         year, quarter = map(int, report_quarter.split("-Q"))
@@ -284,7 +288,8 @@ def build_projection_candidate(
         raise csi.ContractError("No assigned grouped statistics exist for the requested quarter")
 
     cells = []
-    for code, name in sorted(registry.items()):
+    for code in selected_codes:
+        name = registry[code]
         for category in sorted(csi.KNOWN_CSI_CATEGORIES):
             value = counts.get((code, category), 0)
             cells.append({
@@ -296,7 +301,7 @@ def build_projection_candidate(
             })
 
     candidate = {
-        "publication_status": "disabled_pending_verified_neighbourhood_registry_and_privacy_review",
+        "publication_status": "disabled_pending_qualified_source_refresh_and_public_release_review",
         "grain": ["neighbourhood", "CSI category", "Toronto report quarter"],
         "count_semantics": "source records, not unique incidents or people",
         "source": {
@@ -312,7 +317,7 @@ def build_projection_candidate(
             "queried_at_utc": after["queried_at_utc"],
             "schema_sha256": before["schema_sha256"],
         },
-        "neighbourhood_registry_status": "caller_supplied_synthetic_or_unverified_registry",
+        "neighbourhood_registry_status": "caller_supplied_registry_requires_independent_verification",
         "unassigned_note": "Some source records may lack a verified neighbourhood assignment; no exact unassigned total is exposed.",
         "attribution": ATTRIBUTION,
         "cells": cells,
@@ -322,9 +327,33 @@ def build_projection_candidate(
             "Values from zero through four are banded as 0-4; values of five or more are exact.",
             "No marginal totals, rankings, overlapping time grains, event identifiers, offence text, event dates, coordinates, addresses, or joins are emitted.",
             "Banding limits direct small-cell republication but is not an anonymity guarantee or legal threshold.",
-            "Public output remains disabled until a complete official HOOD_158 registry and privacy review are qualified.",
+            "This candidate uses all source groups for reconciliation but emits only the selected whole-neighbourhood cohort.",
+            "Public output remains disabled pending repeatable source refresh, full cohort validation, and release verification.",
         ],
     }
+    _validate_projection_keys(candidate)
+    return candidate
+
+
+def build_scarborough_projection_candidate(statistics: dict[str, Any], *, contract_path: str) -> dict[str, Any]:
+    """Build a disabled Scarborough-only candidate using the hash-pinned City registry."""
+    from csi_registry import RegistryError, load_verified_registry
+
+    try:
+        verified = load_verified_registry(contract_path)
+    except RegistryError as exc:
+        raise csi.ContractError("Verified neighbourhood registry could not be loaded") from exc
+    candidate = build_projection_candidate(
+        statistics,
+        neighbourhood_registry=verified.display_names,
+        selected_neighbourhood_codes=verified.scarborough_codes,
+    )
+    candidate["neighbourhood_registry_status"] = (
+        f"verified_city_registry_{verified.source_effective_date}_sha256_{verified.sha256}"
+    )
+    candidate["limitations"].append(
+        "Scarborough selection is a documented majority-area overlay, not publisher-supplied membership; no area-proration is applied."
+    )
     _validate_projection_keys(candidate)
     return candidate
 
