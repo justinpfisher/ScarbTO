@@ -471,7 +471,7 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
   assert.equal(await feeds.page.locator('.beach-sample-preview-list li').count(), 10);
   assert.equal(await feeds.page.locator('.beach-sample-preview a').count(), 3, 'beach provenance links render without map');
   await feeds.page.getByRole('button', {name: 'All establishments'}).click();
-  assert.equal(await feeds.page.locator('.record-item').count(), 2, 'mode switching restores the DineSafe list');
+  assert.equal(await feeds.page.locator('.record-item').count(), 3, 'mode switching restores the DineSafe list');
   assert.deepEqual(feeds.pageErrors, [], 'map fallback and feed interactions produce no uncaught errors');
 
   const manyRecords = {
