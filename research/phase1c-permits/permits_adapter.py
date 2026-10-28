@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from hashlib import sha256
 import json
 import math
@@ -19,6 +20,7 @@ PUBLICATION_ENABLED = False
 FALLBACK_PLANNING_URL = "https://www.toronto.ca/city-government/planning-development/application-information-centre/"
 ALLOWED_TORONTO_HOSTS = {"www.toronto.ca", "secure.toronto.ca"}
 SCARBOROUGH_WARDS = {20, 21, 22, 23, 24, 25}
+PLANNING_XY_SOURCE_CRS = "NAD27 / MTM Zone 10"
 
 
 class PermitContractError(ValueError):
@@ -93,6 +95,64 @@ def _optional_source_text(row: dict[str, Any], field: str) -> str | None:
     if not isinstance(value, str):
         raise PermitContractError(f"{field} must remain source text")
     return value.strip() or None
+
+
+def _source_number(row: dict[str, Any], field: str, *, integer_only: bool = False) -> tuple[int | float | None, bool]:
+    """Normalize a safe nonnegative numeric source value without retaining prose."""
+    value = row.get(field)
+    if value is None or value == "":
+        return None, False
+    if isinstance(value, bool):
+        return None, True
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None, False
+        if not re.fullmatch(r"(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?", text):
+            return None, True
+        text = text.replace(",", "")
+    elif type(value) in (int, float):
+        text = str(value)
+    else:
+        return None, True
+    try:
+        number = Decimal(text)
+    except InvalidOperation:
+        return None, True
+    if not number.is_finite() or number < 0:
+        return None, True
+    if integer_only and number != number.to_integral_value():
+        return None, True
+    if number == number.to_integral_value():
+        return int(number), False
+    converted = float(number)
+    if not math.isfinite(converted):
+        return None, True
+    return converted, False
+
+
+def _planning_source_coordinates(row: dict[str, Any]) -> tuple[dict[str, str] | None, str | None]:
+    """Retain source X/Y as explicitly projected coordinates; never treat them as lon/lat."""
+    x, y = row.get("X"), row.get("Y")
+    if x in (None, "") and y in (None, ""):
+        return None, None
+    if x in (None, "") or y in (None, ""):
+        return None, "planning_xy:incomplete"
+    if type(x) not in (str, int, float) or type(y) not in (str, int, float) or isinstance(x, bool) or isinstance(y, bool):
+        return None, "planning_xy:invalid_numeric"
+    x_text, y_text = str(x).strip(), str(y).strip()
+    number_pattern = r"-?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?"
+    if not re.fullmatch(number_pattern, x_text) or not re.fullmatch(number_pattern, y_text):
+        return None, "planning_xy:invalid_numeric"
+    if not math.isfinite(float(x_text.replace(",", ""))) or not math.isfinite(float(y_text.replace(",", ""))):
+        return None, "planning_xy:invalid_numeric"
+    digest = sha256(
+        (PLANNING_XY_SOURCE_CRS + "\0" + x_text + "\0" + y_text).encode("utf-8")
+    ).hexdigest()
+    return {
+        "source_location_key": digest,
+        "source_coordinate_reference_system": PLANNING_XY_SOURCE_CRS,
+    }, None
 
 
 def _date_value(row: dict[str, Any], field: str) -> str | None:
@@ -463,6 +523,22 @@ def normalize_permits(
         location = _address_for_geo_id(geo_id, points)
         if location is None:
             unlocated_permit_count += 1
+        estimated_cost, cost_invalid = _source_number(row, "EST_CONST_COST")
+        units_created, units_created_invalid = _source_number(
+            row, "DWELLING_UNITS_CREATED", integer_only=True
+        )
+        units_lost, units_lost_invalid = _source_number(
+            row, "DWELLING_UNITS_LOST", integer_only=True
+        )
+        quality_flags = [
+            field + ":invalid_numeric"
+            for field, invalid in (
+                ("EST_CONST_COST", cost_invalid),
+                ("DWELLING_UNITS_CREATED", units_created_invalid),
+                ("DWELLING_UNITS_LOST", units_lost_invalid),
+            )
+            if invalid
+        ]
         source_address = _source_address(row)
         if source_address and location and location.get("address"):
             if _address_match_key(source_address) != _address_match_key(location["address"]):
@@ -480,6 +556,10 @@ def normalize_permits(
             "application_date": _date_value(row, "APPLICATION_DATE"),
             "issued_date": _date_value(row, "ISSUED_DATE"),
             "completed_date": _date_value(row, "COMPLETED_DATE"),
+            "estimated_cost": estimated_cost,
+            "dwelling_units_created": units_created,
+            "dwelling_units_lost": units_lost,
+            "quality_flags": quality_flags,
             "address": display_address,
             "ward": location["ward"] if location else None,
             "locations": [location] if location else [],
@@ -489,7 +569,8 @@ def normalize_permits(
         stable = {
             k: item[k] for k in (
                 "record_type", "record_key", "permit_type", "status", "application_date",
-                "issued_date", "completed_date", "address", "ward"
+                "issued_date", "completed_date", "estimated_cost", "dwelling_units_created",
+                "dwelling_units_lost", "quality_flags", "address", "ward"
             )
         }
         stable["locations"] = sorted(item["locations"], key=lambda loc: loc["address_point_id"])
@@ -641,6 +722,7 @@ def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, 
                 "wards": set(),
                 "official_url": _official_url(row.get("APPLICATION_URL")),
                 "locations": [],
+                "quality_flags": set(),
                 "folder_fallback_used": fallback,
                 "missing_folder_resolved_from_other_row": resolved_from_other_row,
                 "construction_state": "not_inferred",
@@ -652,12 +734,18 @@ def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, 
         address = _source_address(row)
         if address is not None and not isinstance(address, str):
             raise PermitContractError("address must be source text when present")
-        if address and address.strip():
-            group["locations"].append({
-                "address": address.strip(),
+        source_coordinates, coordinate_issue = _planning_source_coordinates(row)
+        if coordinate_issue:
+            group["quality_flags"].add(coordinate_issue)
+        if (address and address.strip()) or source_coordinates:
+            location = {
+                "address": address.strip() if address and address.strip() else None,
                 "ward": ward,
-                "coordinate_source": "not_used",
-            })
+                "coordinate_source": "projected_source_only" if source_coordinates else "not_used",
+            }
+            if source_coordinates:
+                location.update(source_coordinates)
+            group["locations"].append(location)
 
     records = []
     for key, group in sorted(groups.items()):
@@ -665,18 +753,26 @@ def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, 
             continue
         # Multiple locations are retained; stable fingerprint ignores their order.
         unique_locations = {
-            (location["address"], location["ward"]): location
+            (
+                location["address"], location["ward"],
+                location.get("source_location_key"),
+            ): location
             for location in group["locations"]
         }
         group["locations"] = sorted(
-            unique_locations.values(), key=lambda loc: (loc["address"], loc["ward"] or "")
+            unique_locations.values(),
+            key=lambda loc: (
+                loc["address"] or "", loc["ward"] or "",
+                loc.get("source_location_key") or "",
+            ),
         )
         group["wards"] = sorted(group["wards"], key=int)
+        group["quality_flags"] = sorted(group["quality_flags"])
         stable_fields = {
             k: group[k] for k in (
                 "record_key", "application_type", "application_number", "submission_date", "submission_timestamp",
                 "status", "official_url", "folder_fallback_used",
-                "missing_folder_resolved_from_other_row",
+                "missing_folder_resolved_from_other_row", "quality_flags",
             )
         }
         stable_fields["wards"] = group["wards"]
@@ -694,4 +790,5 @@ def export_public(*_args: Any, **_kwargs: Any) -> None:
     raise PermitExportDisabled(
         "Public permit/development output is disabled pending source, geography, and privacy review"
     )
+
 
