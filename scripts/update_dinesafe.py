@@ -186,6 +186,16 @@ def matching_shape(lon: float, lat: float, shapes: list) -> str | None:
     return None
 
 
+def clean_address(value: str) -> str:
+    """Omit the City's literal missing-component token; do not invent an address."""
+    return ' '.join(part for part in value.split() if part != 'None')
+
+
+def optional_text(value: str) -> str:
+    """A source placeholder is missing information, not an establishment type."""
+    return '' if value.casefold() in ('none', 'null') else value
+
+
 def normalise(csv_data: bytes, wards: dict, neighbourhoods: dict, *, minimum: int = 300) -> tuple[list[dict], dict, dict]:
     ward_shapes = prepare_shapes(wards, only_scarborough=True)
     neigh_shapes = prepare_shapes(neighbourhoods)
@@ -230,8 +240,12 @@ def normalise(csv_data: bytes, wards: dict, neighbourhoods: dict, *, minimum: in
             continue
         status = status_string(as_string(row, 'inspectionStatus', 'ESTABLISHMENT_STATUS'))
         item = {
-            'id': ident, 'name': name, 'address': as_string(row, 'address', 'ESTABLISHMENT_ADDRESS'),
-            'type': as_string(row, 'typeDesc', 'ESTABLISHMENTTYPE', 'ESTABLISHMENT_TYPE'),
+            'id': ident, 'name': name,
+            'address': clean_address(as_string(row, 'address', 'ESTABLISHMENT_ADDRESS')),
+            # The current City's typeDesc carries inspection findings, not
+            # establishment categories. Do not publish it as "type".
+            'type': optional_text(as_string(row, 'ESTABLISHMENTTYPE', 'ESTABLISHMENT_TYPE')),
+            'inspection_detail': optional_text(as_string(row, 'typeDesc')),
             'status': status, 'inspection_date': day, 'latitude': lat, 'longitude': lon,
             'ward': ward, 'neighbourhood': matching_shape(lon, lat, neigh_shapes),
         }
@@ -256,7 +270,8 @@ def normalise(csv_data: bytes, wards: dict, neighbourhoods: dict, *, minimum: in
 
 
 def make_activity(current: list[dict], previous: dict | None, now: datetime) -> list[dict]:
-    history = list(previous.get('activity', [])) if previous else []
+    history = [{**event, 'address': clean_address(event.get('address') or '')}
+               for event in previous.get('activity', [])] if previous else []
     before = {r['id']: r for r in previous.get('establishments', [])} if previous else {}
     # Initial population is a historical baseline, never falsely claimed as new activity.
     if previous and previous.get('ready'):
@@ -349,7 +364,7 @@ def main() -> None:
     previous = json.loads(previous_path.read_text(encoding='utf-8')) if previous_path.exists() else None
     snapshot, local_neigh = build_snapshot(raw_csv, wards, neighbourhoods, previous=previous,
         source_url=source_url, last_refreshed=refreshed, now=now, minimum=args.minimum)
-    fields = ['id', 'name', 'address', 'type', 'status', 'inspection_date', 'latitude', 'longitude', 'ward', 'neighbourhood',
+    fields = ['id', 'name', 'address', 'type', 'inspection_detail', 'status', 'inspection_date', 'latitude', 'longitude', 'ward', 'neighbourhood',
               'source_url', 'licence_url', 'collected_at']
     export = io.StringIO()
     writer = csv.DictWriter(export, fieldnames=fields)
@@ -358,7 +373,7 @@ def main() -> None:
         line = {**entry, 'source_url': DATASET, 'licence_url': LICENCE, 'collected_at': snapshot['published_at']}
         # A downloadable CSV may be opened as a spreadsheet. Treat source-controlled
         # names and addresses as text, not user-executable spreadsheet formulae.
-        for field in ('id', 'name', 'address', 'type', 'ward', 'neighbourhood'):
+        for field in ('id', 'name', 'address', 'type', 'inspection_detail', 'ward', 'neighbourhood'):
             value = line.get(field)
             if isinstance(value, str) and value.lstrip().startswith(('=', '+', '-', '@', '\t', '\r')):
                 line[field] = "'" + value
