@@ -275,18 +275,21 @@ class PermitContractTests(unittest.TestCase):
                 )
 
     def test_revision_zeroes_and_full_permit_number_are_preserved(self):
-        row = permits.normalize_permits(
-            [permit_row()], source_collection="cleared", address_points=POINTS
-        )["records"][0]
+        result = permits.normalize_permits(
+            [permit_row(_id=505)], source_collection="cleared", address_points=POINTS
+        )
+        row = result["records"][0]
         self.assertEqual(row["permit_number"], "22 236652 BLD")
         self.assertEqual(row["revision"], "00")
         self.assertEqual(row["record_key"], "permit:22 236652 BLD:00")
+        self.assertNotIn("_id", row)
+        self.assertEqual(result["source_row_ids_by_record_key"][row["record_key"]], [505])
 
     def test_permit_types_at_same_address_remain_separate(self):
         values = permits.normalize_permits(
             [
                 permit_row(PERMIT_NUM="22 236652 BLD", PERMIT_TYPE="BLD"),
-                permit_row(PERMIT_NUM="22 236652 HVA", PERMIT_TYPE="HVA"),
+                permit_row(PERMIT_NUM="22 236652 HVA", PERMIT_TYPE="HVA", _id=2),
             ],
             source_collection="active",
             address_points=POINTS,
@@ -317,41 +320,92 @@ class PermitContractTests(unittest.TestCase):
 
     def test_conflicting_duplicate_within_collection_is_quarantined(self):
         result = permits.normalize_permits(
-            [permit_row(), permit_row(STATUS="Closed")],
+            [permit_row(_id=101), permit_row(_id=202, STATUS="Closed")],
             source_collection="active", address_points=POINTS,
         )
         self.assertEqual(result["records"], [])
         self.assertEqual(result["quarantined_record_keys"], ["permit:22 236652 BLD:00"])
+        self.assertEqual(result["identity_collisions"][0]["source_rows"], [
+            {"source_collection": "active", "source_row_id": 101},
+            {"source_collection": "active", "source_row_id": 202},
+        ])
 
-    def test_identical_active_cleared_duplicate_is_deduplicated_with_stable_key(self):
+    def test_same_candidate_key_with_different_type_and_status_is_quarantined(self):
+        result = permits.normalize_permits(
+            [
+                permit_row(_id=6401, PERMIT_TYPE="BLD", STATUS="Issued"),
+                permit_row(_id=6422, PERMIT_TYPE="HVA", STATUS="Cancelled"),
+            ],
+            source_collection="active", address_points=POINTS,
+        )
+        self.assertEqual(result["records"], [])
+        self.assertEqual(result["quarantined_record_keys"], ["permit:22 236652 BLD:00"])
+        self.assertEqual(result["identity_collisions"][0]["source_rows"], [
+            {"source_collection": "active", "source_row_id": 6401},
+            {"source_collection": "active", "source_row_id": 6422},
+        ])
+
+    def test_identical_candidate_projection_is_not_deduplicated(self):
+        rows = [permit_row(_id=101), permit_row(_id=202)]
+        result = permits.normalize_permits(
+            rows, source_collection="cleared", address_points=POINTS
+        )
+        reversed_result = permits.normalize_permits(
+            list(reversed(rows)), source_collection="cleared", address_points=POINTS
+        )
+        self.assertEqual(result, reversed_result)
+        self.assertEqual(result["records"], [])
+        self.assertEqual(result["identity_collisions"], [{
+            "candidate_record_key": "permit:22 236652 BLD:00",
+            "source_rows": [
+                {"source_collection": "cleared", "source_row_id": 101},
+                {"source_collection": "cleared", "source_row_id": 202},
+            ],
+            "reason": "candidate_key_repeated_without_proven_unique_semantics",
+        }])
+
+    def test_duplicate_source_ids_fail_closed(self):
+        with self.assertRaisesRegex(permits.PermitContractError, "Duplicate permit source _id"):
+            permits.normalize_permits(
+                [permit_row(_id=101), permit_row(_id=101, PERMIT_NUM="22 999999 BLD")],
+                source_collection="active", address_points=POINTS,
+            )
+
+    def test_identical_active_cleared_candidate_is_quarantined_with_both_source_ids(self):
         active = permits.normalize_permits(
-            [permit_row()], source_collection="active", address_points=POINTS
+            [permit_row(_id=71)], source_collection="active", address_points=POINTS
         )
         cleared = permits.normalize_permits(
-            [permit_row()], source_collection="cleared", address_points=POINTS
+            [permit_row(_id=81)], source_collection="cleared", address_points=POINTS
         )
         combined = permits.combine_permit_collections(active, cleared)
-        self.assertEqual(len(combined["records"]), 1)
-        self.assertEqual(combined["records"][0]["record_key"], "permit:22 236652 BLD:00")
-        self.assertEqual(combined["records"][0]["source_collection"], "active")
-        self.assertEqual(combined["quarantined_record_keys"], [])
+        self.assertEqual(combined["records"], [])
+        self.assertEqual(combined["quarantined_record_keys"], ["permit:22 236652 BLD:00"])
+        self.assertEqual(combined["identity_collisions"][0]["source_rows"], [
+            {"source_collection": "active", "source_row_id": 71},
+            {"source_collection": "cleared", "source_row_id": 81},
+        ])
         reversed_combined = permits.combine_permit_collections(cleared, active)
         self.assertEqual(reversed_combined, combined)
 
     def test_conflicting_active_cleared_duplicate_is_quarantined(self):
         active = permits.normalize_permits(
-            [permit_row()], source_collection="active", address_points=POINTS
+            [permit_row(_id=91)], source_collection="active", address_points=POINTS
         )
         cleared = permits.normalize_permits(
-            [permit_row(STATUS="Cancelled")], source_collection="cleared", address_points=POINTS
+            [permit_row(_id=92, STATUS="Cancelled")], source_collection="cleared", address_points=POINTS
         )
         combined = permits.combine_permit_collections(active, cleared)
         self.assertEqual(combined["records"], [])
         self.assertEqual(combined["quarantined_record_keys"], ["permit:22 236652 BLD:00"])
+        self.assertEqual(combined["identity_collisions"][0]["source_rows"], [
+            {"source_collection": "active", "source_row_id": 91},
+            {"source_collection": "cleared", "source_row_id": 92},
+        ])
 
     def test_upstream_quarantine_is_preserved_when_combining(self):
         conflicted = permits.normalize_permits(
-            [permit_row(), permit_row(STATUS="Closed")],
+            [permit_row(_id=1), permit_row(_id=2, STATUS="Closed")],
             source_collection="active", address_points=POINTS,
         )
         cleared = permits.normalize_permits(
@@ -360,6 +414,29 @@ class PermitContractTests(unittest.TestCase):
         )
         combined = permits.combine_permit_collections(conflicted, cleared)
         self.assertIn("permit:22 236652 BLD:00", combined["quarantined_record_keys"])
+
+    def test_combining_upstream_collision_preserves_matching_other_collection_source_id(self):
+        active = permits.normalize_permits(
+            [
+                permit_row(_id=101),
+                permit_row(_id=102, PERMIT_TYPE="HVA", STATUS="Cancelled"),
+            ],
+            source_collection="active", address_points=POINTS,
+        )
+        cleared = permits.normalize_permits(
+            [permit_row(_id=201)], source_collection="cleared", address_points=POINTS
+        )
+        combined = permits.combine_permit_collections(active, cleared)
+        self.assertEqual(combined["records"], [])
+        self.assertEqual(combined["identity_collisions"], [{
+            "candidate_record_key": "permit:22 236652 BLD:00",
+            "source_rows": [
+                {"source_collection": "active", "source_row_id": 101},
+                {"source_collection": "active", "source_row_id": 102},
+                {"source_collection": "cleared", "source_row_id": 201},
+            ],
+            "reason": "candidate_key_repeated_without_proven_unique_semantics",
+        }])
 
     def test_untrusted_permit_url_is_omitted_not_replaced_with_planning_link(self):
         row = permits.normalize_permits(

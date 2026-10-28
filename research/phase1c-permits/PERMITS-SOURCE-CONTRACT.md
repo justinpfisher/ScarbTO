@@ -63,12 +63,18 @@ snapshot intact.
 
 ## Record and geography rules
 
-Permit identity is the full `PERMIT_NUM` including its type suffix plus the
-string `REVISION_NUM` (preserve `00`), independent of whether the same row
-appears in active or cleared collections. An identical overlap is deduplicated;
-conflicting values for the same identity are quarantined. Active and cleared
-source collection and raw status are preserved. Application, issuance, and
-completion dates remain separate.
+Within one validated source generation, the resource-scoped `_id` is the
+source-row provenance key. It locates a row in that captured resource; it is
+not a semantic permit identity and is not compared across resources or
+generations. `PERMIT_NUM` plus string `REVISION_NUM` (preserve `00`) is only
+a candidate grouping key. If that pair repeats within a collection, quarantine
+the entire candidate group even when rows have identical normalized fields.
+If it appears in both active and cleared collections, quarantine it there too.
+Never deduplicate or upsert on the candidate pair alone. Preserve the source
+collection and every original row `_id` in private collision diagnostics;
+exclude those diagnostics from public output. Active and cleared source
+collection and raw status are preserved for unique candidates. Application,
+issuance, and completion dates remain separate.
 Costs and dwelling-unit counts accept only finite, nonnegative decimal source
 values (comma grouping allowed); unit counts must be integral. Null/blank values
 remain unknown. Malformed values become null with a field-specific
