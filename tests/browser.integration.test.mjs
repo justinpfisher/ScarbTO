@@ -658,6 +658,8 @@ test('browse-mode tabs stay fully visible at desktop and narrow widths', {timeou
   await waitForMap(page);
   for(const width of [1280,1024,960,950,800,390]){
     await page.setViewportSize({width,height:900});
+    const filterToggle=page.locator('#toggle-filters');
+    if(width<=950&&await filterToggle.isVisible()&&await filterToggle.getAttribute('aria-expanded')!=='true')await filterToggle.click();
     await page.waitForTimeout(50);
     const metrics=await page.locator('.view-tabs').evaluate(tabs=>{
       const container=tabs.getBoundingClientRect();
