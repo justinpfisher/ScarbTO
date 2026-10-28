@@ -11,6 +11,10 @@ from urllib.request import Request
 
 import permit_collector as collector
 
+QUALIFIED_FIXTURE = json.loads(
+    (Path(__file__).parent / "fixtures" / "safe-source-fixture.json").read_text(encoding="utf-8")
+)
+
 
 def source_row(row_id, **extra):
     return {
@@ -22,6 +26,9 @@ def source_row(row_id, **extra):
         "APPLICATION_DATE": None,
         "ISSUED_DATE": None,
         "COMPLETED_DATE": None,
+        "EST_CONST_COST": None,
+        "DWELLING_UNITS_CREATED": None,
+        "DWELLING_UNITS_LOST": None,
         "STATUS": "Issued",
         "STREET_NUM": "1",
         "STREET_NAME": "Synthetic",
@@ -55,6 +62,32 @@ class PermitCollectorTests(unittest.TestCase):
 
         def read(self, size=-1):
             return self.body[:size]
+
+    def test_safe_source_fixture_exactness_flag_is_not_inferred_from_numeric_total(self):
+        observation = QUALIFIED_FIXTURE["estimated_total_observation"]
+        self.assertEqual(observation["total"], 200978)
+        self.assertIs(observation["total_was_estimated"], True)
+        payload = {"success": True, "result": {
+            "total": observation["total"],
+            "total_was_estimated": observation["total_was_estimated"],
+            "records": [],
+        }}
+        source = collector.SOURCE_RESOURCES["active_permits"]
+        with self.assertRaisesRegex(collector.CollectionError, "estimated or lacks"):
+            collector._validate_response(
+                payload, fields=source["fields"],
+                required_fields=source["required_fields"], limit=0,
+            )
+
+    def test_source_allowlists_include_only_needed_numeric_and_projected_location_fields(self):
+        permit_fields = collector.SOURCE_RESOURCES["active_permits"]["fields"]
+        dev_fields = collector.SOURCE_RESOURCES["development_applications"]["fields"]
+        self.assertTrue({
+            "EST_CONST_COST", "DWELLING_UNITS_CREATED", "DWELLING_UNITS_LOST"
+        }.issubset(permit_fields))
+        self.assertTrue({"X", "Y"}.issubset(dev_fields))
+        self.assertFalse({"BUILDER_NAME", "CONTACT_NAME", "CONTACT_EMAIL", "DESCRIPTION"} & permit_fields)
+        self.assertFalse({"CONTACT_NAME", "CONTACT_EMAIL", "DESCRIPTION", "PROPOSED_USE"} & dev_fields)
 
     def test_client_uses_fixed_https_host_and_ckan_comma_field_allowlist(self):
         response_body = json.dumps(page(0, [])).encode()
@@ -169,6 +202,8 @@ class PermitCollectorTests(unittest.TestCase):
             "STREET_TYPE": "Rd",
             "STREET_DIRECTION": None,
             "WARD_NUMBER": 20,
+            "X": None,
+            "Y": None,
         }
         client = collector.TorontoCKAN(retries=0)
         with patch.object(client, "_get_json", return_value=page(1, [row])):
@@ -405,3 +440,4 @@ class PermitCollectorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
