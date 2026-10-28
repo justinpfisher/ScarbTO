@@ -205,6 +205,7 @@ test('production render path handles zero matching records without turning into 
 
 test('production DineSafe details clean legacy addresses and label upstream catalogue time', async () => {
   const snapshot=fixture();
+  snapshot.published_at=new Date().toISOString();
   snapshot.source={last_refreshed:'2026-10-27 08:17:32.765401'};
   snapshot.establishments[0].address='0 Synthetic Road None M1V 1V1';
   snapshot.establishments[0].type='';
