@@ -1,8 +1,10 @@
 import json
+from hashlib import sha256
 from pathlib import Path
 import tempfile
 import unittest
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
+from urllib.parse import parse_qs, urlparse
 
 import permit_collector as collector
 import permit_resumable as resumable
@@ -35,47 +37,139 @@ def response(total, records):
 
 
 def transient_http(code):
-    return HTTPError("https://ckan0.cf.opendata.inter.prod-toronto.ca/", code, "transient", {}, None)
+    return HTTPError(
+        "https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/datastore_search",
+        code, f"synthetic HTTP {code}", hdrs={}, fp=None,
+    )
 
 
 class InjectedCKAN:
-    def __init__(self, metadata, fetch_page):
+    """Injected logical client for checkpoint-state tests; no network access."""
+    def __init__(self, metadata, fetch_page, *, eof_records=None):
         self._metadata = metadata
         self._fetch_page = fetch_page
+        self._eof_records = eof_records or []
+        self.total = None
+        self.calls = []
 
     def metadata(self, source_key):
         collector._safe_source(source_key)
-        return self._metadata()
+        self.total, generation = self._metadata()
+        return self.total, generation
 
     def page(self, source_key, *, offset, limit):
         collector._safe_source(source_key)
+        self.calls.append((offset, limit))
+        if offset == self.total:
+            return response(self.total, self._eof_records)
         return self._fetch_page(offset, limit)
 
 
-def collect_resumable_snapshot(source_key, destination, *, metadata, fetch_page, **kwargs):
-    return resumable.collect_resumable_snapshot(
-        source_key, destination, client=InjectedCKAN(metadata, fetch_page), **kwargs,
-    )
+def collect(source_key, destination, *, metadata, fetch_page, eof_records=None, **kwargs):
+    client = InjectedCKAN(metadata, fetch_page, eof_records=eof_records)
+    return resumable.collect_resumable_snapshot(source_key, destination, client=client, **kwargs)
+
+
+class JsonResponse:
+    def __init__(self, payload, url):
+        self._body = json.dumps(payload).encode("utf-8")
+        self._offset = 0
+        self.headers = {}
+        self.url = url
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def geturl(self):
+        return self.url
+
+    def read(self, limit=-1):
+        if limit < 0:
+            result = self._body[self._offset:]
+            self._offset = len(self._body)
+            return result
+        result = self._body[self._offset:self._offset + limit]
+        self._offset += len(result)
+        return result
+
+
+class InjectedHTTPTransport:
+    """Transport seam for the actual TorontoCKAN URL/schema/retry implementation."""
+    def __init__(self, rows, failures=None, action_failures=None):
+        self.rows = rows
+        self.failures = failures or {}
+        self.action_failures = action_failures or {}
+        self.page_calls = []
+        self.calls = []
+
+    def __call__(self, request, *, timeout):
+        url = request.full_url
+        self.calls.append((url, timeout))
+        parsed = urlparse(url)
+        query = parse_qs(parsed.query)
+        action = parsed.path.rsplit("/", 1)[-1]
+        action_failures = self.action_failures.get(action, [])
+        if action_failures:
+            raise action_failures.pop(0)
+        if action == "package_show":
+            resource = collector.SOURCE_RESOURCES["active_permits"]
+            payload = {
+                "success": True,
+                "result": {
+                    "metadata_modified": "package-generation",
+                    "resources": [{"id": resource["resource_id"], "last_modified": "resource-generation"}],
+                },
+            }
+            return JsonResponse(payload, url)
+        if action != "datastore_search":
+            raise AssertionError(action)
+        offset = int(query.get("offset", ["0"])[0])
+        limit = int(query["limit"][0])
+        if limit == 0:
+            return JsonResponse(response(len(self.rows), []), url)
+        self.page_calls.append((offset, limit))
+        failures = self.failures.get(offset, [])
+        if failures:
+            raise failures.pop(0)
+        return JsonResponse(response(len(self.rows), self.rows[offset:offset + limit]), url)
+
+
+def seeded_empty_manifest(root):
+    source_key = "active_permits"
+    digest = sha256(b"").hexdigest()
+    name = f"{source_key}-{digest}.jsonl"
+    (Path(root) / name).write_bytes(b"")
+    manifest = {
+        "schema_version": 1,
+        "source_key": source_key,
+        "row_count": 0,
+        "sha256": digest,
+        "snapshot_file": name,
+    }
+    collector._atomic_write_text(Path(root) / f"{source_key}-manifest.json", json.dumps(manifest))
 
 
 class ResumablePermitCollectorTests(unittest.TestCase):
     def test_first_page_timeout_can_restart_when_no_rows_were_checkpointed(self):
         row = source_row(1)
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
-            with self.assertRaisesRegex(collector.CollectionError, "retry bound exhausted"):
-                collect_resumable_snapshot(
+            with self.assertRaisesRegex(TimeoutError, "offline"):
+                collect(
                     "active_permits", root, metadata=lambda: (1, "g1"),
                     fetch_page=lambda offset, limit: (_ for _ in ()).throw(TimeoutError("offline")),
-                    page_size=1, retries=0,
+                    page_size=1,
                 )
-            manifest = collect_resumable_snapshot(
+            manifest = collect(
                 "active_permits", root, metadata=lambda: (1, "g1"),
                 fetch_page=lambda offset, limit: response(1, [row]),
                 page_size=1,
             )
             self.assertEqual(manifest["row_count"], 1)
 
-    def test_resumes_from_atomic_checkpoint_and_verifies_overlap(self):
+    def test_resumes_from_atomic_checkpoint_verifies_overlap_and_truncates_uncommitted_tail(self):
         rows = [source_row(i) for i in range(1, 5)]
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
             first_calls = []
@@ -86,10 +180,10 @@ class ResumablePermitCollectorTests(unittest.TestCase):
                     return response(4, rows[:2])
                 raise TimeoutError("synthetic timeout")
 
-            with self.assertRaisesRegex(collector.CollectionError, "retry bound exhausted"):
-                collect_resumable_snapshot(
+            with self.assertRaisesRegex(TimeoutError, "synthetic timeout"):
+                collect(
                     "active_permits", root, metadata=lambda: (4, "g1"),
-                    fetch_page=interrupted, page_size=2, overlap_rows=1, retries=0,
+                    fetch_page=interrupted, page_size=2, overlap_rows=1,
                 )
             checkpoint_path = Path(root) / "active_permits-resume.json"
             partial_path = Path(root) / "active_permits-resume.jsonl"
@@ -97,7 +191,6 @@ class ResumablePermitCollectorTests(unittest.TestCase):
             self.assertEqual(saved["next_offset"], 2)
             self.assertEqual(saved["row_count"], 2)
             old_prefix = partial_path.read_bytes()
-            # Simulate a crash after append but before checkpoint replacement.
             with partial_path.open("ab") as output:
                 output.write(b"uncommitted-tail")
 
@@ -111,9 +204,9 @@ class ResumablePermitCollectorTests(unittest.TestCase):
                     return response(4, rows[2:])
                 raise AssertionError((offset, limit))
 
-            manifest = collect_resumable_snapshot(
+            manifest = collect(
                 "active_permits", root, metadata=lambda: (4, "g1"),
-                fetch_page=resumed, page_size=2, overlap_rows=1, retries=0,
+                fetch_page=resumed, page_size=2, overlap_rows=1,
             )
             self.assertEqual(first_calls, [(0, 2), (2, 2)])
             self.assertEqual(second_calls, [(1, 1), (2, 2)])
@@ -134,14 +227,14 @@ class ResumablePermitCollectorTests(unittest.TestCase):
                     return response(3, rows)
                 raise TimeoutError("stop after checkpoint")
 
-            with self.assertRaisesRegex(collector.CollectionError, "retry bound exhausted"):
-                collect_resumable_snapshot(
+            with self.assertRaisesRegex(TimeoutError, "stop after checkpoint"):
+                collect(
                     "active_permits", root, metadata=lambda: (3, "g1"),
-                    fetch_page=interrupted, page_size=2, overlap_rows=1, retries=0,
+                    fetch_page=interrupted, page_size=2, overlap_rows=1,
                 )
             calls = []
             with self.assertRaisesRegex(collector.CollectionError, "generation, count"):
-                collect_resumable_snapshot(
+                collect(
                     "active_permits", root, metadata=lambda: (3, "g2"),
                     fetch_page=lambda offset, limit: calls.append((offset, limit)),
                     page_size=2, overlap_rows=1,
@@ -156,19 +249,19 @@ class ResumablePermitCollectorTests(unittest.TestCase):
                     return response(3, rows[:2])
                 raise TimeoutError("stop after checkpoint")
 
-            with self.assertRaisesRegex(collector.CollectionError, "retry bound exhausted"):
-                collect_resumable_snapshot(
+            with self.assertRaisesRegex(TimeoutError, "stop after checkpoint"):
+                collect(
                     "active_permits", root, metadata=lambda: (3, "g1"),
-                    fetch_page=interrupted, page_size=2, overlap_rows=1, retries=0,
+                    fetch_page=interrupted, page_size=2, overlap_rows=1,
                 )
             checkpoint_path = Path(root) / "active_permits-resume.json"
             before = checkpoint_path.read_bytes()
             changed = source_row(2, STATUS="Changed")
             with self.assertRaisesRegex(collector.CollectionError, "overlap changed"):
-                collect_resumable_snapshot(
+                collect(
                     "active_permits", root, metadata=lambda: (3, "g1"),
                     fetch_page=lambda offset, limit: response(3, [changed]),
-                    page_size=2, overlap_rows=1, retries=0,
+                    page_size=2, overlap_rows=1,
                 )
             self.assertEqual(checkpoint_path.read_bytes(), before)
 
@@ -180,65 +273,69 @@ class ResumablePermitCollectorTests(unittest.TestCase):
                     return response(3, rows)
                 raise TimeoutError("stop")
 
-            with self.assertRaisesRegex(collector.CollectionError, "retry bound exhausted"):
-                collect_resumable_snapshot(
+            with self.assertRaisesRegex(TimeoutError, "stop"):
+                collect(
                     "active_permits", root, metadata=lambda: (3, "g1"),
-                    fetch_page=interrupted, page_size=2, overlap_rows=1, retries=0,
+                    fetch_page=interrupted, page_size=2, overlap_rows=1,
                 )
             path = Path(root) / "active_permits-resume.jsonl"
             damaged = bytearray(path.read_bytes())
             damaged[0] ^= 1
             path.write_bytes(damaged)
             with self.assertRaisesRegex(collector.CollectionError, "hash"):
-                collect_resumable_snapshot(
+                collect(
                     "active_permits", root, metadata=lambda: (3, "g1"),
                     fetch_page=lambda offset, limit: response(3, rows),
-                    page_size=2, overlap_rows=1, retries=0,
+                    page_size=2, overlap_rows=1,
                 )
 
-    def test_timeout_and_502_503_504_retry_with_bounded_backoff(self):
-        rows = [source_row(1)]
-        for failure in (TimeoutError("timeout"), transient_http(502), transient_http(503), transient_http(504)):
-            with self.subTest(failure=str(failure)), tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
-                calls = []
-                delays = []
+    def test_eof_page_is_requested_and_extra_record_fails_closed(self):
+        row = source_row(1)
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            prior = collector.collect_snapshot(
+                "active_permits", root, metadata=lambda: (1, "prior"),
+                fetch_page=lambda offset, limit: response(1, [row]), page_size=1,
+            )
+            manifest_path = Path(root) / "active_permits-manifest.json"
+            previous_manifest = manifest_path.read_bytes()
+            client = InjectedCKAN(
+                lambda: (1, "g1"),
+                lambda offset, limit: response(1, [source_row(2)]),
+                eof_records=[source_row(2)],
+            )
+            with self.assertRaisesRegex(collector.CollectionError, "EOF certification"):
+                resumable.collect_resumable_snapshot("active_permits", root, client=client, page_size=1)
+            self.assertEqual(client.calls, [(0, 1), (1, 1)])
+            self.assertEqual(manifest_path.read_bytes(), previous_manifest)
+            self.assertTrue((Path(root) / prior["snapshot_file"]).is_file())
 
-                def fetch(offset, limit):
-                    calls.append((offset, limit))
-                    if len(calls) == 1:
-                        raise failure
-                    return response(1, rows)
+    def test_empty_source_still_requires_and_checks_zero_offset_eof(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            seeded_empty_manifest(root)
+            client = InjectedCKAN(lambda: (0, "g0"), lambda offset, limit: self.fail("No data page expected"))
+            result = resumable.collect_resumable_snapshot("active_permits", root, client=client, page_size=1)
+            self.assertEqual(result["row_count"], 0)
+            self.assertEqual(client.calls, [(0, 1)])
 
-                manifest = collect_resumable_snapshot(
-                    "active_permits", root, metadata=lambda: (1, "g1"),
-                    fetch_page=fetch, page_size=1, overlap_rows=1, retries=1,
-                    sleep=delays.append,
-                )
-                self.assertEqual(manifest["row_count"], 1)
-                self.assertEqual(len(calls), 2)
-                self.assertEqual(delays, [0.5])
-
-    def test_401_and_403_stop_without_retry(self):
-        for code in (401, 403):
-            with self.subTest(status=code), tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
-                calls = []
-
-                def fetch(offset, limit):
-                    calls.append((offset, limit))
-                    raise HTTPError("https://ckan0.cf.opendata.inter.prod-toronto.ca/", code, "denied", {}, None)
-
-                with self.assertRaisesRegex(collector.CollectionError, f"HTTP {code}"):
-                    collect_resumable_snapshot(
-                        "active_permits", root, metadata=lambda: (1, "g1"),
-                        fetch_page=fetch, page_size=1, retries=2,
-                    )
-                self.assertEqual(len(calls), 1)
+    def test_zero_total_eof_extra_record_fails_without_advancing_manifest(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            seeded_empty_manifest(root)
+            manifest_path = Path(root) / "active_permits-manifest.json"
+            previous = manifest_path.read_bytes()
+            client = InjectedCKAN(
+                lambda: (0, "g0"), lambda offset, limit: self.fail("No data page expected"),
+                eof_records=[source_row(1)],
+            )
+            with self.assertRaisesRegex(collector.CollectionError, "EOF certification"):
+                resumable.collect_resumable_snapshot("active_permits", root, client=client, page_size=1)
+            self.assertEqual(client.calls, [(0, 1)])
+            self.assertEqual(manifest_path.read_bytes(), previous)
 
     def test_out_of_order_or_duplicate_source_ids_stop_before_manifest(self):
         for ids in ([2, 1], [1, 1]):
             with self.subTest(ids=ids), tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
                 with self.assertRaisesRegex(collector.CollectionError, "missing, duplicated, or unordered"):
-                    collect_resumable_snapshot(
+                    collect(
                         "active_permits", root, metadata=lambda: (2, "g1"),
                         fetch_page=lambda offset, limit: response(2, [source_row(i) for i in ids]),
                         page_size=2,
@@ -255,7 +352,7 @@ class ResumablePermitCollectorTests(unittest.TestCase):
             before = manifest_path.read_bytes()
             metadata_values = iter([(2, "new"), (2, "newer")])
             with self.assertRaisesRegex(collector.CollectionError, "generation or count changed"):
-                collect_resumable_snapshot(
+                collect(
                     "active_permits", root, metadata=lambda: next(metadata_values),
                     fetch_page=lambda offset, limit: response(2, [source_row(2), source_row(3)]),
                     page_size=2,
@@ -263,6 +360,84 @@ class ResumablePermitCollectorTests(unittest.TestCase):
             self.assertEqual(manifest_path.read_bytes(), before)
             self.assertTrue((Path(root) / prior["snapshot_file"]).is_file())
 
+    def test_real_ckan_client_owns_exact_retry_budget_and_status_scope(self):
+        row = source_row(1)
+        for failure in (TimeoutError("timeout"), transient_http(502), transient_http(503), transient_http(504)):
+            with self.subTest(failure=str(failure)), tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+                transport = InjectedHTTPTransport([row], failures={0: [failure]})
+                delays = []
+                client = collector.TorontoCKAN(retries=1, sleep=delays.append, opener=transport)
+                manifest = resumable.collect_resumable_snapshot("active_permits", root, client=client, page_size=1)
+                self.assertEqual(manifest["row_count"], 1)
+                self.assertEqual(transport.page_calls, [(0, 1), (0, 1), (1, 1)])
+                self.assertEqual(delays, [0.5])
+
+    def test_actual_package_metadata_request_uses_same_single_retry_owner(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            transport = InjectedHTTPTransport(
+                [source_row(1)], action_failures={"package_show": [TimeoutError("metadata timeout")]},
+            )
+            delays = []
+            client = collector.TorontoCKAN(retries=1, sleep=delays.append, opener=transport)
+            manifest = resumable.collect_resumable_snapshot("active_permits", root, client=client, page_size=1)
+            package_requests = [url for url, _ in transport.calls if urlparse(url).path.endswith("/package_show")]
+            self.assertEqual(manifest["row_count"], 1)
+            # Initial metadata retries once; final generation verification makes
+            # one additional package_show request without another failure.
+            self.assertEqual(len(package_requests), 3)
+            self.assertEqual(delays, [0.5])
+
+    def test_metadata_retry_zero_makes_one_request(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            transport = InjectedHTTPTransport(
+                [source_row(1)], action_failures={"package_show": [transient_http(502), transient_http(502)]},
+            )
+            delays = []
+            client = collector.TorontoCKAN(retries=0, sleep=delays.append, opener=transport)
+            with self.assertRaises(collector.CollectionError):
+                resumable.collect_resumable_snapshot("active_permits", root, client=client, page_size=1)
+            package_requests = [url for url, _ in transport.calls if urlparse(url).path.endswith("/package_show")]
+            self.assertEqual(len(package_requests), 1)
+            self.assertEqual(transport.page_calls, [])
+            self.assertEqual(delays, [])
+
+    def test_retry_zero_means_one_request_and_401_403_429_other_url_errors_do_not_retry(self):
+        row = source_row(1)
+        cases = [
+            (502, transient_http(502)),
+            (401, transient_http(401)),
+            (403, transient_http(403)),
+            (429, transient_http(429)),
+            ("url-error", URLError("connection reset")),
+        ]
+        for name, failure in cases:
+            with self.subTest(case=name), tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+                transport = InjectedHTTPTransport([row], failures={0: [failure, failure]})
+                delays = []
+                client = collector.TorontoCKAN(retries=0, sleep=delays.append, opener=transport)
+                with self.assertRaises(collector.CollectionError):
+                    resumable.collect_resumable_snapshot("active_permits", root, client=client, page_size=1)
+                self.assertEqual(transport.page_calls, [(0, 1)])
+                self.assertEqual(delays, [])
+
+    def test_auth_and_nonretryable_failures_stop_immediately_with_retry_budget_available(self):
+        cases = [
+            ("401", transient_http(401)),
+            ("403", transient_http(403)),
+            ("429", transient_http(429)),
+            ("generic-url-error", URLError("connection reset")),
+        ]
+        for name, failure in cases:
+            with self.subTest(case=name), tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+                transport = InjectedHTTPTransport([source_row(1)], failures={0: [failure, failure]})
+                delays = []
+                client = collector.TorontoCKAN(retries=2, sleep=delays.append, opener=transport)
+                with self.assertRaises(collector.CollectionError):
+                    resumable.collect_resumable_snapshot("active_permits", root, client=client, page_size=1)
+                self.assertEqual(transport.page_calls, [(0, 1)])
+                self.assertEqual(delays, [])
+
 
 if __name__ == "__main__":
     unittest.main()
+
