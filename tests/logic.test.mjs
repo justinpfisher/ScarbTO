@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dayInWindow, filterEstablishments, filterActivity, isStale, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from '../docs/logic.mjs';
+import {dayInWindow, filterEstablishments, filterActivity, isStale, displayAddress, cityCatalogueRefreshText, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from '../docs/logic.mjs';
 const now = new Date('2026-10-24T15:00:00Z');
 const data = [
  {name:'Alpha Café',address:'123 Main',status:'Pass',neighbourhood:'Agincourt',inspection_date:'2026-10-21'},
@@ -31,6 +31,23 @@ test('staleness warning starts only after 48 hours',()=>{
  assert.equal(isStale('2026-10-22T14:59:59.999Z', now),true);
  assert.equal(isStale('not-a-date', now),true);
 });
+test('legacy and new City address placeholders are presentation-only missing values',()=>{
+  assert.equal(displayAddress('4779 Steeles Ave E None M1V 4S5'),'4779 Steeles Ave E M1V 4S5');
+  assert.equal(displayAddress('None'), '');
+  assert.equal(displayAddress('101 Main Street'),'101 Main Street');
+  assert.equal(displayAddress(null),'');
+});
+test('upstream City catalogue time is distinct from Scarb.TO publication age',()=>{
+  assert.equal(cityCatalogueRefreshText('2026-10-27 08:17:32.765401'),
+    'City catalogue timestamp 2026-10-27 08:17 (time zone not specified)');
+  assert.equal(cityCatalogueRefreshText('2026-10-27T08:17:32Z'),
+    'City catalogue timestamp 2026-10-27 08:17 UTC');
+  assert.equal(cityCatalogueRefreshText('2026-10-27'),
+    'City catalogue timestamp 2026-10-27 (date only)');
+  assert.equal(cityCatalogueRefreshText(null), 'City catalogue refresh time not supplied');
+  assert.equal(cityCatalogueRefreshText('unparseable'), 'City catalogue refresh time not supplied');
+});
+
 test('geometry bounds are deterministic',()=>{
  assert.deepEqual(fitBoundsFromFeatures([{geometry:{type:'Polygon',coordinates:[[[0,1],[2,1],[2,4],[0,1]]]}}]),[0,1,2,4]);
 });
