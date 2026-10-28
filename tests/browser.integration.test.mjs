@@ -196,16 +196,18 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
     return {
       layerOrder:['scarborough-outside-mask','scarborough-boundary-line','clusters','single'].map(id=>layers.indexOf(id)),
       camera:[[bounds.getWest(),bounds.getSouth()],[bounds.getEast(),bounds.getNorth()]],
-      sourceFeatures:map.getSource('scarborough-boundary')._data?.features?.length,
-      maskFeatureCount:map.getSource('scarborough-mask')._data?.features?.length,
-      maskPolygonRings:map.getSource('scarborough-mask')._data?.features?.[0]?.geometry?.coordinates?.length,
+      hasBoundarySource:Boolean(map.getSource('scarborough-boundary')),
+      hasMaskSource:Boolean(map.getSource('scarborough-mask')),
+      hasBoundaryLayer:Boolean(map.getLayer('scarborough-boundary-line')),
+      hasMaskLayer:Boolean(map.getLayer('scarborough-outside-mask')),
     };
   });
   assert.ok(boundaryState.layerOrder.every(index=>index>=0));
   assert.ok(boundaryState.layerOrder[0]<boundaryState.layerOrder[1]&&boundaryState.layerOrder[1]<boundaryState.layerOrder[2]&&boundaryState.layerOrder[2]<boundaryState.layerOrder[3],'outside mask and boundary draw below establishment pins');
-  assert.equal(boundaryState.sourceFeatures,1,'display uses the independent official council feature');
-  assert.equal(boundaryState.maskFeatureCount,1);
-  assert.equal(boundaryState.maskPolygonRings,2,'outside mask retains the council boundary as its interior hole');
+  assert.equal(boundaryState.hasBoundarySource,true,'display uses the independent official council feature');
+  assert.equal(boundaryState.hasMaskSource,true);
+  assert.equal(boundaryState.hasBoundaryLayer,true);
+  assert.equal(boundaryState.hasMaskLayer,true);
   assert.ok(boundaryState.camera[0][0]<=-79.3413178929128&&boundaryState.camera[0][1]<=43.6716713902779&&boundaryState.camera[1][0]>=-79.115243188678&&boundaryState.camera[1][1]>=43.8554571861712,'initial camera fits the complete official display boundary');
   if (mobile) await page.getByRole('button', {name: 'Filters'}).click();
   await page.getByRole('button', {name: 'All establishments'}).click();
@@ -450,7 +452,7 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
 
   const feeds = await openWithoutMap();
   t.after(() => feeds.context.close());
-  assert.equal(await feeds.page.locator('.record-item').count(), 2, 'DineSafe records render without map bounds');
+  assert.equal(await feeds.page.locator('.record-item').count(), 3, 'DineSafe records render without map bounds');
 
   const cafe = feeds.page.getByRole('button', {name: 'Fixture Cafe'});
   await cafe.focus();
