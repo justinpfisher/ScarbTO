@@ -53,6 +53,34 @@ class IngestionTests(unittest.TestCase):
         self.assertEqual(stats['scarborough_establishments'],2)
         self.assertEqual(len(neighbourhoods_geo['features']),2)
 
+    def test_current_city_schema_separates_finding_from_category_and_cleans_address(self):
+        source = io.StringIO()
+        columns = ['estId', 'estName', 'address', 'typeDesc', 'inspectionStatus',
+                   'inspectionDate', 'latitude', 'longitude']
+        writer = csv.DictWriter(source, fieldnames=columns)
+        writer.writeheader()
+        writer.writerow(dict(estId='10', estName='A Diner', address='123 Main St None M1A 1A1',
+                             typeDesc='FAIL TO MAINTAIN EQUIPMENT - SEC. 20',
+                             inspectionStatus='Pass', inspectionDate='2026-10-25',
+                             latitude=43.74, longitude=-79.40))
+        writer.writerow(dict(estId='11', estName='B Diner', address='None',
+                             typeDesc='None', inspectionStatus='Conditional Pass',
+                             inspectionDate='2026-10-25', latitude=43.74, longitude=-79.40))
+        entries, _, _ = normalise(source.getvalue().encode('utf-8'), wards(), neighbourhoods(), minimum=1)
+        found = {entry['id']: entry for entry in entries}
+        self.assertEqual(found['10']['address'], '123 Main St M1A 1A1')
+        self.assertEqual(found['10']['type'], '')
+        self.assertEqual(found['10']['inspection_detail'], 'FAIL TO MAINTAIN EQUIPMENT - SEC. 20')
+        self.assertEqual(found['11']['address'], '')
+        self.assertEqual(found['11']['type'], '')
+        self.assertEqual(found['11']['inspection_detail'], '')
+
+    def test_legacy_category_is_not_treated_as_inspection_finding(self):
+        entries, _, _ = normalise(rows_as_csv([item('1', 'Diner', 'Pass', '2026-10-20')]),
+                                  wards(), neighbourhoods(), minimum=1)
+        self.assertEqual(entries[0]['type'], 'Restaurant')
+        self.assertEqual(entries[0]['inspection_detail'], '')
+
     def test_geospatial_holes_and_boundary_points(self):
         geom={'type':'Polygon','coordinates':[[[0,0],[3,0],[3,3],[0,3],[0,0]],[[1,1],[2,1],[2,2],[1,2],[1,1]]]}
         self.assertTrue(in_geometry(.5,.5,geom))
