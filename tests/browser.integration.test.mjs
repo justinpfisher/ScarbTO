@@ -643,3 +643,52 @@ test('resetting during a selected-call request aborts it and prevents late rende
   assert.deepEqual(errors,[]);
 });
 
+
+
+test('browse-mode tabs stay fully visible at desktop and narrow widths', {timeout:60_000}, async t=>{
+  const {server,origin}=await startStaticServer();
+  const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+  t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
+  const context=await browser.newContext({viewport:{width:1280,height:900}});
+  t.after(()=>context.close());
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await installLocalRoutes(page,origin,{});
+  await page.goto(origin,{waitUntil:'domcontentloaded'});
+  await waitForMap(page);
+  for(const width of [1280,1024,960,950,800,390]){
+    await page.setViewportSize({width,height:900});
+    await page.waitForTimeout(50);
+    const metrics=await page.locator('.view-tabs').evaluate(tabs=>{
+      const container=tabs.getBoundingClientRect();
+      return {
+        clientWidth:tabs.clientWidth,
+        scrollWidth:tabs.scrollWidth,
+        buttons:[...tabs.querySelectorAll('.tab')].map(button=>{
+          const rect=button.getBoundingClientRect();
+          return {
+            label:button.textContent.trim(),
+            left:rect.left,
+            right:rect.right,
+            top:rect.top,
+            bottom:rect.bottom,
+            clientWidth:button.clientWidth,
+            scrollWidth:button.scrollWidth,
+            clientHeight:button.clientHeight,
+            scrollHeight:button.scrollHeight,
+            containerLeft:container.left,
+            containerRight:container.right
+          };
+        })
+      };
+    });
+    assert.ok(metrics.scrollWidth<=metrics.clientWidth+1, `mode tab container overflows at ${width}px: ${JSON.stringify(metrics)}`);
+    assert.equal(metrics.buttons.length,4);
+    for(const button of metrics.buttons){
+      assert.ok(button.left>=button.containerLeft-1 && button.right<=button.containerRight+1, `${button.label} clips horizontally at ${width}px`);
+      assert.ok(button.scrollWidth<=button.clientWidth+1, `${button.label} text clips at ${width}px`);
+      assert.ok(button.scrollHeight<=button.clientHeight+1, `${button.label} clips vertically at ${width}px`);
+    }
+  }
+  assert.deepEqual(errors,[]);
+});
