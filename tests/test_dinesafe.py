@@ -194,6 +194,7 @@ class IngestionTests(unittest.TestCase):
             self.assertEqual(json.loads(baseline)['establishments'][0]['name'],'Working Diner')
             report=(root/'published'/'establishments.csv').read_text(encoding='utf-8-sig')
             self.assertIn('https://open.toronto.ca/open-data-licence/',report)
+            self.assertIn('inspection_detail',report.splitlines()[0])
             feed.write_bytes(rows_as_csv([item('1','Working Diner','Unknown','2026-10-22')]))
             blocked=subprocess.run(cmd,capture_output=True,text=True)
             self.assertNotEqual(blocked.returncode,0)
