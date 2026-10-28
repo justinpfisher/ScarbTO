@@ -508,13 +508,22 @@ def normalize_permits(
             raise PermitContractError("OAR mapper accounting does not reconcile with mapped points")
 
     normalized_by_key: dict[tuple[str, str], dict[str, Any]] = {}
-    quarantined: list[str] = []
+    quarantined: set[str] = set()
+    source_id_by_key: dict[str, list[int]] = {}
+    source_ids_seen: set[int] = set()
+    identity_collisions: list[dict[str, Any]] = []
     unlocated_permit_count = 0
     for row in rows:
         if not isinstance(row, dict):
             raise PermitContractError("Permit row must be an object")
         permit_number = _required_string(row, "PERMIT_NUM")
         revision = _required_string(row, "REVISION_NUM")
+        source_row_id = row.get("_id")
+        if type(source_row_id) is not int or source_row_id <= 0:
+            raise PermitContractError("Permit source _id must be a positive integer")
+        if source_row_id in source_ids_seen:
+            raise PermitContractError("Duplicate permit source _id in one collection")
+        source_ids_seen.add(source_row_id)
         permit_type = _required_string(row, "PERMIT_TYPE")
         status_value = row.get("STATUS")
         normalized_status = _optional_source_text(row, "STATUS")
@@ -575,19 +584,54 @@ def normalize_permits(
         }
         stable["locations"] = sorted(item["locations"], key=lambda loc: loc["address_point_id"])
         item["fingerprint"] = _fingerprint(stable)
+        record_key = item["record_key"]
         prior = normalized_by_key.get(key)
-        if prior is not None and prior["fingerprint"] != item["fingerprint"]:
-            quarantined.append(item["record_key"])
+        if prior is not None:
+            # Even identical normalized rows with different source _ids are
+            # separate source records. The natural-key pair is not proven to
+            # identify one permit, so remove it from the candidate output.
+            quarantined.add(record_key)
+            source_id_by_key[record_key] = sorted([
+                prior.pop("_source_row_id"), source_row_id,
+            ])
             normalized_by_key.pop(key, None)
             continue
-        if prior is None and item["record_key"] not in quarantined:
-            normalized_by_key[key] = item
+        if record_key in quarantined:
+            source_id_by_key[record_key] = sorted(
+                [*source_id_by_key[record_key], source_row_id]
+            )
+            continue
+        item["_source_row_id"] = source_row_id
+        normalized_by_key[key] = item
+
+    records = []
+    for key in sorted(normalized_by_key):
+        item = normalized_by_key[key]
+        source_id = item.pop("_source_row_id")
+        records.append(item)
+        source_id_by_key[item["record_key"]] = [source_id]
+
+    identity_collisions = [
+        {
+            "candidate_record_key": record_key,
+            "source_rows": [
+                {"source_collection": source_collection, "source_row_id": source_id}
+                for source_id in source_id_by_key[record_key]
+            ],
+            "reason": "candidate_key_repeated_without_proven_unique_semantics",
+        }
+        for record_key in sorted(quarantined)
+    ]
     return {
         "publication_status": "disabled_pending_source_and_privacy_review",
         "source_collection": source_collection,
         "coverage_note": "Cleared-permit source begins in 2017; 2000-2016 legacy resource intentionally omitted.",
-        "records": [normalized_by_key[key] for key in sorted(normalized_by_key)],
-        "quarantined_record_keys": sorted(set(quarantined)),
+        "records": records,
+        "quarantined_record_keys": sorted(quarantined),
+        "identity_collisions": identity_collisions,
+        # Private source-snapshot IDs support cross-collection collision checks.
+        # They are provenance only, not semantic identities or public fields.
+        "source_row_ids_by_record_key": source_id_by_key,
         "location_accounting": {
             "address_points_total": oar_accounting.get("total_count") if oar_accounting else None,
             "address_points_located": oar_accounting.get("located_count") if oar_accounting else len(points),
@@ -599,15 +643,42 @@ def normalize_permits(
 
 
 def combine_permit_collections(*collections: dict[str, Any]) -> dict[str, Any]:
-    """Quarantine active/cleared conflicts rather than guessing project identity."""
-    entries: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    """Quarantine every repeated candidate identity across or within sources."""
+    entries: dict[tuple[str, str], list[tuple[dict[str, Any], str, list[int]]]] = defaultdict(list)
     quarantined: set[str] = set()
+    collision_sources: dict[str, set[tuple[str, int]]] = defaultdict(set)
     accounting: dict[str, int] = {}
     for collection in collections:
         if collection.get("source_collection") not in {"active", "cleared"}:
             raise PermitContractError("Unexpected permit collection")
+        source_collection = collection["source_collection"]
+        for collision in collection.get("identity_collisions", []):
+            if not isinstance(collision, dict):
+                raise PermitContractError("Permit collision diagnostics are malformed")
+            record_key = collision.get("candidate_record_key")
+            if not isinstance(record_key, str) or not record_key:
+                raise PermitContractError("Permit collision candidate key is missing")
+            quarantined.add(record_key)
+            source_rows = collision.get("source_rows")
+            if not isinstance(source_rows, list):
+                raise PermitContractError("Permit collision source identities are missing")
+            for source in source_rows:
+                if (
+                    not isinstance(source, dict)
+                    or source.get("source_collection") not in {"active", "cleared"}
+                    or type(source.get("source_row_id")) is not int
+                    or source["source_row_id"] <= 0
+                ):
+                    raise PermitContractError("Permit collision source identity is malformed")
+                collision_sources[record_key].add((
+                    source["source_collection"], source["source_row_id"]
+                ))
+        provenance = collection.get("source_row_ids_by_record_key", {})
         for row in collection.get("records", []):
-            entries[(row["permit_number"], row["revision"])].append(row)
+            source_ids = provenance.get(row["record_key"])
+            if not isinstance(source_ids, list) or not source_ids or any(type(value) is not int or value <= 0 for value in source_ids):
+                raise PermitContractError("Permit row is missing original source _id provenance")
+            entries[(row["permit_number"], row["revision"])].append((row, source_collection, source_ids))
         quarantined.update(collection.get("quarantined_record_keys", []))
         for name, value in collection.get("location_accounting", {}).items():
             if type(value) is int:
@@ -618,27 +689,42 @@ def combine_permit_collections(*collections: dict[str, Any]) -> dict[str, Any]:
                 else:
                     accounting[name] = value
     records = []
+    source_row_ids_by_record_key: dict[str, list[dict[str, Any]]] = {}
     for key, matches in sorted(entries.items()):
-        fingerprints = {row["fingerprint"] for row in matches}
-        if len(fingerprints) > 1:
-            quarantined.update(row["record_key"] for row in matches)
-        elif matches[0]["record_key"] in quarantined:
+        record_key = matches[0][0]["record_key"]
+        if len(matches) > 1:
+            quarantined.add(record_key)
+        if record_key in quarantined:
+            for _row, collection_name, source_ids in matches:
+                collision_sources[record_key].update(
+                    (collection_name, source_id) for source_id in source_ids
+                )
             continue
-        else:
-            # Prefer the current active collection when an identical row is
-            # present in both snapshots; output must not depend on argument
-            # ordering.
-            records.append(sorted(
-                matches,
-                key=lambda row: (row["source_collection"] != "active", row["source_collection"]),
-            )[0])
+        row, source_collection, source_ids = matches[0]
+        records.append(row)
+        source_row_ids_by_record_key[record_key] = [
+            {"source_collection": source_collection, "source_row_id": source_id}
+            for source_id in source_ids
+        ]
+    identity_collisions = [
+        {
+            "candidate_record_key": record_key,
+            "source_rows": [
+                {"source_collection": source_collection, "source_row_id": source_id}
+                for source_collection, source_id in sorted(collision_sources[record_key])
+            ],
+            "reason": "candidate_key_repeated_without_proven_unique_semantics",
+        }
+        for record_key in sorted(quarantined)
+    ]
     return {
         "publication_status": "disabled_pending_source_and_privacy_review",
         "records": records,
         "quarantined_record_keys": sorted(quarantined),
+        "identity_collisions": identity_collisions,
+        "source_row_ids_by_record_key": source_row_ids_by_record_key,
         "location_accounting": dict(accounting),
     }
-
 
 def normalize_development_applications(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """Group source address rows by folder/application while retaining all locations."""
