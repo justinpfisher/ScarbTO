@@ -4,7 +4,7 @@
 
 ## Implemented and merged
 
-- Public GitHub repository: [justinpfisher/ScarbTO](https://github.com/justinpfisher/ScarbTO), branch `main`. Last inspected main commit `6a06927c91572d07cda6b9f6c2803f911fc5ca91`, merging [PR #18](https://github.com/justinpfisher/ScarbTO/pull/18).
+- Public GitHub repository: [justinpfisher/ScarbTO](https://github.com/justinpfisher/ScarbTO), branch `main`. Functional-code checkpoint `6a06927c91572d07cda6b9f6c2803f911fc5ca91` merged [PR #18](https://github.com/justinpfisher/ScarbTO/pull/18). Repository documentation was subsequently merged in [PR #19](https://github.com/justinpfisher/ScarbTO/pull/19) (`0aefa15c50d43ff3ecf4d3b9a36ca74379849395`).
 - DineSafe importer consumes official City of Toronto CKAN data, validates Scarborough geographic assignments, writes a current JSON snapshot and downloadable CSV, and records observed changes between validated snapshots. The existing GitHub Pages workflow has had successful test/publish and scheduled-refresh runs.
 - On the last inspected published snapshot (`docs/data/snapshot.json`, published **28 October 2026, 03:22:54 UTC**): **123,869** official source rows, **3,297** Scarborough establishments, zero unassigned neighbourhoods, and **21** observed change events. These figures are historical audit observations; use the live snapshot for current counts.
 - Map/list UI, neighbourhood filtering, recent-versus-all DineSafe views, source links, responsive boundary display and accessible list fallback have been implemented. Rendered desktop/mobile browser checks have passed in recorded GitHub Actions runs.
@@ -19,16 +19,15 @@
 3. **Freshness semantics:** the visible 48-hour staleness warning currently measures `published_at` (Scarb.TO publication), not verified upstream freshness. Distinguish source refresh, collection, change detection and inspection dates without misleading users.
 4. **Usability:** actual physical-device and small-resident-sample validation remain to be independently documented. Synthetic browser checks do not prove user comprehension or live basemap reachability.
 5. **Research readiness:** permit semantic identities, full pagination/generation completeness, spatial joins and licensing need real-source qualification before public display. Police neighbourhood-level usefulness and beach seasonal feed readiness remain open.
-6. **Backlog hygiene:** open drafts #6, #7, #8 and #11 appear potentially superseded by merged work; validate and close when appropriate. Keep #1 open until actual runner verification.
+6. **Backlog hygiene:** superseded draft PRs #6, #7, #8 and #11 were checked and closed on 28 October 2026; desktop-clipping issue #14 was closed as resolved by PR #16. PR #1 remains open until actual runner verification. The distinct synthetic beach-status PR #4 remains open pending a justified seasonal integration.
 
 ## Next delivery order
 
-1. Correct repository instructions/operating documentation without activating unsafe CI changes.
-2. Verify, provision and isolate the project-specific GMKtec runner; complete infrastructure migration or document a narrowly justified hosted feed exception.
-3. Fix DineSafe address/detail mapping and timestamp presentation; add focused regression tests, merge, deploy and verify against actual official records.
-4. Close superseded PRs after checking unique scope; limit simultaneous integration branches.
-5. Qualify one meaningful building/development feed with real source evidence and map usefulness.
-6. Preserve append-only source-linked observations (small monthly files), then consider static neighbourhood updates and lightweight resident testing.
+1. **Completed:** repository policy/current-state documentation merged via PR #19; superseded PRs #6, #7, #8, #11 and resolved issue #14 closed.
+2. **Blocked on verified runner:** provision, register and isolate the repository-specific GMKtec runner; finish PR #1 or a safer refreshed variant with no hosted fallback. Preserve essential public feed refresh through an explicitly documented narrow reliability exception where needed.
+3. **Prepared on branch, not merged:** [DineSafe quality and freshness correction](https://github.com/justinpfisher/ScarbTO/tree/chat/dinesafe-quality-freshness-20261028) normalises literal address placeholders, distinguishes inspection details from establishment category, clarifies source timestamps and adds monthly observed-change archives with tests. Seven read-only pure-JavaScript assertions passed in an isolated code sandbox, but the actual Python, full browser and GMKtec suites have **not** run. Keep this branch unmerged until approved execution and release verification are possible; do not trigger current hosted PR tests by opening a PR first.
+4. Qualify one useful building/development source with real source evidence before public integration.
+5. Validate resident usability and, after enough sourced changes accumulate, consider static neighbourhood update pages.
 
 ## Operational links
 
