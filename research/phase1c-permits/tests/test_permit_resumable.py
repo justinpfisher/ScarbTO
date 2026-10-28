@@ -38,17 +38,37 @@ def transient_http(code):
     return HTTPError("https://ckan0.cf.opendata.inter.prod-toronto.ca/", code, "transient", {}, None)
 
 
+class InjectedCKAN:
+    def __init__(self, metadata, fetch_page):
+        self._metadata = metadata
+        self._fetch_page = fetch_page
+
+    def metadata(self, source_key):
+        collector._safe_source(source_key)
+        return self._metadata()
+
+    def page(self, source_key, *, offset, limit):
+        collector._safe_source(source_key)
+        return self._fetch_page(offset, limit)
+
+
+def collect_resumable_snapshot(source_key, destination, *, metadata, fetch_page, **kwargs):
+    return resumable.collect_resumable_snapshot(
+        source_key, destination, client=InjectedCKAN(metadata, fetch_page), **kwargs,
+    )
+
+
 class ResumablePermitCollectorTests(unittest.TestCase):
     def test_first_page_timeout_can_restart_when_no_rows_were_checkpointed(self):
         row = source_row(1)
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
             with self.assertRaisesRegex(collector.CollectionError, "retry bound exhausted"):
-                resumable.collect_resumable_snapshot(
+                collect_resumable_snapshot(
                     "active_permits", root, metadata=lambda: (1, "g1"),
                     fetch_page=lambda offset, limit: (_ for _ in ()).throw(TimeoutError("offline")),
                     page_size=1, retries=0,
                 )
-            manifest = resumable.collect_resumable_snapshot(
+            manifest = collect_resumable_snapshot(
                 "active_permits", root, metadata=lambda: (1, "g1"),
                 fetch_page=lambda offset, limit: response(1, [row]),
                 page_size=1,
@@ -67,7 +87,7 @@ class ResumablePermitCollectorTests(unittest.TestCase):
                 raise TimeoutError("synthetic timeout")
 
             with self.assertRaisesRegex(collector.CollectionError, "retry bound exhausted"):
-                resumable.collect_resumable_snapshot(
+                collect_resumable_snapshot(
                     "active_permits", root, metadata=lambda: (4, "g1"),
                     fetch_page=interrupted, page_size=2, overlap_rows=1, retries=0,
                 )
@@ -91,7 +111,7 @@ class ResumablePermitCollectorTests(unittest.TestCase):
                     return response(4, rows[2:])
                 raise AssertionError((offset, limit))
 
-            manifest = resumable.collect_resumable_snapshot(
+            manifest = collect_resumable_snapshot(
                 "active_permits", root, metadata=lambda: (4, "g1"),
                 fetch_page=resumed, page_size=2, overlap_rows=1, retries=0,
             )
@@ -115,13 +135,13 @@ class ResumablePermitCollectorTests(unittest.TestCase):
                 raise TimeoutError("stop after checkpoint")
 
             with self.assertRaisesRegex(collector.CollectionError, "retry bound exhausted"):
-                resumable.collect_resumable_snapshot(
+                collect_resumable_snapshot(
                     "active_permits", root, metadata=lambda: (3, "g1"),
                     fetch_page=interrupted, page_size=2, overlap_rows=1, retries=0,
                 )
             calls = []
             with self.assertRaisesRegex(collector.CollectionError, "generation, count"):
-                resumable.collect_resumable_snapshot(
+                collect_resumable_snapshot(
                     "active_permits", root, metadata=lambda: (3, "g2"),
                     fetch_page=lambda offset, limit: calls.append((offset, limit)),
                     page_size=2, overlap_rows=1,
@@ -137,7 +157,7 @@ class ResumablePermitCollectorTests(unittest.TestCase):
                 raise TimeoutError("stop after checkpoint")
 
             with self.assertRaisesRegex(collector.CollectionError, "retry bound exhausted"):
-                resumable.collect_resumable_snapshot(
+                collect_resumable_snapshot(
                     "active_permits", root, metadata=lambda: (3, "g1"),
                     fetch_page=interrupted, page_size=2, overlap_rows=1, retries=0,
                 )
@@ -145,7 +165,7 @@ class ResumablePermitCollectorTests(unittest.TestCase):
             before = checkpoint_path.read_bytes()
             changed = source_row(2, STATUS="Changed")
             with self.assertRaisesRegex(collector.CollectionError, "overlap changed"):
-                resumable.collect_resumable_snapshot(
+                collect_resumable_snapshot(
                     "active_permits", root, metadata=lambda: (3, "g1"),
                     fetch_page=lambda offset, limit: response(3, [changed]),
                     page_size=2, overlap_rows=1, retries=0,
@@ -161,7 +181,7 @@ class ResumablePermitCollectorTests(unittest.TestCase):
                 raise TimeoutError("stop")
 
             with self.assertRaisesRegex(collector.CollectionError, "retry bound exhausted"):
-                resumable.collect_resumable_snapshot(
+                collect_resumable_snapshot(
                     "active_permits", root, metadata=lambda: (3, "g1"),
                     fetch_page=interrupted, page_size=2, overlap_rows=1, retries=0,
                 )
@@ -170,7 +190,7 @@ class ResumablePermitCollectorTests(unittest.TestCase):
             damaged[0] ^= 1
             path.write_bytes(damaged)
             with self.assertRaisesRegex(collector.CollectionError, "hash"):
-                resumable.collect_resumable_snapshot(
+                collect_resumable_snapshot(
                     "active_permits", root, metadata=lambda: (3, "g1"),
                     fetch_page=lambda offset, limit: response(3, rows),
                     page_size=2, overlap_rows=1, retries=0,
@@ -189,7 +209,7 @@ class ResumablePermitCollectorTests(unittest.TestCase):
                         raise failure
                     return response(1, rows)
 
-                manifest = resumable.collect_resumable_snapshot(
+                manifest = collect_resumable_snapshot(
                     "active_permits", root, metadata=lambda: (1, "g1"),
                     fetch_page=fetch, page_size=1, overlap_rows=1, retries=1,
                     sleep=delays.append,
@@ -208,7 +228,7 @@ class ResumablePermitCollectorTests(unittest.TestCase):
                     raise HTTPError("https://ckan0.cf.opendata.inter.prod-toronto.ca/", code, "denied", {}, None)
 
                 with self.assertRaisesRegex(collector.CollectionError, f"HTTP {code}"):
-                    resumable.collect_resumable_snapshot(
+                    collect_resumable_snapshot(
                         "active_permits", root, metadata=lambda: (1, "g1"),
                         fetch_page=fetch, page_size=1, retries=2,
                     )
@@ -218,7 +238,7 @@ class ResumablePermitCollectorTests(unittest.TestCase):
         for ids in ([2, 1], [1, 1]):
             with self.subTest(ids=ids), tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
                 with self.assertRaisesRegex(collector.CollectionError, "missing, duplicated, or unordered"):
-                    resumable.collect_resumable_snapshot(
+                    collect_resumable_snapshot(
                         "active_permits", root, metadata=lambda: (2, "g1"),
                         fetch_page=lambda offset, limit: response(2, [source_row(i) for i in ids]),
                         page_size=2,
@@ -235,7 +255,7 @@ class ResumablePermitCollectorTests(unittest.TestCase):
             before = manifest_path.read_bytes()
             metadata_values = iter([(2, "new"), (2, "newer")])
             with self.assertRaisesRegex(collector.CollectionError, "generation or count changed"):
-                resumable.collect_resumable_snapshot(
+                collect_resumable_snapshot(
                     "active_permits", root, metadata=lambda: next(metadata_values),
                     fetch_page=lambda offset, limit: response(2, [source_row(2), source_row(3)]),
                     page_size=2,
