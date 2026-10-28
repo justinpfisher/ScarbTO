@@ -1,0 +1,39 @@
+{
+  "status": "Source sample qualified; production exporter remains disabled pending complete streaming and spatial verification",
+  "identity": {
+    "permits": "Namespace toronto:permit + trimmed PERMIT_NUM + REVISION_NUM, preserving revision leading zeros. Do not namespace active/cleared separately: lifecycle may move between them. Missing required identity is quarantined; do not silently use _id.",
+    "development": "Logical application: trimmed FOLDERRSN when nonblank; otherwise APPLICATION_TYPE plus APPLICATION# with explicit fallback namespace. If neither complete, quarantine. Never use _id or null literal as stable identity.",
+    "multiple_locations": "Real development rows 1 and 2 share folder/application but differ in X/Y. Group source locations under logical application; do not silently discard later rows or count locations as distinct applications. _id is only within-fetch provenance/order, not a cross-refresh identity guarantee.",
+    "fallback_reconciliation": "If a future row acquires FOLDERRSN, retain an alias from fallback application key to folder key, with collision checking; do not duplicate application."
+  },
+  "dates": {
+    "permit": "APPLICATION_DATE, ISSUED_DATE, COMPLETED_DATE are CKAN date values YYYY-MM-DD or null. Validate calendar dates; retain null as unknown, not epoch.",
+    "development": "DATE_SUBMITTED is timestamp; sampled values are YYYY-MM-DDT00:00:00 without offset. Preserve calendar date or naive source timestamp; do not fabricate Z/UTC or shift date through browser timezone.",
+    "status": "Trim whitespace. Cleared feed includes Approved and Cancelled: feed membership is not proof of completed construction."
+  },
+  "numbers": "Costs and unit counts are source text. Accept strict decimal/grouped numeric strings only, retain zero, parse commas; invalid prose becomes null with quality flag. No eval, coercion to NaN, or propagation of source prose.",
+  "geocode": {
+    "permit_join": "Normalize GEO_ID as integer-compatible identifier; join OAR ADDRESS_POINT_ID, NOT ADDRESS_ID. Require exactly one usable matched point or flag unresolved/ambiguous. No address-string guess silently.",
+    "oar_geometry": "geometry arrives as JSON string containing GeoJSON Point coordinates [longitude, latitude]. Parse safely, check finite range and Toronto plausibility. Do not reverse axes.",
+    "development_xy": "Schema explicitly says NAD27 X/Y; raw sample roughly X=321069 and Y=4838604 is projected metres, never longitude/latitude. Toronto official survey standard names MTM Zone 10. Keep projected coordinates private or unlocated until a separately verified NAD27/MTM10 transformation is tested; do not relabel EPSG:2952 (NAD83 CSRS).",
+    "spatial_scope": "No boundary polygons loaded or verified in this pass. Ward/postal/MUNICIPALITY_NAME labels do not substitute for approved Scarborough polygon containment. No full Scarborough qualification claimed."
+  },
+  "pagination": {
+    "request": "datastore_search with explicit fields allowlist, limit bounded e.g.500, offset 0 then consumed rows, sort=_id asc. Process and discard one page before next; no datastore/dump or whole-feed accumulation.",
+    "exact_total": "Use include_total=true with omitted/null total_estimation_threshold; only label exact if response total_was_estimated is explicitly false. Missing flag is unknown, true is estimate, even if numeric estimate equals exact count.",
+    "estimated_total": "Never terminate traversal solely at estimated total. Follow bounded offset pages until actual EOF; _links.next can exist even for empty result and is not proof of remaining records.",
+    "completion": "For exact totals, verify consumed source rows and actual EOF, detect repeated/nonmonotonic _id, short/empty premature pages, duplicate page fingerprints. Respect response limit if server clamps it. Freeze/check source metadata_modified before and after; changing source invalidates whole-run completeness unless using a consistent snapshot. Per-page count is not application count.",
+    "faults": "Timeout/HTTP failure is not successful empty page. Bounded retry/backoff; no partial export activation. SQL endpoint HTTP404 observed; ordinary datastore_search is available."
+  },
+  "privacy": "Projection is explicit. Never publicize CONTACT_NAME, CONTACT_PHONE, CONTACT_EMAIL, BUILDER_NAME, DESCRIPTION, WORK, CURRENT_USE, PROPOSED_USE, meeting-location prose, or arbitrary new source fields. The fixture includes schema names but no excluded record values. Raw private responses remain local only. Public export must reapply allowlist and sanitize numeric fields.",
+  "licence": "Official dataset portal pages link Open Government Licence - Toronto v1.0; package API inconsistently says notspecified. Preserve discrepancy and links in provenance. Include attribution: Contains information licensed under the Open Government Licence – Toronto. Licence excludes personal information and does not imply City endorsement.",
+  "official_sources": [
+    "https://open.toronto.ca/open-data-licence/",
+    "https://open.toronto.ca/dataset/building-permits-active-permits/",
+    "https://open.toronto.ca/dataset/building-permits-cleared-permits/",
+    "https://open.toronto.ca/dataset/development-applications/",
+    "https://open.toronto.ca/dataset/address-points-municipal-toronto-one-address-repository/",
+    "https://docs.ckan.org/en/2.11/maintaining/datastore.html#ckanext.datastore.logic.action.datastore_search",
+    "https://www.toronto.ca/wp-content/uploads/2017/11/98c7-ecs-specs-surveys-engsrv_survey_standards_for_consultant.pdf"
+  ]
+}
