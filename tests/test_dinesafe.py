@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'scripts'))
 from update_dinesafe import (DataError, build_snapshot, date_string, get_resources, in_geometry,
-    make_activity, normalise, atomic_write)
+    make_activity, normalise, atomic_write, prepare_activity_archives)
 
 
 def polygon(w,s,e,n):
@@ -128,6 +128,39 @@ class IngestionTests(unittest.TestCase):
         self.assertEqual(get_resources(result),('https://city.test/dinesafe.csv','2026-10-24'))
         with self.assertRaisesRegex(DataError,'No HTTPS'):
             get_resources({'success':True,'result':{'resources':[{'name':'old','format':'ZIP','url':'https://city.test/x'}]}})
+
+    def test_monthly_change_archives_are_resumable_append_only_and_fail_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            first = {'id': 'event-1', 'detected_at': '2026-10-27T15:54:39+00:00',
+                     'source_url': 'https://open.toronto.ca/dataset/dinesafe/',
+                     'address': '123 Main St M1A 1A1'}
+            updates = prepare_activity_archives(output, [first])
+            self.assertEqual(len(updates), 1)
+            self.assertEqual(updates[0][0].name, '2026-10.json')
+            for path, content in updates:
+                atomic_write(path, content)
+            self.assertEqual(prepare_activity_archives(output, [first]), [])
+
+            corrected = {**first, 'address': 'Different value'}
+            second = {'id': 'event-2', 'detected_at': '2026-10-28T08:00:00+00:00',
+                      'source_url': first['source_url']}
+            updates = prepare_activity_archives(output, [corrected, second])
+            self.assertEqual(len(updates), 1)
+            self.assertEqual([r['id'] for r in json.loads(updates[0][1])['events']],
+                             ['event-1', 'event-2'])
+            self.assertEqual(json.loads(updates[0][1])['events'][0]['address'],
+                             first['address'], 'Existing observed events remain immutable')
+            for path, content in updates:
+                atomic_write(path, content)
+            self.assertEqual(prepare_activity_archives(output, []), [],
+                             'Later absence from the 365-day window does not remove archives')
+
+            bad = output/'history'/'2026-11.json'
+            atomic_write(bad, b'{"schema_version":2,"events":[]}')
+            november = {**second, 'id': 'event-3', 'detected_at': '2026-11-01T12:00:00Z'}
+            with self.assertRaisesRegex(DataError, 'Invalid existing activity archive'):
+                prepare_activity_archives(output, [november])
 
     def test_date_formats_are_explicit(self):
         self.assertEqual(date_string('20261024'),'2026-10-24')
