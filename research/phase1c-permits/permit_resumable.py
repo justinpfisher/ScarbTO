@@ -161,8 +161,7 @@ def collect_resumable_snapshot(
     source_key: str,
     destination: str | Path,
     *,
-    metadata: Callable[[], tuple[int, str]],
-    fetch_page: Callable[[int, int], dict[str, Any]],
+    client: Any,
     page_size: int = collector.DEFAULT_PAGE_SIZE,
     max_rows: int = collector.MAX_ROWS,
     max_pages: int = collector.MAX_PAGES,
@@ -173,12 +172,15 @@ def collect_resumable_snapshot(
 ) -> dict[str, Any]:
     """Acquire one complete snapshot with atomic page checkpoints and safe resume.
 
-    `metadata` must return the exact unestimated row count and the source
-    generation marker. `fetch_page` must use the fixed resource and explicit
-    allowlisted fields. Only timeout and 502/503/504 errors retry; 401/403,
-    schema failures, source changes, and overlap mismatches stop immediately.
+    `client` must provide the existing `TorontoCKAN.metadata(source_key)` and
+    `.page(source_key, offset=..., limit=...)` interface. That binds each page
+    to the fixed source resource and explicit source-specific field projection.
+    Only timeout and 502/503/504 errors retry; 401/403, schema failures, source
+    changes, and overlap mismatches stop immediately.
     """
     source = collector._safe_source(source_key)
+    if not callable(getattr(client, "metadata", None)) or not callable(getattr(client, "page", None)):
+        raise collector.CollectionError("Resumable collection requires the qualified CKAN client interface")
     if type(page_size) is not int or not 1 <= page_size <= collector.MAX_PAGE_SIZE:
         raise collector.CollectionError("Page size exceeds the qualified maximum")
     if type(overlap_rows) is not int or not 1 <= overlap_rows <= collector.MAX_PAGE_SIZE:
@@ -196,7 +198,7 @@ def collect_resumable_snapshot(
     partial_path = root / f"{source_key}-resume.jsonl"
     checkpoint_path = root / f"{source_key}-resume.json"
     manifest_path = root / f"{source_key}-manifest.json"
-    total, generation = metadata()
+    total, generation = client.metadata(source_key)
     if type(total) is not int or not 0 <= total <= max_rows:
         raise collector.CollectionError("Source count is estimated, malformed, or exceeds the configured limit")
     if not isinstance(generation, str) or not generation.strip():
@@ -217,6 +219,7 @@ def collect_resumable_snapshot(
             "generation": generation,
             "total": total,
             "page_size": page_size,
+            "overlap_rows": overlap_limit,
         }
         if any(checkpoint.get(key) != value for key, value in expected.items()):
             raise collector.CollectionError("Source resource, generation, count, or page size changed since checkpoint")
@@ -231,6 +234,7 @@ def collect_resumable_snapshot(
             or offset != row_count
             or type(row_count) is not int
             or type(byte_count) is not int or byte_count < 0
+            or byte_count > max_snapshot_bytes or row_count > max_rows
             or not isinstance(prefix_hash, str)
             or (last_id is not None and (type(last_id) is not int or last_id <= 0))
             or not isinstance(overlap, list) or len(overlap) > min(overlap_limit, row_count)
@@ -247,7 +251,10 @@ def collect_resumable_snapshot(
             overlap_offset = offset - len(expected_overlap)
             if not expected_overlap:
                 raise collector.CollectionError("Resume checkpoint has no overlap proof")
-            response = _fetch_with_backoff(fetch_page, overlap_offset, len(expected_overlap), retries=retries, sleep=sleep)
+            response = _fetch_with_backoff(
+                lambda offset, limit: client.page(source_key, offset=offset, limit=limit),
+                overlap_offset, len(expected_overlap), retries=retries, sleep=sleep,
+            )
             result = collector._validate_response(response, fields=source["fields"], required_fields=source["required_fields"], limit=page_size)
             if result["total"] != total or len(result["records"]) != len(expected_overlap):
                 raise collector.CollectionError("Resume overlap page does not match the checkpoint count")
@@ -275,7 +282,10 @@ def collect_resumable_snapshot(
 
     while offset < total:
         request_limit = min(page_size, total - offset)
-        response = _fetch_with_backoff(fetch_page, offset, request_limit, retries=retries, sleep=sleep)
+        response = _fetch_with_backoff(
+            lambda page_offset, limit: client.page(source_key, offset=page_offset, limit=limit),
+            offset, request_limit, retries=retries, sleep=sleep,
+        )
         result = collector._validate_response(response, fields=source["fields"], required_fields=source["required_fields"], limit=page_size)
         if result["total"] != total:
             raise collector.CollectionError("Source total changed during resumed pagination")
@@ -314,6 +324,7 @@ def collect_resumable_snapshot(
             "generation": generation,
             "total": total,
             "page_size": page_size,
+            "overlap_rows": overlap_limit,
             "next_offset": offset,
             "row_count": row_count,
             "last_id": last_id,
@@ -323,7 +334,7 @@ def collect_resumable_snapshot(
         }
         collector._atomic_write_text(checkpoint_path, json.dumps(checkpoint, sort_keys=True, separators=(",", ":")) + "\n")
 
-    total_after, generation_after = metadata()
+    total_after, generation_after = client.metadata(source_key)
     if total_after != total or generation_after != generation:
         raise collector.CollectionError("Source generation or count changed before EOF certification")
     if row_count != total or partial_path.stat().st_size != byte_count or collector._file_sha256(partial_path) != prefix_hash:
