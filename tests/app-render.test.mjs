@@ -203,6 +203,28 @@ test('production render path handles zero matching records without turning into 
   } finally { await app.cleanup(); }
 });
 
+test('production DineSafe details clean legacy addresses and label upstream catalogue time', async () => {
+  const snapshot=fixture();
+  snapshot.published_at=new Date().toISOString();
+  snapshot.source={last_refreshed:'2026-10-27 08:17:32.765401'};
+  snapshot.establishments[0].address='0 Synthetic Road None M1V 1V1';
+  snapshot.establishments[0].type='';
+  snapshot.establishments[0].inspection_detail='City finding';
+  const app=await loadApp(snapshot);
+  try {
+    app.map.load();
+    const status=app.document.getElementById('data-status').textContent;
+    assert.match(status,/Scarb.TO checked/);
+    assert.match(status,/City catalogue timestamp 2026-10-27 08:17 \(time zone not specified\)/);
+    const list=app.document.getElementById('record-list');
+    const row=list.querySelector('.record-item');
+    assert.match(row.textContent,/0 Synthetic Road M1V 1V1/);
+    assert.doesNotMatch(row.textContent,/ None /);
+    row.click();
+    assert.match(list.textContent,/Recorded inspection detail: City finding/);
+  } finally { await app.cleanup(); }
+});
+
 test('production list paging, record selection, and map redraw preserve focus and reveal selection', async () => {
   const app = await loadApp(fixture(200));
   try {

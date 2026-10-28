@@ -186,6 +186,16 @@ def matching_shape(lon: float, lat: float, shapes: list) -> str | None:
     return None
 
 
+def clean_address(value: str) -> str:
+    """Omit the City's literal missing-component token; do not invent an address."""
+    return ' '.join(part for part in value.split() if part != 'None')
+
+
+def optional_text(value: str) -> str:
+    """A source placeholder is missing information, not an establishment type."""
+    return '' if value.casefold() in ('none', 'null') else value
+
+
 def normalise(csv_data: bytes, wards: dict, neighbourhoods: dict, *, minimum: int = 300) -> tuple[list[dict], dict, dict]:
     ward_shapes = prepare_shapes(wards, only_scarborough=True)
     neigh_shapes = prepare_shapes(neighbourhoods)
@@ -230,8 +240,12 @@ def normalise(csv_data: bytes, wards: dict, neighbourhoods: dict, *, minimum: in
             continue
         status = status_string(as_string(row, 'inspectionStatus', 'ESTABLISHMENT_STATUS'))
         item = {
-            'id': ident, 'name': name, 'address': as_string(row, 'address', 'ESTABLISHMENT_ADDRESS'),
-            'type': as_string(row, 'typeDesc', 'ESTABLISHMENTTYPE', 'ESTABLISHMENT_TYPE'),
+            'id': ident, 'name': name,
+            'address': clean_address(as_string(row, 'address', 'ESTABLISHMENT_ADDRESS')),
+            # The current City's typeDesc carries inspection findings, not
+            # establishment categories. Do not publish it as "type".
+            'type': optional_text(as_string(row, 'ESTABLISHMENTTYPE', 'ESTABLISHMENT_TYPE')),
+            'inspection_detail': optional_text(as_string(row, 'typeDesc')),
             'status': status, 'inspection_date': day, 'latitude': lat, 'longitude': lon,
             'ward': ward, 'neighbourhood': matching_shape(lon, lat, neigh_shapes),
         }
@@ -256,7 +270,8 @@ def normalise(csv_data: bytes, wards: dict, neighbourhoods: dict, *, minimum: in
 
 
 def make_activity(current: list[dict], previous: dict | None, now: datetime) -> list[dict]:
-    history = list(previous.get('activity', [])) if previous else []
+    history = [{**event, 'address': clean_address(event.get('address') or '')}
+               for event in previous.get('activity', [])] if previous else []
     before = {r['id']: r for r in previous.get('establishments', [])} if previous else {}
     # Initial population is a historical baseline, never falsely claimed as new activity.
     if previous and previous.get('ready'):
@@ -316,6 +331,101 @@ def atomic_write(path: Path, content: bytes) -> None:
     os.replace(stage, path)
 
 
+def archived_activity_by_id(output: Path) -> dict[str, dict]:
+    """Read every validated month so an event ID cannot move on a retry."""
+    history_dir = output / 'history'
+    archived: dict[str, dict] = {}
+    if not history_dir.exists():
+        return archived
+    for path in sorted(history_dir.glob('*.json')):
+        month = path.stem
+        try:
+            if len(month) != 7 or datetime.strptime(month, '%Y-%m').strftime('%Y-%m') != month:
+                raise ValueError('invalid month')
+        except ValueError as exc:
+            raise DataError(f'Invalid existing activity archive name: {path}') from exc
+        try:
+            existing = json.loads(path.read_text(encoding='utf-8'))
+        except (OSError, ValueError, UnicodeDecodeError) as exc:
+            raise DataError(f'Invalid existing activity archive: {path}') from exc
+        if not isinstance(existing, dict) or existing.get('schema_version') != 1 or existing.get('month') != month or not isinstance(existing.get('events'), list):
+            raise DataError(f'Invalid existing activity archive: {path}')
+        for event in existing['events']:
+            event_id = event.get('id') if isinstance(event, dict) else None
+            observed = event.get('detected_at') if isinstance(event, dict) else None
+            if not isinstance(event_id, str) or not event_id or not isinstance(observed, str) or observed[:7] != month:
+                raise DataError(f'Invalid archived event: {path}')
+            if event_id in archived:
+                raise DataError(f'Duplicate event ID across monthly archives: {event_id}')
+            archived[event_id] = event
+    return archived
+
+
+def reconcile_activity_history(output: Path, activity: list[dict]) -> list[dict]:
+    """Keep the first archived observation when retries regenerate an event."""
+    archived = archived_activity_by_id(output)
+    reconciled: dict[str, dict] = {}
+    for event in activity:
+        event_id = event.get('id')
+        if not isinstance(event_id, str) or not event_id:
+            raise DataError('An observed change is missing its identifier')
+        canonical = archived.get(event_id, event)
+        current = reconciled.get(event_id)
+        if current is None or canonical['detected_at'] < current['detected_at']:
+            reconciled[event_id] = canonical
+    return sorted(reconciled.values(), key=lambda value: (value['detected_at'], value['id']), reverse=True)
+
+
+def prepare_activity_archives(output: Path, activity: list[dict]) -> list[tuple[Path, bytes]]:
+    """Stage durable monthly observed events; do not backfill nonexistent observations.
+
+    Archives contain only source-linked events already produced by successful
+    snapshot comparisons. Existing event IDs are immutable; a repeated import
+    cannot silently rewrite the original observation.
+    """
+    archived = archived_activity_by_id(output)
+    months: dict[str, list[dict]] = {}
+    pending_ids: set[str] = set()
+    for event in activity:
+        event_id = event.get('id')
+        observed = event.get('detected_at', '')
+        month = observed[:7] if isinstance(observed, str) else ''
+        try:
+            if len(month) != 7 or datetime.strptime(month, '%Y-%m').strftime('%Y-%m') != month:
+                raise ValueError('invalid month')
+        except ValueError as exc:
+            raise DataError(f'Invalid archived observation month: {month!r}') from exc
+        if not isinstance(event_id, str) or not event_id or not event.get('source_url'):
+            raise DataError('An observed change is missing its identifier or official source')
+        if event_id in archived or event_id in pending_ids:
+            continue
+        pending_ids.add(event_id)
+        months.setdefault(month, []).append(event)
+
+    pending: list[tuple[Path, bytes]] = []
+    for month, new_events in sorted(months.items()):
+        path = output / 'history' / (month + '.json')
+        if path.exists():
+            existing = json.loads(path.read_text(encoding='utf-8'))
+            if not isinstance(existing, dict) or existing.get('schema_version') != 1 or existing.get('month') != month or not isinstance(existing.get('events'), list):
+                raise DataError(f'Invalid existing activity archive: {path}')
+            previous = existing['events']
+        else:
+            previous = []
+        by_id: dict[str, dict] = {}
+        for event in previous:
+            if not isinstance(event, dict) or not isinstance(event.get('id'), str) or event['id'] in by_id:
+                raise DataError(f'Invalid or duplicate archived event: {path}')
+            by_id[event['id']] = event
+        for event in new_events:
+            by_id.setdefault(event['id'], event)
+        records = sorted(by_id.values(), key=lambda value: (value['detected_at'], value['id']))
+        serialised = json.dumps({'schema_version': 1, 'month': month, 'events': records},
+                                separators=(',', ':'), ensure_ascii=False).encode('utf-8')
+        if not path.exists() or path.read_bytes() != serialised:
+            pending.append((path, serialised))
+    return pending
+
 def load_local(path: str) -> bytes:
     return Path(path).read_bytes()
 
@@ -349,7 +459,8 @@ def main() -> None:
     previous = json.loads(previous_path.read_text(encoding='utf-8')) if previous_path.exists() else None
     snapshot, local_neigh = build_snapshot(raw_csv, wards, neighbourhoods, previous=previous,
         source_url=source_url, last_refreshed=refreshed, now=now, minimum=args.minimum)
-    fields = ['id', 'name', 'address', 'type', 'status', 'inspection_date', 'latitude', 'longitude', 'ward', 'neighbourhood',
+    snapshot['activity'] = reconcile_activity_history(args.output, snapshot['activity'])
+    fields = ['id', 'name', 'address', 'type', 'inspection_detail', 'status', 'inspection_date', 'latitude', 'longitude', 'ward', 'neighbourhood',
               'source_url', 'licence_url', 'collected_at']
     export = io.StringIO()
     writer = csv.DictWriter(export, fieldnames=fields)
@@ -358,7 +469,7 @@ def main() -> None:
         line = {**entry, 'source_url': DATASET, 'licence_url': LICENCE, 'collected_at': snapshot['published_at']}
         # A downloadable CSV may be opened as a spreadsheet. Treat source-controlled
         # names and addresses as text, not user-executable spreadsheet formulae.
-        for field in ('id', 'name', 'address', 'type', 'ward', 'neighbourhood'):
+        for field in ('id', 'name', 'address', 'type', 'inspection_detail', 'ward', 'neighbourhood'):
             value = line.get(field)
             if isinstance(value, str) and value.lstrip().startswith(('=', '+', '-', '@', '\t', '\r')):
                 line[field] = "'" + value
@@ -367,8 +478,11 @@ def main() -> None:
                      'dry_run': args.dry_run, 'source': source_url}, indent=2))
     if args.dry_run:
         return
+    archive_writes = prepare_activity_archives(args.output, snapshot['activity'])
     atomic_write(args.output / 'scarborough-neighbourhoods.geojson', json.dumps(local_neigh, separators=(',', ':'), ensure_ascii=False).encode())
     atomic_write(args.output / 'establishments.csv', export.getvalue().encode('utf-8-sig'))
+    for archive_path, archive_data in archive_writes:
+        atomic_write(archive_path, archive_data)
     atomic_write(previous_path, json.dumps(snapshot, separators=(',', ':'), ensure_ascii=False).encode())
 
 

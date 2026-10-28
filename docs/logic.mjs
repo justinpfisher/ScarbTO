@@ -39,6 +39,22 @@ export function isStale(iso, now = new Date()) {
   return !Number.isFinite(parsed) || now.valueOf() - parsed > 48 * 60 * 60 * 1000;
 }
 
+/** Remove exact missing-component placeholders from legacy and new City addresses. */
+export function displayAddress(value) {
+  return (typeof value === 'string' ? value : '')
+    .split(/\s+/).filter(part => part && part !== 'None').join(' ');
+}
+
+/** The CKAN catalogue timestamp may not specify a time zone; never infer one. */
+export function cityCatalogueRefreshText(value) {
+  if (typeof value !== 'string') return 'City catalogue refresh time not supplied';
+  const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$/);
+  if (!match) return 'City catalogue refresh time not supplied';
+  const [, date, clock, zone] = match;
+  const suffix = zone ? (zone === 'Z' ? ' UTC' : ' ' + zone) : (clock ? ' (time zone not specified)' : ' (date only)');
+  return 'City catalogue timestamp ' + date + (clock ? ' ' + clock : '') + suffix;
+}
+
 export function fitBoundsFromFeatures(features) {
   const coords = [];
   for (const f of features) {
