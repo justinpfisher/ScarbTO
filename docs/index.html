@@ -56,8 +56,8 @@
       </aside>
       <main class="map-results">
         <div class="map-panel">
-          <div id="map" role="region" aria-label="Interactive map of DineSafe establishments and beach sample locations"></div><p id="selected-calls-map-note" class="map-mode-note" hidden>Selected calls are division totals in the list; no individual call locations are mapped.</p><p id="map-fallback" class="map-fallback" role="status" aria-live="polite" hidden>Map unavailable. Use the searchable results list below; feeds, filters and record links remain available.</p>
-          <div class="map-legend" id="map-legend" aria-hidden="true"><span><i class="dot pass"></i>Pass</span><span><i class="dot conditional"></i>Conditional</span><span><i class="dot closed"></i>Closed</span><span><i class="dot beach"></i>Beach sample</span></div>
+          <div id="map" role="region" aria-label="Interactive map of Scarborough, with DineSafe places and an official council boundary"></div><p id="selected-calls-map-note" class="map-mode-note" hidden>Selected calls are division totals in the list; no individual call locations are mapped.</p><p id="map-fallback" class="map-fallback" role="status" aria-live="polite" hidden>Map unavailable. Use the searchable results list below; feeds, filters and record links remain available.</p>
+          <div class="map-legend" id="map-legend" role="group" aria-label="Map legend"><span><i class="dot pass" aria-hidden="true"></i>Pass</span><span><i class="dot conditional" aria-hidden="true"></i>Conditional</span><span><i class="dot closed" aria-hidden="true"></i>Closed</span><span><i class="dot beach" aria-hidden="true"></i>Beach sample</span><span><i class="dot boundary" aria-hidden="true"></i>Community Council boundary</span><span><i class="dot outside" aria-hidden="true"></i>Outside area</span></div>
           <button class="map-fit" id="fit" type="button" title="Show all Scarborough">Show all Scarborough</button>
         </div>
         <section class="results" id="results" aria-labelledby="results-title">
@@ -70,7 +70,7 @@
     <footer id="about">
       <div><strong>Built for Scarborough.</strong> Not a City of Toronto service. DineSafe outcomes are the last outcomes recorded in the source data, not real-time guarantees.</div>
       <div>Source: <a href="https://open.toronto.ca/dataset/dinesafe/" rel="noopener noreferrer" target="_blank">City of Toronto DineSafe Open Data</a> · <a href="https://open.toronto.ca/open-data-licence/" rel="noopener noreferrer" target="_blank">Open Government Licence - Toronto</a> · <a id="download" href="data/establishments.csv" download>Download Scarb.TO CSV</a> · <a href="https://github.com/justinpfisher/ScarbTO/actions" target="_blank" rel="noopener noreferrer">Update history</a></div>
-      <div>Maps by OpenFreeMap and OpenStreetMap contributors, attributed on the map. New activity is identified from daily snapshots; inspection dates can be older than when records are published.</div>
+      <div>Scarborough Community Council boundary: <a href="https://open.toronto.ca/dataset/community-council-boundaries/" target="_blank" rel="noopener noreferrer">City of Toronto Open Data</a>, licensed under the <a href="https://open.toronto.ca/open-data-licence/" target="_blank" rel="noopener noreferrer">Open Government Licence - Toronto</a>. The boundary is a visual reference; it does not filter records. Maps by OpenFreeMap and OpenStreetMap contributors, attributed on the map. New activity is identified from daily snapshots; inspection dates can be older than when records are published.</div>
     </footer>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js" defer></script>

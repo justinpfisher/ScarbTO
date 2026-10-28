@@ -9,6 +9,11 @@
 
 .mobile-filter-toggle{display:none}
 .dot.beach{background:#506c80}
+.dot.boundary{background:#2d6657;border:1px solid #fff;outline:1px solid #2d6657}
+.dot.outside{background:#edf0eb;border:1px solid #ccd5cd}
+.map-legend{max-width:min(430px,calc(100% - 16px));flex-wrap:wrap;row-gap:7px}
+.map-legend span{white-space:nowrap}
+.maplibregl-canvas{outline:none}
 .filter-note{margin:0 0 14px;color:#5d7168;font-size:11px;line-height:1.45}
 .beach-sample-preview{padding:14px 20px 22px;display:flex;flex-direction:column;gap:12px;color:#334f46}
 .beach-sample-preview h3{font-size:16px;line-height:1.3}

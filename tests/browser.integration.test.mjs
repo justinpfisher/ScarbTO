@@ -34,6 +34,7 @@ const snapshot = {
   establishments: [
     {id: 'fixture-a', establishment_id: 'fixture-a', name: 'Fixture Cafe', address: '10 Test Road', status: 'Pass', inspection_date: '2026-10-26', longitude: -79.255, latitude: 43.775, neighbourhood: 'Agincourt'},
     {id: 'fixture-b', establishment_id: 'fixture-b', name: 'Fixture Bakery', address: '20 Sample Avenue', status: 'Conditional Pass', inspection_date: '2026-10-25', longitude: -79.29, latitude: 43.73, neighbourhood: 'Woburn'},
+  {id: 'boundary-edge-fixture', establishment_id: 'boundary-edge-fixture', name: 'Boundary Edge Fixture', address: '30 Boundary Road', status: 'Pass', inspection_date: '2026-10-24', longitude: -79.344, latitude: 43.671, neighbourhood: 'Test area'},
   ],
   activity: [],
 };
@@ -187,10 +188,32 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await installLocalRoutes(page, origin);
   await page.goto(origin, {waitUntil: 'networkidle'});
   await waitForMap(page);
+  await page.waitForFunction(() => window.__scarbMap.getSource('scarborough-mask') && window.__scarbMap.getSource('scarborough-boundary'));
+  const boundaryState=await page.evaluate(()=>{
+    const map=window.__scarbMap;
+    const layers=map.getStyle().layers.map(layer=>layer.id);
+    const bounds=map.getBounds();
+    return {
+      layerOrder:['scarborough-outside-mask','scarborough-boundary-line','clusters','single'].map(id=>layers.indexOf(id)),
+      camera:[[bounds.getWest(),bounds.getSouth()],[bounds.getEast(),bounds.getNorth()]],
+      hasBoundarySource:Boolean(map.getSource('scarborough-boundary')),
+      hasMaskSource:Boolean(map.getSource('scarborough-mask')),
+      hasBoundaryLayer:Boolean(map.getLayer('scarborough-boundary-line')),
+      hasMaskLayer:Boolean(map.getLayer('scarborough-outside-mask')),
+    };
+  });
+  assert.ok(boundaryState.layerOrder.every(index=>index>=0));
+  assert.ok(boundaryState.layerOrder[0]<boundaryState.layerOrder[1]&&boundaryState.layerOrder[1]<boundaryState.layerOrder[2]&&boundaryState.layerOrder[2]<boundaryState.layerOrder[3],'outside mask and boundary draw below establishment pins');
+  assert.equal(boundaryState.hasBoundarySource,true,'display uses the independent official council feature');
+  assert.equal(boundaryState.hasMaskSource,true);
+  assert.equal(boundaryState.hasBoundaryLayer,true);
+  assert.equal(boundaryState.hasMaskLayer,true);
+  assert.ok(boundaryState.camera[0][0]<=-79.3413178929128&&boundaryState.camera[0][1]<=43.6716713902779&&boundaryState.camera[1][0]>=-79.115243188678&&boundaryState.camera[1][1]>=43.8554571861712,'initial camera fits the complete official display boundary');
   if (mobile) await page.getByRole('button', {name: 'Filters'}).click();
   await page.getByRole('button', {name: 'All establishments'}).click();
   await page.getByRole('button', {name: 'Fixture Cafe'}).waitFor();
-  assert.equal(await page.getByRole('button', {name: 'Fixture Bakery'}).count(), 1, `${name}: both synthetic records are listed`);
+  assert.equal(await page.getByRole('button', {name: 'Fixture Bakery'}).count(), 1, `${name}: synthetic records are listed`);
+  assert.equal(await page.getByRole('button', {name: 'Boundary Edge Fixture'}).count(), 1, `${name}: the display boundary does not filter the list`);
 
   const initialCenter = await page.evaluate(() => window.__scarbMap.getCenter().toArray());
   await page.getByRole('button', {name: 'Fixture Bakery'}).click();
@@ -246,7 +269,18 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   if (!mobile) {
     await page.setViewportSize({width: 1024, height: 768});
     await page.waitForFunction(() => Math.abs(document.querySelector('#map canvas').getBoundingClientRect().width - document.querySelector('#map').clientWidth) < 2);
+    await page.getByRole('button', {name: 'Show all Scarborough'}).click();
+    await page.waitForFunction(() => {
+      const bounds=window.__scarbMap.getBounds();
+      return bounds.getWest()<=-79.3413178929128&&bounds.getSouth()<=43.6716713902779&&bounds.getEast()>=-79.115243188678&&bounds.getNorth()>=43.8554571861712;
+    });
     await page.setViewportSize({width, height});
+    await page.waitForFunction(() => Math.abs(document.querySelector('#map canvas').getBoundingClientRect().width - document.querySelector('#map').clientWidth) < 2);
+    await page.getByRole('button', {name: 'Show all Scarborough'}).click();
+    await page.waitForFunction(() => {
+      const bounds=window.__scarbMap.getBounds();
+      return bounds.getWest()<=-79.3413178929128&&bounds.getSouth()<=43.6716713902779&&bounds.getEast()>=-79.115243188678&&bounds.getNorth()>=43.8554571861712;
+    });
   }
 
   const dimensions = await page.evaluate(() => ({
@@ -418,7 +452,7 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
 
   const feeds = await openWithoutMap();
   t.after(() => feeds.context.close());
-  assert.equal(await feeds.page.locator('.record-item').count(), 2, 'DineSafe records render without map bounds');
+  assert.equal(await feeds.page.locator('.record-item').count(), 3, 'DineSafe records render without map bounds');
 
   const cafe = feeds.page.getByRole('button', {name: 'Fixture Cafe'});
   await cafe.focus();
@@ -437,7 +471,7 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
   assert.equal(await feeds.page.locator('.beach-sample-preview-list li').count(), 10);
   assert.equal(await feeds.page.locator('.beach-sample-preview a').count(), 3, 'beach provenance links render without map');
   await feeds.page.getByRole('button', {name: 'All establishments'}).click();
-  assert.equal(await feeds.page.locator('.record-item').count(), 2, 'mode switching restores the DineSafe list');
+  assert.equal(await feeds.page.locator('.record-item').count(), 3, 'mode switching restores the DineSafe list');
   assert.deepEqual(feeds.pageErrors, [], 'map fallback and feed interactions produce no uncaught errors');
 
   const manyRecords = {

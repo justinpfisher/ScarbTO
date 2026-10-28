@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import copy
+from pathlib import Path
 import unittest
 from datetime import datetime, time, timezone
 
 import csi_adapter as csi
 import csi_projection as projection
 from test_csi_adapter import fixture_rows, pages_from, version
+from csi_registry import EXPECTED_SELECTED
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class CsiProjectionTests(unittest.TestCase):
@@ -96,7 +100,7 @@ class CsiProjectionTests(unittest.TestCase):
         self.assertEqual({cell["neighbourhood_code"] for cell in output["cells"]}, set(self.registry))
         self.assertEqual({cell["neighbourhood"] for cell in output["cells"]}, set(self.registry.values()))
         self.assertIn("Contains information licensed under the Open Government Licence", output["attribution"])
-        self.assertEqual(output["publication_status"], "disabled_pending_verified_neighbourhood_registry_and_privacy_review")
+        self.assertEqual(output["publication_status"], "disabled_pending_qualified_source_refresh_and_public_release_review")
         self.assertEqual({cell["report_quarter"] for cell in output["cells"]}, {"2025-Q4"})
 
     def test_arcgis_statistics_headers_are_validated_without_allowing_geometry_or_ids(self):
@@ -245,6 +249,30 @@ class CsiProjectionTests(unittest.TestCase):
             self.build([], {"1": "Synthetic"}, total=0)
         with self.assertRaisesRegex(csi.ContractError, "unique"):
             self.build([], {"109": "Same", "159": "same"}, total=0)
+
+    def test_verified_registry_projection_emits_only_qualified_scarborough_overlay(self):
+        contract = ROOT / "fixtures" / "official-source-contract" / "scarbto-neighbourhood158-source-contract-2026-10-27.json"
+        selected = EXPECTED_SELECTED[0]
+        outside = "001"
+        response = self.grouped_response([
+            self.group(selected, "Assault", 6),
+            self.group(outside, "Assault", 7),
+            self.group("NSA", "Assault", 1),
+        ], total=14)
+        output = projection.build_scarborough_projection_candidate(response, contract_path=str(contract))
+        self.assertEqual(len(output["cells"]), 30 * len(csi.KNOWN_CSI_CATEGORIES))
+        codes = {cell["neighbourhood_code"] for cell in output["cells"]}
+        self.assertEqual(codes, set(EXPECTED_SELECTED))
+        self.assertNotIn(outside, codes)
+        self.assertEqual(output["neighbourhood_registry_status"], "verified_city_registry_2022-04-12_sha256_0f16bf16cde47f382f21003050a978251f71c258581746d64c9a8c9f5ae8564e")
+        self.assertTrue(output["publication_status"].startswith("disabled_"))
+        self.assertTrue(any("majority-area overlay" in item for item in output["limitations"]))
+
+    def test_verified_registry_projection_still_rejects_unknown_toronto_groups(self):
+        contract = ROOT / "fixtures" / "official-source-contract" / "scarbto-neighbourhood158-source-contract-2026-10-27.json"
+        response = self.grouped_response([self.group("014", "Assault", 1)], total=1)
+        with self.assertRaisesRegex(csi.ContractError, "unregistered HOOD_158"):
+            projection.build_scarborough_projection_candidate(response, contract_path=str(contract))
 
 
 if __name__ == "__main__":
