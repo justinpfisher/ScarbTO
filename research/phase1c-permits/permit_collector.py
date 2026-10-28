@@ -36,11 +36,13 @@ SOURCE_RESOURCES = {
         "fields": frozenset({
             "_id", "PERMIT_NUM", "REVISION_NUM", "PERMIT_TYPE", "GEO_ID",
             "APPLICATION_DATE", "ISSUED_DATE", "COMPLETED_DATE", "STATUS",
+            "EST_CONST_COST", "DWELLING_UNITS_CREATED", "DWELLING_UNITS_LOST",
             "STREET_NUM", "STREET_NAME", "STREET_TYPE", "STREET_DIRECTION",
         }),
         "required_fields": frozenset({
             "_id", "PERMIT_NUM", "REVISION_NUM", "PERMIT_TYPE", "GEO_ID",
             "APPLICATION_DATE", "ISSUED_DATE", "COMPLETED_DATE", "STATUS",
+            "EST_CONST_COST", "DWELLING_UNITS_CREATED", "DWELLING_UNITS_LOST",
             "STREET_NUM", "STREET_NAME", "STREET_TYPE", "STREET_DIRECTION",
         }),
         "minimum_row_retention": 0.5,
@@ -51,11 +53,13 @@ SOURCE_RESOURCES = {
         "fields": frozenset({
             "_id", "PERMIT_NUM", "REVISION_NUM", "PERMIT_TYPE", "GEO_ID",
             "APPLICATION_DATE", "ISSUED_DATE", "COMPLETED_DATE", "STATUS",
+            "EST_CONST_COST", "DWELLING_UNITS_CREATED", "DWELLING_UNITS_LOST",
             "STREET_NUM", "STREET_NAME", "STREET_TYPE", "STREET_DIRECTION",
         }),
         "required_fields": frozenset({
             "_id", "PERMIT_NUM", "REVISION_NUM", "PERMIT_TYPE", "GEO_ID",
             "APPLICATION_DATE", "ISSUED_DATE", "COMPLETED_DATE", "STATUS",
+            "EST_CONST_COST", "DWELLING_UNITS_CREATED", "DWELLING_UNITS_LOST",
             "STREET_NUM", "STREET_NAME", "STREET_TYPE", "STREET_DIRECTION",
         }),
         "minimum_row_retention": 0.5,
@@ -67,11 +71,12 @@ SOURCE_RESOURCES = {
             "_id", "APPLICATION_TYPE", "APPLICATION#", "FOLDERRSN",
             "DATE_SUBMITTED", "STATUS", "STREET_NUM", "STREET_NAME",
             "STREET_TYPE", "STREET_DIRECTION", "APPLICATION_URL", "WARD_NUMBER",
+            "X", "Y",
         }),
         "required_fields": frozenset({
             "_id", "APPLICATION_TYPE", "APPLICATION#", "FOLDERRSN", "DATE_SUBMITTED",
             "STATUS", "STREET_NUM", "STREET_NAME", "STREET_TYPE",
-            "STREET_DIRECTION", "WARD_NUMBER",
+            "STREET_DIRECTION", "WARD_NUMBER", "X", "Y",
         }),
         "minimum_row_retention": 0.5,
     },
@@ -405,3 +410,4 @@ def collect_snapshot(
         except OSError:
             pass
         raise
+
