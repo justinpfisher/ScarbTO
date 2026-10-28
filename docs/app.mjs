@@ -1,4 +1,4 @@
-import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from './logic.mjs';
+import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, displayAddress, cityCatalogueRefreshText, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from './logic.mjs';
 import {beginListRedraw, finishListRedraw, revealSelectedRecord} from './list-focus.mjs';
 import {beachPreviewFeature, renderBeachSamplePreview, validateBeachSamplePreview} from './beach-history.mjs';
 import {SelectedCallsClient, selectedCallsPolicy} from './selected-calls.mjs';
@@ -222,7 +222,7 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
     button.type='button';button.dataset.id=entry.id;button.setAttribute('aria-expanded',String(entry.id===selectedId));
     const head=els('div','record-top');head.append(els('span','record-title',entry.name));
     head.append(els('span','status-label '+outcomeClass(entry.status),entry.status));
-    button.append(head,els('div','record-address',entry.address||'Address unavailable'));
+    button.append(head,els('div','record-address',displayAddress(entry.address)||'Address unavailable'));
     const meta=els('div','record-meta');
     meta.append(els('span','',localDate(entry.inspection_date)));
     if(entry.neighbourhood)meta.append(els('span','',entry.neighbourhood));
@@ -238,7 +238,12 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
       button.setAttribute('aria-controls',detailId);
       const detail=els('div','record-details');
       detail.id=detailId;
-      detail.append(els('p','record-detail-note',entry.type&&entry.type!=='None'?`Recorded inspection detail: ${entry.type}`:'No additional detail in this source row.'));
+      const inspectionDetail = typeof entry.inspection_detail === 'string'
+        ? entry.inspection_detail : (entry.type === 'None' ? '' : entry.type || '');
+      const detailNote = inspectionDetail
+        ? `Recorded inspection detail: ${inspectionDetail}`
+        : (entry.type && entry.type !== 'None' ? `Establishment category: ${entry.type}` : 'No additional detail in this source row.');
+      detail.append(els('p','record-detail-note',detailNote));
       const source=els('a','record-source-link','Open the City DineSafe record');
       source.dataset.id=entry.id;source.href=cityDineSafeRecordUrl(entry.id);source.target='_blank';source.rel='noopener noreferrer';
       detail.append(source);card.append(detail);
@@ -413,8 +418,11 @@ async function loadDineSafeSnapshot() {
     try{const r=await fetch('data/scarborough-neighbourhoods.geojson',{cache:'force-cache'});if(r.ok)shapes=await r.json();}catch{}
     populateNeighbourhoods();
     const stale=isStale(candidate.published_at);
-    setDineSafeStatus(stale?`Data may be stale: last validated ${publishedAt(candidate.published_at)} · check update history`:
-      `City data checked ${publishedAt(candidate.published_at)} · not live`,stale?'warning':'');
+    const cityReported=cityCatalogueRefreshText(candidate.source?.last_refreshed);
+    setDineSafeStatus(stale
+      ? `Scarb.TO check may be stale (last published ${publishedAt(candidate.published_at)}) · ${cityReported} · check update history`
+      : `Scarb.TO checked ${publishedAt(candidate.published_at)} · ${cityReported} · not live`,
+      stale?'warning':'');
     performFilters();
   }catch(error){
     snapshot=null;dineSafeLoadState='error';dineSafeLoadError=error.message;
