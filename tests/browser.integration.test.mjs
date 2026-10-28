@@ -234,7 +234,21 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   const beachCenter = await page.evaluate(() => window.__scarbMap.getCenter().toArray());
   assert.ok(Math.abs(beachCenter[0] - selectedCenter[0]) > 0.01, `${name}: beach mode moves the real map camera`);
   assert.equal(await page.locator('.beach-sample-preview-list li').count(), 10);
-  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /not current swimming advice/i);
+  assert.equal(await page.locator('.beach-sample-day').count(), 2, `${name}: dated history groups sample rows by collection day`);
+  assert.deepEqual(await page.locator('.beach-sample-day h4 time').evaluateAll(nodes => nodes.map(node => node.dateTime)), ['2026-09-16', '2026-09-08']);
+  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /not a complete history or current swimming advice/i);
+  const historyLayout = await page.locator('.beach-sample-preview').evaluate(element => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    rows: [...element.querySelectorAll('.beach-sample-preview-list li')].map(row => ({
+      width: row.getBoundingClientRect().width,
+      scrollWidth: row.scrollWidth,
+    })),
+  }));
+  assert.ok(historyLayout.clientWidth > 0 && historyLayout.scrollWidth <= historyLayout.clientWidth, `${name}: dated history has no horizontal overflow`);
+  assert.equal(historyLayout.rows.length, 10, `${name}: all preview measurements remain in the responsive list`);
+  assert.ok(historyLayout.rows.every(row => row.width > 0 && row.scrollWidth <= historyLayout.clientWidth), `${name}: each sample row fits the history panel`);
+  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /not a complete history or current swimming advice/i);
   assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /reference point, not sample-site coordinates/i);
   assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /Open Government Licence.*Toronto/i);
   assert.match(await page.locator('#data-status').textContent(), /Toronto sample rows checked 2026-10-27; latest sample 2026-09-16\. Not current swimming status\./);

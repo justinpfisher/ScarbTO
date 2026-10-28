@@ -1,6 +1,6 @@
 import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, displayAddress, cityCatalogueRefreshText, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from './logic.mjs';
 import {beginListRedraw, finishListRedraw, revealSelectedRecord} from './list-focus.mjs';
-import {beachPreviewFeature, renderBeachSamplePreview, validateBeachSamplePreview} from './beach-history.mjs';
+import {beachPreviewFeature, renderBeachMeasurementHistory, validateBeachSamplePreview} from './beach-history.mjs';
 import {SelectedCallsClient, selectedCallsPolicy} from './selected-calls.mjs';
 import {cameraBoundsForViewport, COUNCIL_BOUNDARY_BOUNDS, outsideMask, validateCouncilBoundary} from './boundary.mjs';
 
@@ -196,7 +196,7 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
       const source=els('a','record-source-link','Check Toronto Open Data source');source.href='https://open.toronto.ca/dataset/toronto-beaches-water-quality/';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
       finishListRedraw(list,previousFocus);return;
     }
-    list.append(renderBeachSamplePreview(document,beachPreview));
+    list.append(renderBeachMeasurementHistory(document,beachPreview));
     finishListRedraw(list,previousFocus);return;
   }
   if(!snapshot?.ready){const message=dineSafeLoadState==='error'?`Could not load the published dataset (${dineSafeLoadError}). Check the update history link below.`:dineSafeLoadState==='loading'?'Loading the validated City data snapshot.':'No validated DineSafe snapshot has been published. The map will populate after the first successful import.';list.append(els('p','empty',message));$('results-count').textContent=dineSafeLoadState==='error'?'Unavailable':'0 in view';finishListRedraw(list,previousFocus);return;}

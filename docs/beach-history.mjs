@@ -50,33 +50,48 @@ export function beachPreviewFeature(input) {
   };
 }
 
-export function renderBeachSamplePreview(document, input) {
+export function renderBeachMeasurementHistory(document, input) {
   const preview = validateBeachSamplePreview(input);
   const section = document.createElement("section");
   section.className = "beach-sample-preview";
   const title = document.createElement("h3");
-  title.textContent = preview.beach_name;
+  title.textContent = `${preview.beach_name} sample history`;
   const note = document.createElement("p");
-  note.textContent = `Latest ${preview.rows_included} catalogue rows shown, selected from ${preview.total_rows_in_source_filter.toLocaleString("en-CA")} rows for this beach. Samples are dated measurements, not current swimming advice. The map pin marks the beach reference point, not sample-site coordinates. Contains information licensed under the Open Government Licence - Toronto.`;
-  const records = document.createElement("ol");
-  records.className = "beach-sample-preview-list";
+  note.textContent = `Latest ${preview.rows_included} catalogue rows shown, selected from ${preview.total_rows_in_source_filter.toLocaleString("en-CA")} rows for this beach. This is a limited sample preview, not a complete history or current swimming advice. Measurements are grouped by their sample collection date; the map pin marks the beach reference point, not sample-site coordinates. Contains information licensed under the Open Government Licence - Toronto.`;
+  const byDate = new Map();
   for (const record of preview.records) {
-    const item = document.createElement("li");
+    if (!byDate.has(record.collectionDate)) byDate.set(record.collectionDate, []);
+    byDate.get(record.collectionDate).push(record);
+  }
+  const days = document.createElement("div");
+  days.className = "beach-sample-days";
+  for (const [collectionDate, dayRecords] of [...byDate.entries()].sort(([left], [right]) => right.localeCompare(left))) {
+    const day = document.createElement("section");
+    day.className = "beach-sample-day";
+    const heading = document.createElement("h4");
     const date = document.createElement("time");
-    date.dateTime = record.collectionDate;
-    date.textContent = record.collectionDate;
-    const site = document.createElement("span");
-    site.textContent = `Site ${record.siteName}`;
-    const measurement = document.createElement("span");
-    measurement.textContent = record.eColi === null
-      ? "No numeric E. coli measurement recorded"
-      : `E. coli measurement: ${record.eColi}`;
-    item.append(date, site, measurement);
-    records.append(item);
+    date.dateTime = collectionDate;
+    date.textContent = collectionDate;
+    heading.append(date);
+    const records = document.createElement("ol");
+    records.className = "beach-sample-preview-list";
+    for (const record of [...dayRecords].sort((left, right) => left.siteName.localeCompare(right.siteName))) {
+      const item = document.createElement("li");
+      const site = document.createElement("span");
+      site.textContent = `Site ${record.siteName}`;
+      const measurement = document.createElement("span");
+      measurement.textContent = record.eColi === null
+        ? "No numeric E. coli measurement recorded"
+        : `E. coli measurement: ${record.eColi}`;
+      item.append(site, measurement);
+      records.append(item);
+    }
+    day.append(heading, records);
+    days.append(day);
   }
   const captured = document.createElement("p");
   captured.className = "beach-sample-preview-meta";
-  captured.textContent = `Source rows checked ${preview.retrieved_on}. Latest sample date: ${preview.records.reduce((latest, row) => row.collectionDate > latest ? row.collectionDate : latest, "0000-00-00")}.`;
+  captured.textContent = `Catalogue preview retrieved ${preview.retrieved_on}. Latest sample date: ${preview.records.reduce((latest, row) => row.collectionDate > latest ? row.collectionDate : latest, "0000-00-00")}.`;
   const source = document.createElement("a");
   source.href = CATALOGUE_URL;
   source.target = "_blank";
@@ -92,6 +107,9 @@ export function renderBeachSamplePreview(document, input) {
   currentInfo.target = "_blank";
   currentInfo.rel = "noopener noreferrer";
   currentInfo.textContent = "Official current beach information";
-  section.append(title, note, records, captured, source, licence, currentInfo);
+  section.append(title, note, days, captured, source, licence, currentInfo);
   return section;
 }
+
+// Keep the existing app call site compatible while exposing the dated-history view explicitly.
+export const renderBeachSamplePreview = renderBeachMeasurementHistory;
