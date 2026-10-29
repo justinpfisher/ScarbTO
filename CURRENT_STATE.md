@@ -4,10 +4,10 @@
 
 ## Live product and latest refresh
 
-- Repository: [justinpfisher/ScarbTO](https://github.com/justinpfisher/ScarbTO), public, `main`. Latest main commit is data refresh `63caaa8e5a709b88203c58ff14ce1457a16d46f6`, following the DineSafe quality/freshness implementation merged in [PR #20](https://github.com/justinpfisher/ScarbTO/pull/20) at `ce0561e9f0282ee6d74ca0693a94f72ed08f5db4).
+- Repository: [justinpfisher/ScarbTO](https://github.com/justinpfisher/ScarbTO), public, `main`. Latest main commit is data refresh `63caaa8e5a709b88203c58ff14ce1457a16d46f6`, following the DineSafe quality/freshness implementation merged in [PR #20](https://github.com/justinpfisher/ScarbTO/pull/20) at `ce0561e9f0282ee6d74ca0693a94f72ed08f5db4`).
 - Latest observed publisher run [40698504507](https://github.com/justinpfisher/ScarbTO/actions/runs/40698504507) succeeded: tests, validated DineSafe refresh, snapshot verification, and Pages deployment. At that run the importer validated 124,150 source rows, geocoded 124,150, retained 18,959 Scarborough rows, and reported 3,301 establishments, zero unassigned neighbourhoods, and 44 observed change events.
 - The published snapshot records Scarb.TO publication at **2026-10-28 13:41:14 UTC** and City source refresh at **2026-10-28 08:18:45.891883** (the source timestamp has no timezone in its value). These are different events; a successful check is not itself a new City inspection.
-- `CURRENT_STATE.md` is being corrected on branch `docs/current-state-post-pr20-20261028` because its previous text still described PR #20's DineSafe fixes as unmerged and listed the repaired placeholders, labeling and freshness behavior as open defects. It is not yet a pull request.
+- This current-state correction is tracked in [PR #21](https://github.com/justinpfisher/ScarbTO/pull/21); it removes the already-fixed DineSafe defects from the status list and records the latest permit-source qualification evidence below.
 - The live site `https://scarb.to/` and normal HTTPS were verified after the reviewed DineSafe UI work. The live October history archive contains the validated observed changes. Physical-device usability remains unverified.
 
 ## Integrated feeds and research boundaries
@@ -15,7 +15,7 @@
 - DineSafe is the production data feed. PR #20 normalized missing address placeholders, labels inspection-detail text correctly, separates source freshness from collection/publication times, and adds monthly observed-change history.
 - The selected-police-calls interface is grouped and on demand for Toronto Divisions 41–43. It is not individual calls, confirmed crimes, or a neighbourhood incident map. Do not display stale source counts as current.
 - Beach information is a dated historical sample preview, not present swimming advice. Toronto results currently have a seasonal limitation; an old sample cannot be presented as today's safety status. [PR #4](https://github.com/justinpfisher/ScarbTO/pull/4) remains an open draft for a synthetic status adapter and is not a live status feed.
-- Permit/development code is research-only. Full cleared-record traversal stopped on transient read failures and full OAR spatial validation is incomplete. Public permit export remains disabled. Do not infer construction completion from permit/application status or publish unqualified locations.
+- Permit/development code is research-only. The cleared-record traversal downloaded 106,000 of 446,979 rows from generation `2026-10-28T11:19:44.437505`; the final 6,000 downloaded rows lack post-batch generation verification, so the traversal is not certified complete. OAR spatial acquisition returned zero rows because the source request received a tunnel-level HTTP 403. Public permit export remains disabled. Do not infer construction completion from permit/application status or publish unqualified locations.
 - Historical police neighbourhood export also remains disabled; aggregate projection and source-contract safeguards do not by themselves qualify a public feed.
 
 ## Runner policy — unresolved
