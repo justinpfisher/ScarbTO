@@ -219,7 +219,90 @@ class ResumablePermitCollectorTests(unittest.TestCase):
             self.assertFalse(partial_path.exists())
             self.assertEqual(old_prefix.count(b"\n"), 2)
 
-    def test_resume_rejects_changed_generation_before_fetching(self):
+    def test_stale_generation_quarantines_and_restarts_without_losing_last_good_on_failure(self):
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            prior_rows = [source_row(i, STATUS="Prior") for i in range(1, 3)]
+            prior = collector.collect_snapshot(
+                "active_permits", root, metadata=lambda: (2, "prior"),
+                fetch_page=lambda offset, limit: response(2, prior_rows[offset:offset + limit]),
+                page_size=2,
+            )
+            manifest_path = Path(root) / "active_permits-manifest.json"
+            last_good_manifest = manifest_path.read_bytes()
+            last_good_snapshot = Path(root) / prior["snapshot_file"]
+
+            generation_a = [source_row(i, STATUS="Generation A") for i in range(1, 5)]
+
+            def interrupted_a(offset, limit):
+                if offset == 0:
+                    return response(4, generation_a[:2])
+                raise TimeoutError("stop after checkpoint")
+
+            with self.assertRaisesRegex(TimeoutError, "stop after checkpoint"):
+                collect(
+                    "active_permits", root, metadata=lambda: (4, "generation-a"),
+                    fetch_page=interrupted_a, page_size=2, overlap_rows=1,
+                )
+
+            checkpoint_path = Path(root) / "active_permits-resume.json"
+            partial_path = Path(root) / "active_permits-resume.jsonl"
+            checkpoint_a = checkpoint_path.read_bytes()
+            partial_a = partial_path.read_bytes()
+            generation_b = [source_row(i, STATUS="Generation B") for i in range(1, 5)]
+            failed_b_calls = []
+
+            def fail_b(offset, limit):
+                failed_b_calls.append((offset, limit))
+                if offset == 0:
+                    return response(4, generation_b[:2])
+                raise TimeoutError("generation B interrupted")
+
+            with self.assertRaisesRegex(TimeoutError, "generation B interrupted"):
+                collect(
+                    "active_permits", root, metadata=lambda: (4, "generation-b"),
+                    fetch_page=fail_b, page_size=2, overlap_rows=1,
+                )
+
+            self.assertEqual(failed_b_calls, [(0, 2), (2, 2)])
+            self.assertEqual(manifest_path.read_bytes(), last_good_manifest)
+            self.assertTrue(last_good_snapshot.is_file())
+            checkpoint_b = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+            self.assertEqual(checkpoint_b["generation"], "generation-b")
+            self.assertEqual(checkpoint_b["next_offset"], 2)
+            self.assertEqual(
+                [json.loads(line) for line in partial_path.read_text(encoding="utf-8").splitlines()],
+                generation_b[:2],
+            )
+            quarantine_files = list((Path(root) / "active_permits-stale").iterdir())
+            self.assertEqual(len(quarantine_files), 2)
+            checkpoint_backup = next(path for path in quarantine_files if path.name.endswith(".json"))
+            prefix_backup = next(path for path in quarantine_files if path.name.endswith(".jsonl"))
+            self.assertEqual(checkpoint_backup.read_bytes(), checkpoint_a)
+            self.assertEqual(prefix_backup.read_bytes(), partial_a)
+
+            resumed_calls = []
+
+            def resume_b(offset, limit):
+                resumed_calls.append((offset, limit))
+                if offset == 1 and limit == 1:
+                    return response(4, [generation_b[1]])
+                if offset == 2 and limit == 2:
+                    return response(4, generation_b[2:])
+                raise AssertionError((offset, limit))
+
+            manifest = collect(
+                "active_permits", root, metadata=lambda: (4, "generation-b"),
+                fetch_page=resume_b, page_size=2, overlap_rows=1,
+            )
+            self.assertEqual(resumed_calls, [(1, 1), (2, 2)])
+            self.assertEqual(manifest["row_count"], 4)
+            self.assertEqual(manifest["generation"], "generation-b")
+            self.assertNotEqual(manifest_path.read_bytes(), last_good_manifest)
+            self.assertTrue(last_good_snapshot.is_file())
+            rows = [json.loads(line) for line in (Path(root) / manifest["snapshot_file"]).read_text(encoding="utf-8").splitlines()]
+            self.assertEqual(rows, generation_b)
+
+    def test_stale_checkpoint_with_corrupt_prefix_fails_closed_without_quarantine(self):
         rows = [source_row(i) for i in range(1, 3)]
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
             def interrupted(offset, limit):
@@ -229,17 +312,73 @@ class ResumablePermitCollectorTests(unittest.TestCase):
 
             with self.assertRaisesRegex(TimeoutError, "stop after checkpoint"):
                 collect(
-                    "active_permits", root, metadata=lambda: (3, "g1"),
+                    "active_permits", root, metadata=lambda: (3, "generation-a"),
                     fetch_page=interrupted, page_size=2, overlap_rows=1,
                 )
+            partial_path = Path(root) / "active_permits-resume.jsonl"
+            damaged = bytearray(partial_path.read_bytes())
+            damaged[0] ^= 1
+            partial_path.write_bytes(damaged)
+            checkpoint_before = (Path(root) / "active_permits-resume.json").read_bytes()
             calls = []
-            with self.assertRaisesRegex(collector.CollectionError, "generation, count"):
+            with self.assertRaisesRegex(collector.CollectionError, "hash"):
                 collect(
-                    "active_permits", root, metadata=lambda: (3, "g2"),
+                    "active_permits", root, metadata=lambda: (3, "generation-b"),
                     fetch_page=lambda offset, limit: calls.append((offset, limit)),
                     page_size=2, overlap_rows=1,
                 )
             self.assertEqual(calls, [])
+            self.assertEqual((Path(root) / "active_permits-resume.json").read_bytes(), checkpoint_before)
+            quarantine_dir = Path(root) / "active_permits-stale"
+            self.assertEqual(list(quarantine_dir.glob("*")) if quarantine_dir.exists() else [], [])
+
+    def test_zero_row_generation_churn_counts_quarantined_checkpoint_metadata(self):
+        row = source_row(1, STATUS="Generation X")
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            def interrupt_x(offset, limit):
+                if offset == 0:
+                    return response(2, [row])
+                raise TimeoutError("generation X interrupted")
+
+            with self.assertRaisesRegex(TimeoutError, "generation X interrupted"):
+                collect(
+                    "active_permits", root, metadata=lambda: (2, "generation-x"),
+                    fetch_page=interrupt_x, page_size=1, overlap_rows=1,
+                    max_snapshot_bytes=10_000,
+                )
+
+            def interrupt_a(offset, limit):
+                raise TimeoutError("generation A interrupted before its first page")
+
+            with self.assertRaisesRegex(TimeoutError, "generation A interrupted"):
+                collect(
+                    "active_permits", root, metadata=lambda: (2, "generation-a"),
+                    fetch_page=interrupt_a, page_size=1, overlap_rows=1,
+                    max_snapshot_bytes=10_000,
+                )
+
+            quarantine_dir = Path(root) / "active_permits-stale"
+            entries_before_b = list(quarantine_dir.iterdir())
+            self.assertEqual(len(entries_before_b), 2)
+            quarantined_bytes = sum(path.stat().st_size for path in entries_before_b)
+            checkpoint_path = Path(root) / "active_permits-resume.json"
+            partial_path = Path(root) / "active_permits-resume.jsonl"
+            checkpoint_a = checkpoint_path.read_bytes()
+            self.assertEqual(partial_path.stat().st_size, 0)
+
+            b_page_calls = []
+            with self.assertRaisesRegex(collector.CollectionError, "bounded storage limit"):
+                collect(
+                    "active_permits", root, metadata=lambda: (2, "generation-b"),
+                    fetch_page=lambda offset, limit: b_page_calls.append((offset, limit)),
+                    page_size=1, overlap_rows=1,
+                    max_snapshot_bytes=quarantined_bytes + len(checkpoint_a) - 1,
+                )
+
+            self.assertEqual(b_page_calls, [])
+            self.assertEqual(checkpoint_path.read_bytes(), checkpoint_a)
+            self.assertEqual(partial_path.stat().st_size, 0)
+            self.assertEqual(list(quarantine_dir.iterdir()), entries_before_b)
 
     def test_resume_rejects_overlap_change_without_advancing_checkpoint(self):
         rows = [source_row(i) for i in range(1, 4)]
@@ -440,4 +579,5 @@ class ResumablePermitCollectorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 
