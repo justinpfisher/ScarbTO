@@ -332,6 +332,54 @@ class ResumablePermitCollectorTests(unittest.TestCase):
             quarantine_dir = Path(root) / "active_permits-stale"
             self.assertEqual(list(quarantine_dir.glob("*")) if quarantine_dir.exists() else [], [])
 
+    def test_zero_row_generation_churn_counts_quarantined_checkpoint_metadata(self):
+        row = source_row(1, STATUS="Generation X")
+        with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
+            def interrupt_x(offset, limit):
+                if offset == 0:
+                    return response(2, [row])
+                raise TimeoutError("generation X interrupted")
+
+            with self.assertRaisesRegex(TimeoutError, "generation X interrupted"):
+                collect(
+                    "active_permits", root, metadata=lambda: (2, "generation-x"),
+                    fetch_page=interrupt_x, page_size=1, overlap_rows=1,
+                    max_snapshot_bytes=10_000,
+                )
+
+            def interrupt_a(offset, limit):
+                raise TimeoutError("generation A interrupted before its first page")
+
+            with self.assertRaisesRegex(TimeoutError, "generation A interrupted"):
+                collect(
+                    "active_permits", root, metadata=lambda: (2, "generation-a"),
+                    fetch_page=interrupt_a, page_size=1, overlap_rows=1,
+                    max_snapshot_bytes=10_000,
+                )
+
+            quarantine_dir = Path(root) / "active_permits-stale"
+            entries_before_b = list(quarantine_dir.iterdir())
+            self.assertEqual(len(entries_before_b), 2)
+            quarantined_bytes = sum(path.stat().st_size for path in entries_before_b)
+            checkpoint_path = Path(root) / "active_permits-resume.json"
+            partial_path = Path(root) / "active_permits-resume.jsonl"
+            checkpoint_a = checkpoint_path.read_bytes()
+            self.assertEqual(partial_path.stat().st_size, 0)
+
+            b_page_calls = []
+            with self.assertRaisesRegex(collector.CollectionError, "bounded storage limit"):
+                collect(
+                    "active_permits", root, metadata=lambda: (2, "generation-b"),
+                    fetch_page=lambda offset, limit: b_page_calls.append((offset, limit)),
+                    page_size=1, overlap_rows=1,
+                    max_snapshot_bytes=quarantined_bytes + len(checkpoint_a) - 1,
+                )
+
+            self.assertEqual(b_page_calls, [])
+            self.assertEqual(checkpoint_path.read_bytes(), checkpoint_a)
+            self.assertEqual(partial_path.stat().st_size, 0)
+            self.assertEqual(list(quarantine_dir.iterdir()), entries_before_b)
+
     def test_resume_rejects_overlap_change_without_advancing_checkpoint(self):
         rows = [source_row(i) for i in range(1, 4)]
         with tempfile.TemporaryDirectory(dir=Path.cwd()) as root:
