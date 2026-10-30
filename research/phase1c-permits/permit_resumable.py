@@ -11,6 +11,7 @@ from hashlib import sha256
 import json
 import os
 from pathlib import Path
+import shutil
 import tempfile
 from typing import Any
 
@@ -90,6 +91,68 @@ def _validated_previous_manifest(root: Path, source_key: str) -> tuple[dict[str,
     return manifest, count
 
 
+def _quarantine_stale_checkpoint(
+    root: Path,
+    source_key: str,
+    partial_path: Path,
+    checkpoint_bytes: bytes,
+    byte_count: int,
+    prefix_hash: str,
+    *,
+    max_snapshot_bytes: int,
+) -> Path:
+    """Preserve the verified committed prefix before a fresh-generation restart."""
+    if byte_count > max_snapshot_bytes or not partial_path.is_file():
+        raise collector.CollectionError("Stale resume staging is not safe to quarantine")
+    if partial_path.stat().st_size < byte_count or _hash_prefix(partial_path, byte_count) != prefix_hash:
+        raise collector.CollectionError("Stale resume prefix does not match its checkpoint")
+
+    quarantine_root = root / f"{source_key}-stale"
+    quarantine_root.mkdir(parents=True, exist_ok=True)
+    key = sha256(checkpoint_bytes + b"\0" + prefix_hash.encode("ascii")).hexdigest()[:32]
+    saved_checkpoint = quarantine_root / f"{key}.json"
+    saved_prefix = quarantine_root / f"{key}.jsonl"
+
+    if saved_checkpoint.exists():
+        if not saved_checkpoint.is_file() or saved_checkpoint.read_bytes() != checkpoint_bytes:
+            raise collector.CollectionError("Existing stale-resume checkpoint quarantine is corrupt")
+    else:
+        collector._atomic_write_text(saved_checkpoint, checkpoint_bytes.decode("utf-8"))
+
+    if saved_prefix.exists():
+        if (
+            not saved_prefix.is_file()
+            or saved_prefix.stat().st_size != byte_count
+            or collector._file_sha256(saved_prefix) != prefix_hash
+        ):
+            raise collector.CollectionError("Existing stale-resume prefix quarantine is corrupt")
+    else:
+        free_bytes = shutil.disk_usage(root).free
+        if free_bytes < byte_count:
+            raise collector.CollectionError("Insufficient disk space to preserve stale resume staging")
+        _copy_prefix_atomically(partial_path, saved_prefix, byte_count)
+    return quarantine_root
+
+
+def _initial_checkpoint(source_key: str, resource_id: str, generation: str, total: int,
+                        page_size: int, overlap_rows: int) -> dict[str, Any]:
+    return {
+        "schema_version": CHECKPOINT_SCHEMA,
+        "source_key": source_key,
+        "resource_id": resource_id,
+        "generation": generation,
+        "total": total,
+        "page_size": page_size,
+        "overlap_rows": overlap_rows,
+        "next_offset": 0,
+        "row_count": 0,
+        "last_id": None,
+        "byte_count": 0,
+        "sha256": sha256(b"").hexdigest(),
+        "overlap": [],
+    }
+
+
 def collect_resumable_snapshot(
     source_key: str,
     destination: str | Path,
@@ -142,16 +205,16 @@ def collect_resumable_snapshot(
 
     if checkpoint_path.exists():
         checkpoint = _load_checkpoint(checkpoint_path)
-        expected = {
+        stable_expected = {
             "source_key": source_key,
             "resource_id": source["resource_id"],
-            "generation": generation,
-            "total": total,
             "page_size": page_size,
             "overlap_rows": overlap_limit,
         }
-        if any(checkpoint.get(key) != value for key, value in expected.items()):
-            raise collector.CollectionError("Source resource, generation, count, or page size changed since checkpoint")
+        if any(checkpoint.get(key) != value for key, value in stable_expected.items()):
+            raise collector.CollectionError("Source resource or resume parameters changed since checkpoint")
+        checkpoint_total = checkpoint.get("total")
+        checkpoint_generation = checkpoint.get("generation")
         offset = checkpoint.get("next_offset")
         row_count = checkpoint.get("row_count")
         byte_count = checkpoint.get("byte_count")
@@ -159,7 +222,9 @@ def collect_resumable_snapshot(
         last_id = checkpoint.get("last_id")
         overlap = checkpoint.get("overlap")
         if (
-            type(offset) is not int or offset < 0 or offset > total
+            type(checkpoint_total) is not int or not 0 <= checkpoint_total <= max_rows
+            or not isinstance(checkpoint_generation, str) or not checkpoint_generation.strip()
+            or type(offset) is not int or offset < 0 or offset > checkpoint_total
             or offset != row_count
             or type(row_count) is not int
             or type(byte_count) is not int or byte_count < 0
@@ -172,6 +237,24 @@ def collect_resumable_snapshot(
             raise collector.CollectionError("Resume checkpoint fields are malformed")
         if partial_path.stat().st_size < byte_count or _hash_prefix(partial_path, byte_count) != prefix_hash:
             raise collector.CollectionError("Resume partial file hash does not match its checkpoint")
+        if checkpoint_total != total or checkpoint_generation != generation:
+            _quarantine_stale_checkpoint(
+                root, source_key, partial_path, checkpoint_path.read_bytes(), byte_count,
+                prefix_hash, max_snapshot_bytes=max_snapshot_bytes,
+            )
+            checkpoint = _initial_checkpoint(
+                source_key, source["resource_id"], generation, total, page_size, overlap_limit,
+            )
+            # Publish the new-generation checkpoint before truncating the old
+            # partial. A crash in between is recoverable by the normal tail
+            # truncation path below; the verified old prefix is quarantined.
+            collector._atomic_write_text(
+                checkpoint_path, json.dumps(checkpoint, sort_keys=True, separators=(",", ":")) + "\n",
+            )
+            offset = row_count = byte_count = 0
+            prefix_hash = checkpoint["sha256"]
+            last_id = None
+            overlap = []
         if partial_path.stat().st_size > byte_count:
             # Discard only bytes written after the last atomic checkpoint.
             _copy_prefix_atomically(partial_path, partial_path, byte_count)
@@ -318,4 +401,5 @@ def collect_resumable_snapshot(
     checkpoint_path.unlink(missing_ok=True)
     partial_path.unlink(missing_ok=True)
     return manifest
+
 
