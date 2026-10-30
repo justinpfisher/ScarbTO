@@ -22,6 +22,13 @@ These rules apply to automated agents, contributors and development workflows. R
 
 ## Delivery and data integrity
 
+## Autonomy and owner boundaries
+
+- Within the agreed Scarb.TO MVP and its stabilization, independently choose technical approaches, complete necessary in-scope work, troubleshoot, fix and retest, open and update normal pull requests, and carry work through required checks, merge, deployment, live verification, and milestone acceptance against the existing agreed criteria. Do not add routine approval checkpoints.
+- Keep the owner informed at meaningful milestones and with concise status updates. Preserve the product goal, evidence integrity, source/privacy/consent boundaries, existing test and release requirements, and mandatory platform or provider confirmations.
+- Bring material changes to product scope or end goal to the owner. Do not contact other people or agencies on the owner's behalf. Forecast spending constraints before reaching them; keep the existing C$25/month ceiling and C$0 target, and do not add paid services.
+- This autonomy does not authorize credential or access changes, security-setting changes, irreversible deletion, or new product scope. Never run untrusted public pull-request code on a persistent self-hosted runner or bypass Scarb.TO's runner trust and execution constraints.
+
 - Verify current source schema, licensing, geographic boundaries, duplicates, meaningful count changes and safe publication. Fail closed and retain the last good public release on anomalies. Surface staleness and support rollback.
 - Keep upstream source freshness distinct from Scarb.TO's successful check/publication time. A successful unchanged re-download is not new City information.
 - For ordinary authorised work follow **implement → relevant tests → merge → deploy → verify live**. A green CI run is not proof of live operation; report distinctions accurately.
