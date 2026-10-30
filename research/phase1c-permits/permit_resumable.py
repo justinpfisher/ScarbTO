@@ -113,16 +113,16 @@ def _quarantine_stale_checkpoint(
     saved_checkpoint = quarantine_root / f"{key}.json"
     saved_prefix = quarantine_root / f"{key}.jsonl"
 
-    if not saved_prefix.exists():
-        quarantined_bytes = sum(
-            path.stat().st_size
-            for path in quarantine_root.glob("*.jsonl")
-            if path.is_file()
-        )
-        if quarantined_bytes + byte_count > max_snapshot_bytes:
-            raise collector.CollectionError("Stale-resume quarantine exceeded its bounded storage limit")
-        if shutil.disk_usage(root).free < byte_count:
-            raise collector.CollectionError("Insufficient disk space to preserve stale resume staging")
+    existing_entries = list(quarantine_root.iterdir())
+    if any(path.is_symlink() or not path.is_file() for path in existing_entries):
+        raise collector.CollectionError("Stale-resume quarantine contains an unexpected entry")
+    quarantined_bytes = sum(path.stat().st_size for path in existing_entries)
+    additional_bytes = (0 if saved_checkpoint.exists() else len(checkpoint_bytes))
+    additional_bytes += 0 if saved_prefix.exists() else byte_count
+    if quarantined_bytes + additional_bytes > max_snapshot_bytes:
+        raise collector.CollectionError("Stale-resume quarantine exceeded its bounded storage limit")
+    if not saved_prefix.exists() and shutil.disk_usage(root).free < byte_count:
+        raise collector.CollectionError("Insufficient disk space to preserve stale resume staging")
 
     if saved_checkpoint.exists():
         if not saved_checkpoint.is_file() or saved_checkpoint.read_bytes() != checkpoint_bytes:
