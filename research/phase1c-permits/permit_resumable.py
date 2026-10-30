@@ -100,7 +100,7 @@ def _quarantine_stale_checkpoint(
     prefix_hash: str,
     *,
     max_snapshot_bytes: int,
-) -> Path:
+) -> None:
     """Preserve the verified committed prefix before a fresh-generation restart."""
     if byte_count > max_snapshot_bytes or not partial_path.is_file():
         raise collector.CollectionError("Stale resume staging is not safe to quarantine")
@@ -112,6 +112,17 @@ def _quarantine_stale_checkpoint(
     key = sha256(checkpoint_bytes + b"\0" + prefix_hash.encode("ascii")).hexdigest()[:32]
     saved_checkpoint = quarantine_root / f"{key}.json"
     saved_prefix = quarantine_root / f"{key}.jsonl"
+
+    if not saved_prefix.exists():
+        quarantined_bytes = sum(
+            path.stat().st_size
+            for path in quarantine_root.glob("*.jsonl")
+            if path.is_file()
+        )
+        if quarantined_bytes + byte_count > max_snapshot_bytes:
+            raise collector.CollectionError("Stale-resume quarantine exceeded its bounded storage limit")
+        if shutil.disk_usage(root).free < byte_count:
+            raise collector.CollectionError("Insufficient disk space to preserve stale resume staging")
 
     if saved_checkpoint.exists():
         if not saved_checkpoint.is_file() or saved_checkpoint.read_bytes() != checkpoint_bytes:
@@ -127,15 +138,19 @@ def _quarantine_stale_checkpoint(
         ):
             raise collector.CollectionError("Existing stale-resume prefix quarantine is corrupt")
     else:
-        free_bytes = shutil.disk_usage(root).free
-        if free_bytes < byte_count:
-            raise collector.CollectionError("Insufficient disk space to preserve stale resume staging")
         _copy_prefix_atomically(partial_path, saved_prefix, byte_count)
-    return quarantine_root
+    if saved_prefix.stat().st_size != byte_count or collector._file_sha256(saved_prefix) != prefix_hash:
+        raise collector.CollectionError("Stale-resume quarantine verification failed")
 
 
-def _initial_checkpoint(source_key: str, resource_id: str, generation: str, total: int,
-                        page_size: int, overlap_rows: int) -> dict[str, Any]:
+def _initial_checkpoint(
+    source_key: str,
+    resource_id: str,
+    generation: str,
+    total: int,
+    page_size: int,
+    overlap_rows: int,
+) -> dict[str, Any]:
     return {
         "schema_version": CHECKPOINT_SCHEMA,
         "source_key": source_key,
