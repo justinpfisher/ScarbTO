@@ -124,6 +124,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
         addLink(r,'Ward '+code+': '+rep.name+' · City office',rep.url);
       }
       addText(r,'p','area-disclaimer','The listed wards represent meaningful source-measured overlaps, not whole-neighbourhood containment or population shares.');
+      addText(r,'p','area-disclaimer','Scarborough membership is a source-verified majority-area selection of 30 whole City neighbourhoods, not a publisher-assigned district. The DineSafe site retains establishments included by the six municipal wards.');
     }
     const ridings=section(content,'Provincial & federal representatives',
       'Their electoral boundaries differ from City wards and neighbourhoods. An area name alone cannot determine your exact MPP or MP.');
@@ -154,8 +155,10 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     syncOutline();
   }
   function display() {
-    if (!map?.loaded?.()) return;
+    if (!map) return;
     const active=LIVE_MODES.has(getState().mode) && overlay!=='off' && cache.has(overlay);
+    // A source.setData() operation makes map.loaded() temporarily false.
+    // Always hide an existing overlay immediately, even during that interval.
     if (!active) {
       if (map.getLayer?.('area-region-fill')) {
         map.setLayoutProperty('area-region-fill','visibility','none');
@@ -163,6 +166,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
       }
       return;
     }
+    if (!map.isStyleLoaded?.() && !map.loaded?.()) return;
     const current=cache.get(overlay);
     if (!map.getSource('area-regions')) {
       map.addSource('area-regions',{type:'geojson',data:current});
