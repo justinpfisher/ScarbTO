@@ -24,6 +24,84 @@ LICENCE = 'https://open.toronto.ca/open-data-licence/'
 WARDS = 'https://gis.toronto.ca/arcgis/rest/services/cot_geospatial22/FeatureServer/0/query'
 NEIGHBOURHOODS = 'https://gis.toronto.ca/arcgis/rest/services/cot_geospatial26/FeatureServer/9/query'
 MAP_QUERY = {'where': '1=1', 'outFields': 'AREA_NAME,AREA_SHORT_CODE', 'returnGeometry': 'true', 'outSR': '4326', 'f': 'geojson'}
+
+# Source-qualified official 2022 Social Planning Neighbourhoods v3.0 membership.
+# Derived from hash-pinned 2026-10-27 contract; not a City-supplied membership flag.
+AREA_NEIGHBOURHOODS = {
+  "116": "Steeles",
+  "118": "Tam O'Shanter-Sullivan",
+  "119": "Wexford/Maryvale",
+  "120": "Clairlea-Birchmount",
+  "121": "Oakridge",
+  "122": "Birchcliffe-Cliffside",
+  "123": "Cliffcrest",
+  "124": "Kennedy Park",
+  "125": "Ionview",
+  "126": "Dorset Park",
+  "128": "Agincourt South-Malvern West",
+  "129": "Agincourt North",
+  "130": "Milliken",
+  "133": "Centennial Scarborough",
+  "134": "Highland Creek",
+  "135": "Morningside",
+  "136": "West Hill",
+  "138": "Eglinton East",
+  "139": "Scarborough Village",
+  "140": "Guildwood",
+  "141": "Golfdale-Cedarbrae-Woburn",
+  "142": "Woburn North",
+  "143": "West Rouge",
+  "144": "Morningside Heights",
+  "145": "Malvern West",
+  "146": "Malvern East",
+  "147": "L'Amoreaux West",
+  "148": "East L'Amoreaux",
+  "156": "Bendale-Glen Andrew",
+  "157": "Bendale South"
+}
+AREA_WARDS = {
+  "20": "Scarborough Southwest",
+  "21": "Scarborough Centre",
+  "22": "Scarborough-Agincourt",
+  "23": "Scarborough North",
+  "24": "Scarborough-Guildwood",
+  "25": "Scarborough-Rouge Park"
+}
+
+
+def qualified_area_features(source: dict, expected: dict[str, str]) -> dict:
+    """Publish complete official-area features; never derive them from establishment coverage."""
+    if source.get('type') != 'FeatureCollection' or not isinstance(source.get('features'), list):
+        raise DataError('Area boundary source is not a FeatureCollection')
+    out = {}
+    for feature in source['features']:
+        props = feature.get('properties') or {}
+        code = str(props.get('AREA_SHORT_CODE') or '').strip()
+        if code not in expected:
+            continue
+        if code in out or props.get('AREA_NAME') != expected[code]:
+            raise DataError('Duplicate or changed official area code/name: ' + code)
+        geom = feature.get('geometry') or {}
+        rings = boxes(geom)
+        if not rings:
+            raise DataError('Missing official area geometry: ' + code)
+        for polygon in rings:
+            if not isinstance(polygon, list) or not polygon:
+                raise DataError('Invalid official polygon: ' + code)
+            for ring in polygon:
+                if not isinstance(ring, list) or len(ring) < 4 or ring[0] != ring[-1]:
+                    raise DataError('Unclosed official ring: ' + code)
+                for point in ring:
+                    if not isinstance(point, list) or len(point) < 2 or not all(
+                        isinstance(n, (int, float)) and n == n for n in point[:2]
+                    ) or not (-80 < point[0] < -78 and 43 < point[1] < 45):
+                        raise DataError('Invalid Toronto boundary point: ' + code)
+        out[code] = feature
+    if set(out) != set(expected):
+        raise DataError('Incomplete official area layer; missing: ' + ', '.join(sorted(set(expected) - set(out))))
+    return {'type': 'FeatureCollection', 'features': [out[code] for code in sorted(out)]}
+
+
 MAX_DOWNLOAD = 100 * 1024 * 1024
 HEADERS = {'User-Agent': 'ScarbTO-PoC/0.1 (https://scarb.to; public open-data consumer)', 'Accept': '*/*'}
 ALLOWED_STATUSES = {'pass': 'Pass', 'conditional pass': 'Conditional Pass', 'closed': 'Closed'}
@@ -459,6 +537,10 @@ def main() -> None:
     previous = json.loads(previous_path.read_text(encoding='utf-8')) if previous_path.exists() else None
     snapshot, local_neigh = build_snapshot(raw_csv, wards, neighbourhoods, previous=previous,
         source_url=source_url, last_refreshed=refreshed, now=now, minimum=args.minimum)
+    # These layers use the same downloaded, validated City geography as the DineSafe import.
+    # Neighbourhood overlay membership is deliberately independent of establishment coverage.
+    overlay_wards = qualified_area_features(wards, AREA_WARDS)
+    overlay_neighbourhoods = qualified_area_features(neighbourhoods, AREA_NEIGHBOURHOODS)
     snapshot['activity'] = reconcile_activity_history(args.output, snapshot['activity'])
     fields = ['id', 'name', 'address', 'type', 'inspection_detail', 'status', 'inspection_date', 'latitude', 'longitude', 'ward', 'neighbourhood',
               'source_url', 'licence_url', 'collected_at']
@@ -479,6 +561,9 @@ def main() -> None:
     if args.dry_run:
         return
     archive_writes = prepare_activity_archives(args.output, snapshot['activity'])
+    atomic_write(args.output / 'scarborough-wards.geojson', json.dumps(overlay_wards, separators=(',', ':'), ensure_ascii=False).encode())
+    atomic_write(args.output / 'scarborough-overlay-neighbourhoods.geojson', json.dumps(overlay_neighbourhoods, separators=(',', ':'), ensure_ascii=False).encode())
+    # Retain the existing DineSafe-covered neighbourhood geometry for legacy zoom/filter behaviour.
     atomic_write(args.output / 'scarborough-neighbourhoods.geojson', json.dumps(local_neigh, separators=(',', ':'), ensure_ascii=False).encode())
     atomic_write(args.output / 'establishments.csv', export.getvalue().encode('utf-8-sig'))
     for archive_path, archive_data in archive_writes:

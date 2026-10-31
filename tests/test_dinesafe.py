@@ -9,7 +9,8 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'scripts'))
 from update_dinesafe import (DataError, build_snapshot, date_string, get_resources, in_geometry,
-    make_activity, normalise, atomic_write, prepare_activity_archives, reconcile_activity_history)
+    make_activity, normalise, atomic_write, prepare_activity_archives, reconcile_activity_history,
+    AREA_NEIGHBOURHOODS, AREA_WARDS, qualified_area_features)
 
 
 def polygon(w,s,e,n):
@@ -196,11 +197,39 @@ class IngestionTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(),b'two')
             self.assertEqual(len(list(path.parent.glob('.stage-*'))),0)
 
+    def test_qualified_area_export_keeps_all_official_codes_and_rejects_drift(self):
+        def official(dictionary):
+            return {'type':'FeatureCollection','features':[
+                {'type':'Feature','properties':{'AREA_NAME':name,'AREA_SHORT_CODE':code},
+                 'geometry':polygon(-79.45,43.70,-79.35,43.80)}
+                for code,name in dictionary.items()]}
+        ward_features=official(AREA_WARDS)
+        neighbourhood_features=official(AREA_NEIGHBOURHOODS)
+        self.assertEqual(len(qualified_area_features(ward_features,AREA_WARDS)['features']),6)
+        self.assertEqual(len(qualified_area_features(neighbourhood_features,AREA_NEIGHBOURHOODS)['features']),30)
+        duplicate=official(AREA_WARDS)
+        duplicate['features'][1]['properties']['AREA_SHORT_CODE']='20'
+        with self.assertRaisesRegex(DataError,'Duplicate'):
+            qualified_area_features(duplicate,AREA_WARDS)
+        renamed=official(AREA_WARDS)
+        renamed['features'][0]['properties']['AREA_NAME']='Synthetic ward'
+        with self.assertRaisesRegex(DataError,'changed'):
+            qualified_area_features(renamed,AREA_WARDS)
+        missing=official(AREA_NEIGHBOURHOODS)
+        missing['features'].pop()
+        with self.assertRaisesRegex(DataError,'Incomplete'):
+            qualified_area_features(missing,AREA_NEIGHBOURHOODS)
+
     def test_offline_cli_publication_and_failed_refresh_preserves_baseline(self):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder)
-            (root/'wards.geojson').write_text(json.dumps(wards()))
-            (root/'neighbours.geojson').write_text(json.dumps(neighbourhoods()))
+            def source_shapes(dictionary):
+                return {'type':'FeatureCollection','features':[
+                    {'type':'Feature','properties':{'AREA_NAME':name,'AREA_SHORT_CODE':code},
+                     'geometry':polygon(-79.45,43.70,-79.35,43.80)}
+                    for code,name in dictionary.items()]}
+            (root/'wards.geojson').write_text(json.dumps(source_shapes(AREA_WARDS)))
+            (root/'neighbours.geojson').write_text(json.dumps(source_shapes(AREA_NEIGHBOURHOODS)))
             feed=root/'feed.csv'
             feed.write_bytes(rows_as_csv([item('1','Working Diner','Pass','2026-10-20')]))
             cmd=[sys.executable, str(Path(__file__).resolve().parent.parent/'scripts'/'update_dinesafe.py'),

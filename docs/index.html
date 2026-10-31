@@ -26,6 +26,16 @@
     <div class="app-wrap">
       <aside class="filters" aria-label="Map filters">
         <div class="filter-topline"><span class="eyebrow">Explore the area</span><span class="data-pill">DineSafe</span><button class="mobile-filter-toggle" id="toggle-filters" type="button" aria-expanded="false" aria-controls="filter-options">Filters</button></div>
+        <div class="area-boundary-controls" role="group" aria-label="Optional map boundary overlays">
+          <span class="area-controls-label">Boundaries</span>
+          <div class="area-toggle-list">
+            <button type="button" class="area-toggle selected" data-area-overlay="off" aria-pressed="true">Off</button>
+            <button type="button" class="area-toggle" data-area-overlay="neighbourhood" aria-pressed="false">Neighbourhoods</button>
+            <button type="button" class="area-toggle" data-area-overlay="ward" aria-pressed="false">City wards</button>
+          </div>
+          <div class="area-choice-wrap" id="area-choice-wrap" hidden><label for="area-choice">Choose an area</label><select id="area-choice"><option value="">Choose an area</option></select></div>
+          <p class="area-overlay-note">Selecting an area filters the DineSafe map and list. Other layers keep their own geography.</p>
+        </div>
         <div id="filter-options" class="filter-options"><div class="view-tabs" role="group" aria-label="Browse mode">
           <button class="tab active" data-mode="recent" type="button" aria-pressed="true">Recent activity</button>
           <button class="tab" data-mode="all" type="button" aria-pressed="false">All establishments</button>
@@ -57,6 +67,22 @@
       <main class="map-results">
         <div class="map-panel">
           <div id="map" role="region" aria-label="Interactive map of Scarborough, with DineSafe places and an official council boundary"></div><p id="selected-calls-map-note" class="map-mode-note" hidden>Selected calls are division totals in the list; no individual call locations are mapped.</p><p id="map-fallback" class="map-fallback" role="status" aria-live="polite" hidden>Map unavailable. Use the searchable results list below; feeds, filters and record links remain available.</p>
+          <div id="area-selection" class="area-selection" hidden>
+            <button type="button" id="area-reopen" aria-label="Open selected area information"><span id="area-selection-name"></span></button>
+            <button type="button" id="area-clear">Clear area</button>
+          </div>
+          <p id="area-note" class="area-note" role="status" aria-live="polite" hidden></p>
+          <aside id="area-panel" class="area-panel" aria-labelledby="area-title" hidden>
+            <div class="area-panel-header">
+              <div class="area-panel-heading"><p class="area-eyebrow">Explore area</p><h3 id="area-title" tabindex="-1"></h3><p id="area-subtitle"></p></div>
+              <div class="area-panel-actions">
+                <button type="button" id="area-panel-expand" aria-expanded="false" aria-label="Expand area information">Expand</button>
+                <button type="button" id="area-panel-close" aria-label="Close area information">Close</button>
+              </div>
+            </div>
+            <div id="area-content" class="area-content"></div>
+            <div class="area-panel-footer"><button type="button" id="area-panel-fit">View boundary</button><span>Official sources linked above</span></div>
+          </aside>
           <div class="map-legend" id="map-legend" role="group" aria-label="Map legend"><span><i class="dot pass" aria-hidden="true"></i>Pass</span><span><i class="dot conditional" aria-hidden="true"></i>Conditional</span><span><i class="dot closed" aria-hidden="true"></i>Closed</span><span><i class="dot beach" aria-hidden="true"></i>Beach sample</span><span><i class="dot boundary" aria-hidden="true"></i>Community Council boundary</span><span><i class="dot outside" aria-hidden="true"></i>Outside area</span></div>
           <button class="map-fit" id="fit" type="button" title="Show all Scarborough">Show all Scarborough</button>
         </div>
@@ -70,6 +96,7 @@
     <footer id="about">
       <div><strong>Built for Scarborough.</strong> Not a City of Toronto service. DineSafe outcomes are the last outcomes recorded in the source data, not real-time guarantees.</div>
       <div>Source: <a href="https://open.toronto.ca/dataset/dinesafe/" rel="noopener noreferrer" target="_blank">City of Toronto DineSafe Open Data</a> · <a href="https://open.toronto.ca/open-data-licence/" rel="noopener noreferrer" target="_blank">Open Government Licence - Toronto</a> · <a id="download" href="data/establishments.csv" download>Download Scarb.TO CSV</a> · <a href="https://github.com/justinpfisher/ScarbTO/actions" target="_blank" rel="noopener noreferrer">Update history</a></div>
+      <div>Neighbourhood and City ward boundaries: <a href="https://open.toronto.ca/dataset/neighbourhoods/" target="_blank" rel="noopener noreferrer">City neighbourhoods (effective April 2022)</a> and <a href="https://open.toronto.ca/dataset/city-wards/" target="_blank" rel="noopener noreferrer">City wards (effective December 2018)</a>, licensed under the Open Government Licence – Toronto. Neighbourhoods can span wards; boundaries are not electoral address lookups.</div>
       <div>Scarborough Community Council boundary: <a href="https://open.toronto.ca/dataset/community-council-boundaries/" target="_blank" rel="noopener noreferrer">City of Toronto Open Data</a>, licensed under the <a href="https://open.toronto.ca/open-data-licence/" target="_blank" rel="noopener noreferrer">Open Government Licence - Toronto</a>. The boundary is a visual reference; it does not filter records. Maps by OpenFreeMap and OpenStreetMap contributors, attributed on the map. New activity is identified from daily snapshots; inspection dates can be older than when records are published.</div>
     </footer>
   </div>

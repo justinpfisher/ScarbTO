@@ -49,14 +49,18 @@ jobs:
         run: npx playwright install chromium
       - name: Unit tests (network-independent)
         run: python -m unittest discover -s tests -v
+      - name: Check production smoke-check script syntax
+        run: python -m py_compile scripts/verify_live_overlay.py
       - name: Check JavaScript syntax
         run: |
           node --check docs/logic.mjs
+          node --check docs/area-selection.mjs
+          node --check docs/area-explorer.mjs
           node --check docs/app.mjs
           node --check docs/beach-history.mjs
           node --check docs/selected-calls.mjs
       - name: JavaScript logic tests
-        run: node --test tests/logic.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs tests/boundary.test.mjs
+        run: node --test tests/logic.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs tests/boundary.test.mjs tests/area-selection.test.mjs
       - name: Offline research prototype tests
         run: python .github/scripts/test_research_prototypes.py
       - name: Beach sample view tests
@@ -110,4 +114,6 @@ jobs:
       - name: Deploy last validated snapshot
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify Scarb.TO production HTTP response and official boundary assets
+        run: python scripts/verify_live_overlay.py "${{ github.sha }}"
 
