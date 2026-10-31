@@ -5,6 +5,7 @@ import {mkdir, readFile, stat} from 'node:fs/promises';
 import {extname, resolve, sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
+import {WARDS, NEIGHBOURHOODS} from '../docs/area-selection.mjs';
 
 const root = resolve(fileURLToPath(new URL('../docs/', import.meta.url)));
 const maplibreRoot = resolve(fileURLToPath(new URL('../node_modules/maplibre-gl/dist/', import.meta.url)));
@@ -692,5 +693,103 @@ test('browse-mode tabs stay fully visible at desktop and narrow widths', {timeou
       assert.ok(button.scrollHeight<=button.clientHeight+1, `${button.label} clips vertically at ${width}px`);
     }
   }
+  assert.deepEqual(errors,[]);
+});
+
+
+function areaOverlayFixture(kind) {
+  const dictionary=kind==='ward'?WARDS:NEIGHBOURHOODS;
+  return {type:'FeatureCollection',features:Object.entries(dictionary).map(([code,area],i)=>{
+    const lon=-79.32+(i%6)*0.025,lat=43.70+Math.floor(i/6)*0.021;
+    return {type:'Feature',properties:{AREA_SHORT_CODE:code,AREA_NAME:area.name},
+      geometry:{type:'Polygon',coordinates:[[[lon,lat],[lon+.018,lat],[lon+.018,lat+.018],[lon,lat+.018],[lon,lat]]]}};
+  })};
+}
+
+test('optional ward and neighbourhood overlays share one area filter and preserve camera and state', {timeout:90_000}, async t=>{
+  const {server,origin}=await startStaticServer();
+  const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+  t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
+  const context=await browser.newContext({viewport:{width:1280,height:900}});
+  t.after(()=>context.close());
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',err=>errors.push(err.message));
+  const areaSnapshot={...snapshot,establishments:[
+    {...snapshot.establishments[0],neighbourhood:'Ionview',ward:'Scarborough Southwest'},
+    {...snapshot.establishments[1],neighbourhood:'Oakridge',ward:'Scarborough Southwest'},
+    {...snapshot.establishments[2],neighbourhood:'West Hill',ward:'Scarborough Centre'}
+  ]};
+  await installLocalRoutes(page,origin,{snapshotBody:areaSnapshot});
+  await page.route('**/data/scarborough-wards.geojson',route=>route.fulfill({contentType:'application/geo+json',body:JSON.stringify(areaOverlayFixture('ward'))}));
+  await page.route('**/data/scarborough-overlay-neighbourhoods.geojson',route=>route.fulfill({contentType:'application/geo+json',body:JSON.stringify(areaOverlayFixture('neighbourhood'))}));
+  await page.goto(origin,{waitUntil:'domcontentloaded'});
+  await waitForMap(page);
+  await page.getByRole('button',{name:'All establishments'}).click();
+  assert.equal(await page.locator('#area-selection').isVisible(),false);
+  assert.equal(await page.locator('[data-area-overlay="off"]').getAttribute('aria-pressed'),'true');
+  assert.equal(await page.evaluate(()=>Boolean(window.__scarbMap.getSource('area-regions'))),false,'no overlay resources rendered by default');
+  await page.locator('[data-area-overlay="ward"]').click();
+  await page.waitForFunction(()=>Boolean(window.__scarbMap.getLayer('area-region-fill')));
+  await page.locator('#area-choice').selectOption('20');
+  await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===2);
+  assert.match(await page.locator('#area-panel').textContent(),/Parthi Kandavel/);
+  const centerBefore=await page.evaluate(()=>window.__scarbMap.getCenter().toArray());
+  await page.locator('[data-area-overlay="neighbourhood"]').click();
+  await page.waitForFunction(()=>document.querySelector('[data-area-overlay="neighbourhood"]').getAttribute('aria-pressed')==='true');
+  assert.equal(await page.locator('#record-list .record-item').count(),2,'switching visual geometry does not silently change the ward filter');
+  assert.match(await page.locator('#area-selection-name').textContent(),/Ward 20/);
+  await page.locator('#area-choice').selectOption('125');
+  await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===1);
+  assert.match(await page.locator('#area-selection-name').textContent(),/Ionview/);
+  assert.match(await page.locator('#area-panel').textContent(),/Wards 20 and 21/);
+  await page.locator('[data-area-overlay="off"]').click();
+  assert.equal(await page.locator('#record-list .record-item').count(),1,'hiding outlines retains geographic selection');
+  const hidden=await page.evaluate(()=>window.__scarbMap.getLayoutProperty('area-region-fill','visibility'));
+  assert.equal(hidden,'none');
+  await page.reload({waitUntil:'domcontentloaded'});
+  await waitForMap(page);
+  assert.equal(await page.locator('[data-area-overlay="off"]').getAttribute('aria-pressed'),'true','outlines off on every page load');
+  assert.match(await page.locator('#area-selection-name').textContent(),/Ionview/,'persistent area filter has a visible chip');
+  await page.locator('#area-clear').click();
+  await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===3);
+  assert.equal(await page.locator('#area-selection').isVisible(),false);
+  const centerAfter=await page.evaluate(()=>window.__scarbMap.getCenter().toArray());
+  assert.ok(centerBefore.every((v,i)=>Math.abs(v-centerAfter[i])<.02),'clear preserves approximate map location');
+  assert.deepEqual(errors,[]);
+});
+
+test('mobile area panel is closeable and the selected-area chip remains usable without the panel', {timeout:90_000}, async t=>{
+  const {server,origin}=await startStaticServer();
+  const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+  t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
+  t.after(()=>context.close());
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',err=>errors.push(err.message));
+  await installLocalRoutes(page,origin,{snapshotBody:{...snapshot,establishments:[
+    {...snapshot.establishments[0],neighbourhood:'Ionview',ward:'Scarborough Centre'},
+    {...snapshot.establishments[1],neighbourhood:'Oakridge',ward:'Scarborough Southwest'}
+  ]}});
+  await page.route('**/data/scarborough-overlay-neighbourhoods.geojson',route=>route.fulfill({contentType:'application/geo+json',body:JSON.stringify(areaOverlayFixture('neighbourhood'))}));
+  await page.goto(origin,{waitUntil:'domcontentloaded'});
+  await waitForMap(page);
+  await page.getByRole('button',{name:'All establishments'}).click();
+  await page.locator('[data-area-overlay="neighbourhood"]').click();
+  await page.locator('#area-choice').selectOption('125');
+  const panel=page.locator('#area-panel');
+  await panel.waitFor({state:'visible'});
+  const size=await panel.evaluate(e=>({height:e.getBoundingClientRect().height,width:e.getBoundingClientRect().width}));
+  assert.ok(size.width<=390 && size.height<=844*0.60,'mobile bottom sheet fits a phone viewport');
+  await page.locator('#area-panel-close').click();
+  assert.equal(await panel.isVisible(),false);
+  assert.equal(await page.locator('#area-selection').isVisible(),true);
+  await page.locator('#area-reopen').click();
+  assert.equal(await panel.isVisible(),true);
+  await page.locator('#area-panel-expand').click();
+  assert.equal(await page.locator('#area-panel-expand').getAttribute('aria-expanded'),'true');
+  await page.keyboard.press('Escape');
+  assert.equal(await panel.isVisible(),false);
+  await page.locator('#area-clear').click();
+  assert.equal(await page.locator('#area-selection').isVisible(),false);
   assert.deepEqual(errors,[]);
 });
