@@ -112,4 +112,6 @@ jobs:
       - name: Deploy last validated snapshot
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify Scarb.TO production HTTP response and official boundary assets
+        run: python scripts/verify_live_overlay.py "${{ github.sha }}"
 
