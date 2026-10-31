@@ -1,3 +1,5 @@
+import {areaFor, areaForName} from './area-selection.mjs';
+import {createAreaExplorer} from './area-explorer.mjs';
 import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, displayAddress, cityCatalogueRefreshText, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from './logic.mjs';
 import {beginListRedraw, finishListRedraw, revealSelectedRecord} from './list-focus.mjs';
 import {beachPreviewFeature, renderBeachSamplePreview, validateBeachSamplePreview} from './beach-history.mjs';
@@ -14,6 +16,9 @@ try {
   if (['all', ...STATUS].includes(remembered.status)) state.status = remembered.status;
   if (['7','30','90','all'].includes(remembered.days)) state.days = remembered.days;
   if (typeof remembered.neighbourhood === 'string') state.neighbourhood = remembered.neighbourhood;
+  if (areaFor(remembered.areaKind, remembered.areaCode)) {
+    state.areaKind=remembered.areaKind;state.areaCode=String(remembered.areaCode);state.neighbourhood='';
+  }
 } catch { /* Private browsing, old preferences or disabled storage must not break the map. */ }
 let snapshot = null, beachPreview = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]};
 let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = false, usingBeach = false, listLimit = 80;
@@ -23,6 +28,7 @@ let selectedCallsViewState = {status:'unavailable',reason:'not loaded',counts:[]
 let selectedCallsExpiryTimer=null, selectedCallsExpiryDeadlineMono=null, selectedCallsExpiryFetchedAt=null;
 let mapUnavailable = false;
 let councilBoundary = null;
+let areaExplorer = null;
 
 function clearSelectedCallsExpiry(){
   clearTimeout(selectedCallsExpiryTimer);selectedCallsExpiryTimer=null;
@@ -48,7 +54,7 @@ function deactivateSelectedCalls(){
   selectedCallsViewState=selectedCallsClient.state();
 }
 function save() {
-  try {const {status,days,neighbourhood}=state;const mode=state.mode==='selected-calls'?'recent':state.mode;localStorage.setItem(STORAGE_KEY,JSON.stringify({mode,status,days,neighbourhood}));}catch{}
+  try {const {status,days,neighbourhood,areaKind,areaCode}=state;const mode=state.mode==='selected-calls'?'recent':state.mode;localStorage.setItem(STORAGE_KEY,JSON.stringify({mode,status,days,neighbourhood,areaKind,areaCode}));}catch{}
 }
 function els(tag, cls, value) {
   const element = document.createElement(tag);
@@ -98,7 +104,7 @@ function setDineSafeStatus(text,className='') {
 }
 function syncControls() {
   $('window').value=state.days;
-  $('neighbourhood').value=state.neighbourhood;
+  $('neighbourhood').value=state.areaKind==='neighbourhood'?(areaFor('neighbourhood',state.areaCode)?.name||''):state.neighbourhood;
   $('search').value=state.search;
   document.querySelectorAll('.tab').forEach(b=>{let hit=b.dataset.mode===state.mode;b.classList.toggle('active',hit);b.setAttribute('aria-pressed',String(hit));});
   document.querySelectorAll('.chip').forEach(b=>{let hit=b.dataset.status===state.status;b.classList.toggle('selected',hit);b.setAttribute('aria-pressed',String(hit));});
@@ -111,6 +117,7 @@ function syncControls() {
   $('map').setAttribute('aria-label',selectedCallsMode?'Map background only; selected calls are not mapped individually':'Interactive map of DineSafe establishments and beach sample locations');
   document.querySelectorAll('#search,#neighbourhood,#window,.outcomes button').forEach(control=>{control.disabled=beachMode||selectedCallsMode;});
   syncDataStatus();
+  areaExplorer?.updateMode();
 }
 function populateNeighbourhoods() {
   const names=[...new Set(snapshot.establishments.map(e=>e.neighbourhood).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'en-CA'));
@@ -134,7 +141,7 @@ function performFilters() {
     $('results-kicker').textContent='Toronto Police Service · on-demand aggregate';
     $('results-title').textContent='Selected calls — Divisions 41, 42 and 43';
     $('results-caption').textContent='Selected calls published for these divisions; not all crime, police activity, or officer presence. Opening this view requests grouped counts from TPS/Esri. No individual calls or locations are requested or mapped.';
-    updateSource();renderList();return;
+    updateSource();renderList();areaExplorer?.sync();return;
   }
   if(state.mode==='beach'){
     usingBeach=true;visiblePlaces=[];visibleActivity=[];usingActivity=false;
@@ -166,7 +173,7 @@ function performFilters() {
   $('results-caption').textContent=usingActivity?'Changes detected on successive daily imports; inspection dates may be older.':
     state.mode==='recent'?'Showing establishments with a recent recorded inspection date; not necessarily newly published.':
     'Showing the latest inspection record available for each establishment.';
-  updateSource();renderList();
+  updateSource();renderList();areaExplorer?.sync();
 }
 function renderList({focusMore = false, revealSelection = false} = {}) {
   const list=$('record-list');
@@ -336,6 +343,7 @@ async function initMap() {
         map.on('click','clusters',e=>{const geom=e.features?.[0]?.geometry;if(geom?.type==='Point')map.easeTo({center:geom.coordinates,zoom:Math.min(map.getZoom()+2,15),duration:350});});
         map.on('click','single',e=>{const id=String(e.features?.[0]?.properties?.id||'');if(id)selectPlace(id,false,true);});
         for(const layer of ['clusters','single']){map.on('mouseenter',layer,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',layer,()=>map.getCanvas().style.cursor='');}
+        areaExplorer?.attachMap(map);
         map.on('moveend',()=>{listLimit=80;renderList();});
         updateSource();renderList();
       }catch(error){setMapUnavailable(error);}
@@ -360,7 +368,13 @@ function bindControls(){
   }));
   document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{state.status=b.dataset.status;save();syncControls();performFilters();}));
   $('window').addEventListener('change',e=>{state.days=e.target.value;save();performFilters();});
-  $('neighbourhood').addEventListener('change',e=>{state.neighbourhood=e.target.value;save();selectNeighbourhood();performFilters();});
+  $('neighbourhood').addEventListener('change',e=>{
+    const area=areaForName('neighbourhood',e.target.value);
+    if(area){areaExplorer?.select(area);return;}
+    // Preserve the existing adjacent-neighbourhood DineSafe dropdown entries.
+    state.areaKind='';state.areaCode='';state.neighbourhood=e.target.value;
+    save();selectNeighbourhood();performFilters();areaExplorer?.sync();
+  });
   $('search').addEventListener('input',e=>{state.search=e.target.value;performFilters();});
   $('reset').addEventListener('click',()=>{if(state.mode==='selected-calls')deactivateSelectedCalls();state={...DEFAULTS};selectedId=null;syncControls();fitAll();save();performFilters();});
   $('fit').addEventListener('click',fitAll);
@@ -431,7 +445,19 @@ async function loadDineSafeSnapshot() {
   }
 }
 function boot() {
-  bindControls();syncControls();void initMap();
+  bindControls();
+  areaExplorer=createAreaExplorer({
+    getState:()=>state, getSnapshot:()=>snapshot, getVisiblePlaces:()=>visiblePlaces,
+    onSelect:area=>{
+      state.areaKind=area.kind;state.areaCode=area.code;state.neighbourhood='';
+      selectedId=null;save();syncControls();performFilters();
+    },
+    onClear:()=>{
+      state.areaKind='';state.areaCode='';state.neighbourhood='';
+      selectedId=null;save();syncControls();performFilters();
+    }
+  });
+  syncControls();void initMap();
   // Each feed loads independently so an optional beach request never holds DineSafe hostage.
   void loadBeachPreview();
   void loadDineSafeSnapshot();
