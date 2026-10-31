@@ -742,6 +742,10 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===1);
   assert.match(await page.locator('#area-selection-name').textContent(),/Ionview/);
   assert.match(await page.locator('#area-panel').textContent(),/Ward 20 and Ward 21/);
+  await page.getByRole('button',{name:'Selected police calls'}).click();
+  await page.waitForFunction(()=>document.querySelector('#area-selection-name')?.textContent.includes('not applied'));
+  assert.match(await page.locator('#area-panel').textContent(),/geographic filtering is paused/i);
+  await page.getByRole('button',{name:'All establishments'}).click();
   await page.locator('[data-area-overlay="off"]').click();
   assert.equal(await page.locator('#record-list .record-item').count(),1,'hiding outlines retains geographic selection');
   const hidden=await page.evaluate(()=>window.__scarbMap.getLayoutProperty('area-region-fill','visibility'));
