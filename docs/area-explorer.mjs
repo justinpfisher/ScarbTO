@@ -74,7 +74,9 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     const chip=el('area-selection'), panel=el('area-panel');
     chip.hidden=!area;
     if (!area) {panel.hidden=true;open=false;return;}
-    el('area-selection-name').textContent=(area.kind==='ward'?'Ward '+area.code+' — ':'')+area.name;
+    const areaLabel=(area.kind==='ward'?'Ward '+area.code+' — ':'')+area.name;
+    el('area-selection-name').textContent=LIVE_MODES.has(getState().mode)
+      ? areaLabel : 'DineSafe area (not applied): '+areaLabel;
     panel.hidden=!open;
     if (!open) return;
     const title=el('area-title');
@@ -91,9 +93,13 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     content.replaceChildren();
     const snapshot=getSnapshot();
     const places=snapshot?.ready?snapshot.establishments.filter(place=>areaMatches(place,{areaKind:area.kind,areaCode:area.code})):null;
-    const matching=getVisiblePlaces().filter(place=>areaMatches(place,{areaKind:area.kind,areaCode:area.code})).length;
+    const isDineSafe=LIVE_MODES.has(getState().mode);
+    const matching=isDineSafe
+      ? getVisiblePlaces().filter(place=>areaMatches(place,{areaKind:area.kind,areaCode:area.code})).length : null;
     const dine=section(content,'Restaurants & DineSafe',places
-      ? places.length.toLocaleString('en-CA')+' establishments in the latest validated snapshot; '+matching.toLocaleString('en-CA')+' currently match your DineSafe filters.'
+      ? places.length.toLocaleString('en-CA')+' establishments in the latest validated snapshot; '+(isDineSafe
+        ? matching.toLocaleString('en-CA')+' currently match your DineSafe filters.'
+        : 'DineSafe geographic filtering is paused while this other source is displayed.')
       : 'A validated DineSafe snapshot is unavailable. No restaurant count is shown.');
     addText(dine,'p','area-disclaimer','Latest recorded inspections, not a complete real-time restaurant inventory.');
     if (snapshot?.published_at) {
