@@ -9,7 +9,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
   const el = id => document.getElementById(id);
   let map = null, overlay = 'off', token = 0, open = false, expanded = false;
   const cache = new Map();
-  let displayed = null;
+  let displayed = null, choiceMode = null, panelStamp = '';
   const LIVE_MODES = new Set(['recent', 'all']);
 
   function selected() {
@@ -45,15 +45,18 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     const choice=el('area-choice');
     const group=el('area-choice-wrap');
     group.hidden=overlay==='off';
-    choice.replaceChildren();
-    const initial=make('option','','Choose an area');
-    initial.value='';choice.append(initial);
-    const dictionary=overlay==='ward'?WARDS:NEIGHBOURHOODS;
-    if (overlay!=='off') {
-      for (const [code,area] of Object.entries(dictionary).sort((a,b)=>a[1].name.localeCompare(b[1].name,'en-CA'))) {
-        const label=overlay==='ward'?'Ward '+code+' — '+area.name:area.name;
-        const option=make('option','',label);option.value=code;choice.append(option);
+    if (choiceMode!==overlay) {
+      choice.replaceChildren();
+      const initial=make('option','','Choose an area');
+      initial.value='';choice.append(initial);
+      const dictionary=overlay==='ward'?WARDS:NEIGHBOURHOODS;
+      if (overlay!=='off') {
+        for (const [code,area] of Object.entries(dictionary).sort((a,b)=>a[1].name.localeCompare(b[1].name,'en-CA'))) {
+          const label=overlay==='ward'?'Ward '+code+' — '+area.name:area.name;
+          const option=make('option','',label);option.value=code;choice.append(option);
+        }
       }
+      choiceMode=overlay;
     }
     const area=selected();
     choice.value=area?.kind===(overlay==='ward'?'ward':'neighbourhood')?area.code:'';
@@ -63,6 +66,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
       const pressed=button.dataset.areaOverlay===overlay;
       button.setAttribute('aria-pressed',String(pressed));
       button.classList.toggle('selected',pressed);
+      button.disabled=!LIVE_MODES.has(getState().mode) && button.dataset.areaOverlay!=='off';
     }
   }
   function renderPanel() {
@@ -80,6 +84,9 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     else sub.textContent='Toronto Social Planning Neighbourhood '+area.code+' · 2022 boundaries';
     el('area-panel-expand').setAttribute('aria-expanded',String(expanded));
     panel.classList.toggle('expanded',expanded);
+    const stamp=[area.kind,area.code,getState().mode,getVisiblePlaces().length,getSnapshot()?.published_at].join('|');
+    if (stamp===panelStamp) return;
+    panelStamp=stamp;
     const content=el('area-content');
     content.replaceChildren();
     const snapshot=getSnapshot();
@@ -89,6 +96,16 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
       ? places.length.toLocaleString('en-CA')+' establishments in the latest validated snapshot; '+matching.toLocaleString('en-CA')+' currently match your DineSafe filters.'
       : 'A validated DineSafe snapshot is unavailable. No restaurant count is shown.');
     addText(dine,'p','area-disclaimer','Latest recorded inspections, not a complete real-time restaurant inventory.');
+    if (snapshot?.published_at) {
+      const stamp=new Date(snapshot.published_at);
+      const published=Number.isFinite(stamp.valueOf())
+        ? new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',dateStyle:'medium',timeStyle:'short'}).format(stamp)
+        : 'unavailable';
+      const catalogue=typeof snapshot.source?.last_refreshed==='string' ? snapshot.source.last_refreshed : 'not supplied';
+      addText(dine,'p','area-disclaimer','Scarb.TO publication: '+published+'; City catalogue timestamp: '+catalogue+' (source time zone may be unspecified).');
+      if (Number.isFinite(stamp.valueOf()) && Date.now()-stamp.valueOf()>48*60*60*1000)
+        addText(dine,'p','area-disclaimer','The published snapshot may be stale; verify against the City source.');
+    }
     if (!LIVE_MODES.has(getState().mode)) addText(dine,'p','area-disclaimer','This area filter applies to DineSafe views, not to police division totals or historical beach samples.');
     if (area.kind==='ward') {
       const rep=councillorFor(area.code);
@@ -96,6 +113,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
       if(rep.transition) addText(r,'p','area-disclaimer',rep.transition+' is councillor-elect; term begins November 15, 2026.');
       addLink(r,'Official City profile and office contacts',rep.url);
       addText(r,'p','area-disclaimer','Officeholder information checked October 31, 2026; confirm changes with the City.');
+      content.prepend(r);
     } else {
       const names=area.wards.map(code=>'Ward '+code);
       const r=section(content,'Municipal representation',names.length>1
@@ -160,6 +178,10 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
   }
   async function setOverlay(next) {
     if (!['off','neighbourhood','ward'].includes(next)) return;
+    if (next!=='off' && !LIVE_MODES.has(getState().mode)) {
+      showNote('Boundary overlays and area filters apply only to DineSafe; division totals and beach samples use different geographies.');
+      return;
+    }
     const generation=++token;
     overlay=next;showNote('');sync();
     if (next!=='off' && !cache.has(next)) {
@@ -229,5 +251,10 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     if(event.key==='Escape' && open) onPanelClose();
   });
   sync();
-  return {sync, attachMap, updateMode:()=>{display();sync();}, setOverlay, select};
+  return {sync, attachMap, updateMode:()=>{
+    if (!LIVE_MODES.has(getState().mode) && overlay!=='off')
+      showNote('Boundaries are hidden for this view. Police division totals and historical beach samples are not neighbourhood or ward figures.');
+    else if (el('area-note').textContent.startsWith('Boundaries are hidden for this view')) showNote('');
+    display();sync();
+  }, setOverlay, select};
 }
