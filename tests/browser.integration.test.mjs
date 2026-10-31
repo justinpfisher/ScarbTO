@@ -741,7 +741,7 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   await page.locator('#area-choice').selectOption('125');
   await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===1);
   assert.match(await page.locator('#area-selection-name').textContent(),/Ionview/);
-  assert.match(await page.locator('#area-panel').textContent(),/Wards 20 and 21/);
+  assert.match(await page.locator('#area-panel').textContent(),/Ward 20 and Ward 21/);
   await page.locator('[data-area-overlay="off"]').click();
   assert.equal(await page.locator('#record-list .record-item').count(),1,'hiding outlines retains geographic selection');
   const hidden=await page.evaluate(()=>window.__scarbMap.getLayoutProperty('area-region-fill','visibility'));
