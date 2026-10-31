@@ -291,6 +291,7 @@ function setMapUnavailable(error) {
   mapUnavailable=true;
   const failedMap=map;
   map=null;
+  areaExplorer?.detachMap();
   try{failedMap?.remove();}catch{}
   const panel=document.querySelector('.map-panel');
   panel?.classList.add('map-unavailable');
