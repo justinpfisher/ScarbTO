@@ -773,6 +773,8 @@ test('mobile area panel is closeable and the selected-area chip remains usable w
   await page.route('**/data/scarborough-overlay-neighbourhoods.geojson',route=>route.fulfill({contentType:'application/geo+json',body:JSON.stringify(areaOverlayFixture('neighbourhood'))}));
   await page.goto(origin,{waitUntil:'domcontentloaded'});
   await waitForMap(page);
+  const toggle=page.locator('#toggle-filters');
+  if(await toggle.isVisible() && await toggle.getAttribute('aria-expanded')!=='true')await toggle.click();
   await page.getByRole('button',{name:'All establishments'}).click();
   await page.locator('[data-area-overlay="neighbourhood"]').click();
   await page.locator('#area-choice').selectOption('125');
