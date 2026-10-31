@@ -728,12 +728,28 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   assert.equal(await page.locator('#area-selection').isVisible(),false);
   assert.equal(await page.locator('[data-area-overlay="off"]').getAttribute('aria-pressed'),'true');
   assert.equal(await page.evaluate(()=>Boolean(window.__scarbMap.getSource('area-regions'))),false,'no overlay resources rendered by default');
+  // Simulate a slow MapLibre style while the official polygon request arrives.
+  await page.evaluate(()=>{
+    const map=window.__scarbMap;
+    window.__overlayOriginalLoaded=map.loaded;
+    window.__overlayOriginalStyleLoaded=map.isStyleLoaded;
+    map.loaded=()=>false;map.isStyleLoaded=()=>false;
+  });
+  const wardResponse=page.waitForResponse(response=>response.url().includes('scarborough-wards.geojson'));
   await page.locator('[data-area-overlay="ward"]').click();
-  await page.waitForFunction(()=>Boolean(window.__scarbMap.getLayer('area-region-fill')));
+  await wardResponse;
+  await page.waitForTimeout(120);
+  assert.equal(await page.evaluate(()=>Boolean(window.__scarbMap.getLayer('area-region-fill'))),false,'loading style does not pretend overlay was drawn');
+  await page.evaluate(()=>{
+    const map=window.__scarbMap;
+    map.loaded=window.__overlayOriginalLoaded;
+    map.isStyleLoaded=window.__overlayOriginalStyleLoaded;
+    map.fire('idle');
+  });
+  await page.waitForFunction(()=>Boolean(window.__scarbMap.getLayer('area-region-fill')),'overlay eventually appears on readiness');
   await page.locator('#area-choice').selectOption('20');
   await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===2);
   assert.match(await page.locator('#area-panel').textContent(),/Parthi Kandavel/);
-  const centerBefore=await page.evaluate(()=>window.__scarbMap.getCenter().toArray());
   await page.locator('[data-area-overlay="neighbourhood"]').click();
   await page.waitForFunction(()=>document.querySelector('[data-area-overlay="neighbourhood"]').getAttribute('aria-pressed')==='true');
   assert.equal(await page.locator('#record-list .record-item').count(),2,'switching visual geometry does not silently change the ward filter');
@@ -754,11 +770,18 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   await waitForMap(page);
   assert.equal(await page.locator('[data-area-overlay="off"]').getAttribute('aria-pressed'),'true','outlines off on every page load');
   assert.match(await page.locator('#area-selection-name').textContent(),/Ionview/,'persistent area filter has a visible chip');
+  assert.equal(await page.evaluate(()=>Boolean(window.__scarbMap.getSource('area-regions'))),false,'restored selection does not silently enable outlines');
+  await page.locator('#area-reopen').click();
+  const zoomBefore=await page.evaluate(()=>window.__scarbMap.getZoom());
+  await page.locator('#area-panel-fit').click();
+  await page.waitForFunction(before=>window.__scarbMap.getZoom()>before+0.3,zoomBefore,{timeout:5000});
+  assert.equal(await page.locator('[data-area-overlay="off"]').getAttribute('aria-pressed'),'true','fit selected boundary without enabling overlay');
+  const centerAtClear=await page.evaluate(()=>window.__scarbMap.getCenter().toArray());
   await page.locator('#area-clear').click();
   await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===3);
   assert.equal(await page.locator('#area-selection').isVisible(),false);
   const centerAfter=await page.evaluate(()=>window.__scarbMap.getCenter().toArray());
-  assert.ok(centerBefore.every((v,i)=>Math.abs(v-centerAfter[i])<.02),'clear preserves approximate map location');
+  assert.ok(centerAtClear.every((v,i)=>Math.abs(v-centerAfter[i])<.02),'clear preserves map location even after inspecting area geometry');
   assert.deepEqual(errors,[]);
 });
 
