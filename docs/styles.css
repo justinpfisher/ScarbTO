@@ -108,3 +108,10 @@
 @media(prefers-reduced-motion:reduce){
   .area-panel,.area-toggle{scroll-behavior:auto;transition:none!important}
 }
+
+
+/* Keep the sheet anchored to the phone viewport, not beneath a scrolled header. */
+@media(max-width:570px){
+  .area-panel{position:fixed;top:auto;left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));height:min(54dvh,460px);max-height:54dvh;z-index:30}
+  .area-panel.expanded{top:auto;height:min(76dvh,650px);max-height:76dvh}
+}
