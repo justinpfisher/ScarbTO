@@ -10,6 +10,8 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
   let map = null, overlay = 'off', token = 0, open = false, expanded = false;
   const cache = new Map();
   let displayed = null, choiceMode = null, panelStamp = '';
+  let awaitingMapReady = false, fitAttempt = 0;
+  const pendingGeometry = new Map();
   const LIVE_MODES = new Set(['recent', 'all']);
 
   function selected() {
@@ -85,6 +87,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     if (area.kind==='ward') sub.textContent='City of Toronto municipal ward · 2018 ward boundaries';
     else sub.textContent='Toronto Social Planning Neighbourhood '+area.code+' · 2022 boundaries';
     el('area-panel-expand').setAttribute('aria-expanded',String(expanded));
+    el('area-panel-fit').disabled=!map;
     panel.classList.toggle('expanded',expanded);
     const stamp=[area.kind,area.code,getState().mode,getVisiblePlaces().length,getSnapshot()?.published_at].join('|');
     if (stamp===panelStamp) return;
@@ -160,19 +163,29 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     renderPanel();
     syncOutline();
   }
+  function hideMapOverlay() {
+    if (!map?.getLayer?.('area-region-fill')) return;
+    if (map.getLayoutProperty?.('area-region-fill','visibility')!=='none')
+      map.setLayoutProperty('area-region-fill','visibility','none');
+    if (map.getLayoutProperty?.('area-region-line','visibility')!=='none')
+      map.setLayoutProperty('area-region-line','visibility','none');
+  }
   function display() {
     if (!map) return;
     const active=LIVE_MODES.has(getState().mode) && overlay!=='off' && cache.has(overlay);
-    // A source.setData() operation makes map.loaded() temporarily false.
-    // Always hide an existing overlay immediately, even during that interval.
     if (!active) {
-      if (map.getLayer?.('area-region-fill')) {
-        map.setLayoutProperty('area-region-fill','visibility','none');
-        map.setLayoutProperty('area-region-line','visibility','none');
-      }
+      awaitingMapReady=false;
+      hideMapOverlay();
       return;
     }
-    if (!map.isStyleLoaded?.() && !map.loaded?.()) return;
+    if (!map.isStyleLoaded?.() && !map.loaded?.()) {
+      // MapLibre.loaded() can be temporarily false after setData or a style
+      // update. Don't lose the requested selection or expose stale geometry.
+      awaitingMapReady=true;
+      hideMapOverlay();
+      return;
+    }
+    awaitingMapReady=false;
     const current=cache.get(overlay);
     if (!map.getSource('area-regions')) {
       map.addSource('area-regions',{type:'geojson',data:current});
@@ -182,9 +195,26 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
         paint:{'line-color':'#246b59','line-width':1.35,'line-opacity':0.80}},'clusters');
     } else if(displayed!==overlay) map.getSource('area-regions').setData(current);
     displayed=overlay;
-    map.setLayoutProperty('area-region-fill','visibility','visible');
-    map.setLayoutProperty('area-region-line','visibility','visible');
+    if (map.getLayoutProperty?.('area-region-fill','visibility')!=='visible')
+      map.setLayoutProperty('area-region-fill','visibility','visible');
+    if (map.getLayoutProperty?.('area-region-line','visibility')!=='visible')
+      map.setLayoutProperty('area-region-line','visibility','visible');
     syncOutline();
+  }
+  async function loadGeometry(kind) {
+    if (cache.has(kind)) return cache.get(kind);
+    if (pendingGeometry.has(kind)) return pendingGeometry.get(kind);
+    const path=kind==='ward'?'scarborough-wards.geojson':'scarborough-overlay-neighbourhoods.geojson';
+    const promise=(async()=>{
+      const response=await fetch('data/'+path,{cache:'force-cache'});
+      if(!response.ok) throw new Error('HTTP '+response.status);
+      const data=validateAreaFeatures(kind,await response.json());
+      cache.set(kind,data);
+      return data;
+    })();
+    pendingGeometry.set(kind,promise);
+    try { return await promise; }
+    finally { pendingGeometry.delete(kind); }
   }
   async function setOverlay(next) {
     if (!['off','neighbourhood','ward'].includes(next)) return;
@@ -196,10 +226,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     overlay=next;showNote('');sync();
     if (next!=='off' && !cache.has(next)) {
       try {
-        const filename=next==='ward'?'scarborough-wards.geojson':'scarborough-overlay-neighbourhoods.geojson';
-        const response=await fetch('data/'+filename,{cache:'force-cache'});
-        if (!response.ok) throw new Error('HTTP '+response.status);
-        cache.set(next,validateAreaFeatures(next,await response.json()));
+        await loadGeometry(next);
       } catch (error) {
         if (generation!==token) return;
         overlay='off';
@@ -219,6 +246,11 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
   }
   function attachMap(nextMap) {
     map=nextMap;
+    // A requested overlay must be retried when the map finishes loading. The
+    // flag makes these callbacks inert once the correct layer is installed.
+    for(const event of ['styledata','idle']) {
+      map.on(event,()=>{if(awaitingMapReady) display();});
+    }
     map.on('click','area-region-fill',event=>{
       if (overlay==='off' || !LIVE_MODES.has(getState().mode)) return;
       // Point markers and clusters always take precedence over polygon taps.
@@ -229,13 +261,30 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     map.on('mouseenter','area-region-fill',()=>{if (overlay!=='off') map.getCanvas().style.cursor='pointer';});
     map.on('mouseleave','area-region-fill',()=>{map.getCanvas().style.cursor='';});
     display();
+    sync();
   }
-  function fitArea() {
-    const area=selected(), collection=cache.get(area?.kind);
-    if (!map || !collection || !area) return;
-    const matching=collection.features.filter(f=>f.properties.AREA_SHORT_CODE===area.code);
-    const bounds=fitBoundsFromFeatures(matching);
-    if(bounds) map.fitBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]],{padding:42,maxZoom:13,duration:350});
+  function detachMap() {
+    map=null;awaitingMapReady=false;displayed=null;
+    sync();
+  }
+  async function fitArea() {
+    const area=selected(), attempt=++fitAttempt;
+    if (!map || !area) return;
+    try {
+      // An area selected through the legacy dropdown or restored from browser
+      // preferences need not have its overlay enabled or loaded.
+      const collection=await loadGeometry(area.kind);
+      const current=selected();
+      if(attempt!==fitAttempt || !map || !current || current.kind!==area.kind || current.code!==area.code) return;
+      const matching=collection.features.filter(f=>f.properties.AREA_SHORT_CODE===area.code);
+      const bounds=fitBoundsFromFeatures(matching);
+      if(bounds) map.fitBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]],{padding:42,maxZoom:13,duration:350});
+      else showNote('The selected official area has no usable mapped boundary.');
+    } catch(error) {
+      if(attempt!==fitAttempt) return;
+      showNote('The official boundary could not be loaded. Your area filter remains in place.');
+      console.warn('Selected area boundary unavailable:',error?.message||error);
+    }
   }
   function onPanelClose() {
     open=false;expanded=false;renderPanel();
@@ -261,7 +310,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     if(event.key==='Escape' && open) onPanelClose();
   });
   sync();
-  return {sync, attachMap, updateMode:()=>{
+  return {sync, attachMap, detachMap, updateMode:()=>{
     if (!LIVE_MODES.has(getState().mode) && overlay!=='off')
       showNote('Boundaries are hidden for this view. Police division totals and historical beach samples are not neighbourhood or ward figures.');
     else if (el('area-note').textContent.startsWith('Boundaries are hidden for this view')) showNote('');
