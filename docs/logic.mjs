@@ -1,6 +1,7 @@
+import {areaMatches} from './area-selection.mjs';
 /** Pure presentation/filtering functions; safe to test without a browser. */
 export const STATUS = ['Pass', 'Conditional Pass', 'Closed'];
-export const DEFAULTS = Object.freeze({mode:'recent',status:'all',days:'30',neighbourhood:'',search:''});
+export const DEFAULTS = Object.freeze({mode:'recent',status:'all',days:'30',neighbourhood:'',areaKind:'',areaCode:'',search:''});
 
 export function dayInWindow(date, days, now = new Date()) {
   if (days === 'all') return true;
@@ -18,7 +19,7 @@ export function filterEstablishments(items, state, now = new Date()) {
   const query = state.search.trim().toLocaleLowerCase('en-CA');
   return items.filter(e =>
     (state.status === 'all' || e.status === state.status) &&
-    (!state.neighbourhood || e.neighbourhood === state.neighbourhood) &&
+    areaMatches(e,state) &&
     (!query || `${e.name} ${e.address}`.toLocaleLowerCase('en-CA').includes(query)) &&
     dayInWindow(e.inspection_date, state.days, now)
   );
