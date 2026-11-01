@@ -720,7 +720,14 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
     {...snapshot.establishments[2],neighbourhood:'West Hill',ward:'Scarborough Centre'}
   ]};
   await installLocalRoutes(page,origin,{snapshotBody:areaSnapshot});
-  await page.route('**/data/scarborough-wards.geojson',route=>route.fulfill({contentType:'application/geo+json',body:JSON.stringify(areaOverlayFixture('ward'))}));
+  let releaseWardGeometry, resolveWardRequest;
+  const wardGeometryGate=new Promise(resolve=>releaseWardGeometry=resolve);
+  const wardRequestStarted=new Promise(resolve=>resolveWardRequest=resolve);
+  await page.route('**/data/scarborough-wards.geojson',async route=>{
+    resolveWardRequest();
+    await wardGeometryGate;
+    await route.fulfill({contentType:'application/geo+json',body:JSON.stringify(areaOverlayFixture('ward'))});
+  });
   await page.route('**/data/scarborough-overlay-neighbourhoods.geojson',route=>route.fulfill({contentType:'application/geo+json',body:JSON.stringify(areaOverlayFixture('neighbourhood'))}));
   await page.goto(origin,{waitUntil:'domcontentloaded'});
   await waitForMap(page);
@@ -728,30 +735,22 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   assert.equal(await page.locator('#area-selection').isVisible(),false);
   assert.equal(await page.locator('[data-area-overlay="off"]').getAttribute('aria-pressed'),'true');
   assert.equal(await page.evaluate(()=>Boolean(window.__scarbMap.getSource('area-regions'))),false,'no overlay resources rendered by default');
-  // Simulate a slow MapLibre style while the official polygon request arrives.
-  await page.evaluate(()=>{
-    const map=window.__scarbMap;
-    window.__overlayOriginalLoaded=map.loaded;
-    window.__overlayOriginalStyleLoaded=map.isStyleLoaded;
-    map.loaded=()=>false;map.isStyleLoaded=()=>false;
-  });
+  // Hold the boundary response while MapLibre remains in its real loaded state.
   const wardResponse=page.waitForResponse(response=>response.url().includes('scarborough-wards.geojson'));
   await page.locator('[data-area-overlay="ward"]').click();
-  await wardResponse;
+  await wardRequestStarted;
   await page.waitForTimeout(120);
-  assert.equal(await page.evaluate(()=>Boolean(window.__scarbMap.getLayer('area-region-fill'))),false,'loading style does not pretend overlay was drawn');
-  await page.evaluate(()=>{
-    const map=window.__scarbMap;
-    map.loaded=window.__overlayOriginalLoaded;
-    map.isStyleLoaded=window.__overlayOriginalStyleLoaded;
-    map.fire('idle');
-  });
-  await page.waitForFunction(()=>Boolean(window.__scarbMap.getLayer('area-region-fill')),'overlay eventually appears on readiness');
+  assert.equal(await page.evaluate(()=>Boolean(window.__scarbMap.getLayer('area-region-fill'))),false,'overlay waits for its geometry response');
+  releaseWardGeometry();
+  await wardResponse;
+  await page.waitForFunction(()=>Boolean(window.__scarbMap.getLayer('area-region-fill')),'overlay appears after geometry is available');
+  await page.waitForFunction(()=>window.__scarbMap.isSourceLoaded('area-regions'),'ward source has completed its initial tile load');
   await page.locator('#area-choice').selectOption('20');
   await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===2);
   assert.match(await page.locator('#area-panel').textContent(),/Parthi Kandavel/);
   await page.locator('[data-area-overlay="neighbourhood"]').click();
   await page.waitForFunction(()=>document.querySelector('[data-area-overlay="neighbourhood"]').getAttribute('aria-pressed')==='true');
+  await page.waitForFunction(()=>window.__scarbMap.isSourceLoaded('area-regions'),'neighbourhood source update has completed');
   assert.equal(await page.locator('#record-list .record-item').count(),2,'switching visual geometry does not silently change the ward filter');
   assert.match(await page.locator('#area-selection-name').textContent(),/Ward 20/);
   await page.locator('#area-choice').selectOption('125');
