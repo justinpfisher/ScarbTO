@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -76,6 +77,7 @@ class CodeOnlyReleaseTests(unittest.TestCase):
                 check=True,
             )
             commit = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+            tree = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD:docs/data"], text=True).strip()
             parent = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD^"], text=True).strip()
             committed_at = subprocess.check_output(["git", "-C", str(repo), "show", "-s", "--format=%cI", "HEAD"], text=True).strip()
             timestamp = datetime.fromisoformat(committed_at.replace("Z", "+00:00"))
@@ -113,13 +115,13 @@ class CodeOnlyReleaseTests(unittest.TestCase):
                 return {"total_count": 1, "jobs": [job]}
 
             with patch("scripts.verify_code_only_release._github_api_json", side_effect=api_response):
-                result = validate_publisher_tree(repo)
+                result = validate_publisher_tree(repo, expected={"commit": commit, "tree": tree, "run_id": 123})
             self.assertEqual(result["commit"], commit)
             self.assertEqual(result["run_id"], 123)
             (data / "untracked.json").write_text("{}", encoding="utf-8")
             with patch("scripts.verify_code_only_release._github_api_json", side_effect=api_response):
                 with self.assertRaises(ReleaseError):
-                    validate_publisher_tree(repo)
+                    validate_publisher_tree(repo, expected={"commit": commit, "tree": tree, "run_id": 123})
 
     def test_forged_bot_commit_metadata_without_successful_run_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory(dir=ROOT) as temp:
@@ -141,12 +143,67 @@ class CodeOnlyReleaseTests(unittest.TestCase):
                 ["git", "-C", str(repo), "commit", "--quiet", "-m", "data: refresh validated Scarborough DineSafe snapshot"],
                 check=True,
             )
+            commit = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+            tree = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD:docs/data"], text=True).strip()
             with patch(
                 "scripts.verify_code_only_release._github_api_json",
                 return_value={"total_count": 0, "workflow_runs": []},
             ):
                 with self.assertRaisesRegex(ReleaseError, "No unique successful workflow run"):
-                    validate_publisher_tree(repo)
+                    validate_publisher_tree(repo, expected={"commit": commit, "tree": tree, "run_id": 123})
+
+    def test_fabricated_sibling_with_matching_parent_metadata_and_run_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ROOT) as temp:
+            repo = Path(temp)
+            subprocess.run(["git", "init", "--quiet", str(repo)], check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.name", "base"], check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.email", "base@example.invalid"], check=True)
+            (repo / "seed.txt").write_text("seed\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(repo), "add", "seed.txt"], check=True)
+            subprocess.run(["git", "-C", str(repo), "commit", "--quiet", "-m", "base"], check=True)
+            parent = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+            data = repo / "docs/data"
+            data.mkdir(parents=True)
+            (data / "snapshot.json").write_text("verified snapshot", encoding="utf-8")
+            subprocess.run(["git", "-C", str(repo), "config", "user.name", "Scarb.TO data publisher"], check=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"],
+                check=True,
+            )
+            env = dict(os.environ)
+            env["GIT_AUTHOR_DATE"] = "2026-11-01T16:51:45+00:00"
+            env["GIT_COMMITTER_DATE"] = "2026-11-01T16:51:45+00:00"
+            subprocess.run(["git", "-C", str(repo), "add", "docs/data"], check=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "commit", "--quiet", "-m", "data: refresh validated Scarborough DineSafe snapshot"],
+                check=True,
+                env=env,
+            )
+            verified = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+            verified_tree = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD:docs/data"], text=True).strip()
+            verified_time = subprocess.check_output(["git", "-C", str(repo), "show", "-s", "--format=%cI", "HEAD"], text=True).strip()
+            subprocess.run(["git", "-C", str(repo), "checkout", "--quiet", parent], check=True)
+            data.mkdir(parents=True, exist_ok=True)
+            (data / "snapshot.json").write_text("fabricated sibling", encoding="utf-8")
+            subprocess.run(["git", "-C", str(repo), "add", "docs/data"], check=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "commit", "--quiet", "-m", "data: refresh validated Scarborough DineSafe snapshot"],
+                check=True,
+                env=env,
+            )
+            sibling = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+            sibling_parent = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD^"], text=True).strip()
+            sibling_time = subprocess.check_output(["git", "-C", str(repo), "show", "-s", "--format=%cI", "HEAD"], text=True).strip()
+            self.assertEqual(sibling_parent, parent)
+            self.assertEqual(sibling_time, verified_time)
+            self.assertNotEqual(sibling, verified)
+            with patch("scripts.verify_code_only_release._github_api_json") as api:
+                with self.assertRaisesRegex(ReleaseError, "not the independently verified release baseline"):
+                    validate_publisher_tree(
+                        repo,
+                        expected={"commit": verified, "tree": verified_tree, "run_id": 123},
+                    )
+            api.assert_not_called()
 
     def test_dispatch_requires_main_and_explicit_code_only_event(self) -> None:
         env = {

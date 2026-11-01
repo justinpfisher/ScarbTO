@@ -28,6 +28,13 @@ REQUIRED_PUBLISH_STEPS = {
     "Verify Scarb.TO production HTTP response and official boundary assets",
 }
 MAX_API_BYTES = 1_000_000
+# Exact last-good baseline independently verified for this code-only rollout.
+# Update only alongside a separately verified successful publisher run.
+PINNED_BASELINE = {
+    "commit": "e15bdcd3f922f918a0090df0209b0c8497ed5460",
+    "tree": "2cb70e87eab0cb92601150a2d43e002f41fa87ec",
+    "run_id": 41328319131,
+}
 
 
 class ReleaseError(ValueError):
@@ -154,9 +161,12 @@ def _verify_successful_publisher_run(parent_sha: str, commit_time: datetime) -> 
     return run_id
 
 
-def validate_publisher_tree(repo: str | Path) -> dict[str, str | int]:
+def validate_publisher_tree(
+    repo: str | Path, *, expected: dict[str, str | int] | None = None
+) -> dict[str, str | int]:
     """Require current docs/data to match a successful, independently recorded publisher run."""
     root = Path(repo)
+    checkpoint = expected if expected is not None else PINNED_BASELINE
     if _git(root, "rev-parse", "--is-shallow-repository") != "false":
         raise ReleaseError("Full repository history is required to verify snapshot provenance")
     if _git(root, "status", "--porcelain", "--untracked-files=all", "--", "docs/data"):
@@ -173,14 +183,20 @@ def validate_publisher_tree(repo: str | Path) -> dict[str, str | int]:
     if len(parts) != 8 or parts[1:6] != [PUBLISHER, PUBLISHER_EMAIL, PUBLISHER, PUBLISHER_EMAIL, PUBLISH_SUBJECT]:
         raise ReleaseError("Latest docs/data change is not a validated publisher commit")
     commit = parts[0]
+    if commit != checkpoint.get("commit"):
+        raise ReleaseError("Last-good data commit is not the independently verified release baseline")
     parents = parts[7].split()
     if len(parents) != 1:
         raise ReleaseError("Last-good data commit has unexpected ancestry")
     run_id = _verify_successful_publisher_run(parents[0], _timestamp(parts[6]))
     published_tree = _git(root, "rev-parse", f"{commit}:docs/data")
     current_tree = _git(root, "rev-parse", "HEAD:docs/data")
+    if published_tree != checkpoint.get("tree") or current_tree != checkpoint.get("tree"):
+        raise ReleaseError("Last-good data tree does not match the independently verified release baseline")
     if published_tree != current_tree:
         raise ReleaseError("docs/data differs from the last validated publisher snapshot")
+    if run_id != checkpoint.get("run_id"):
+        raise ReleaseError("Publisher run does not match the independently verified release baseline")
     return {"commit": commit, "tree": current_tree, "run_id": run_id}
 
 
