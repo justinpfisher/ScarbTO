@@ -1,2 +1,4 @@
 # This checked-in source contract is validated by its exact byte hash.
 research/phase1b-csi/fixtures/official-source-contract/scarbto-neighbourhood158-source-contract-2026-10-27.json -text
+research/phase1c-permits/tests/fixtures/safe-source-fixture.json -text
+research/phase1c-permits/tests/fixtures/normalization-contract.json -text
