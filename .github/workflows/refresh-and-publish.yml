@@ -38,6 +38,12 @@ jobs:
           -Command "$ErrorActionPreference = 'Stop'; . '{0}'; if (Test-Path -LiteralPath variable:\LASTEXITCODE) {{ exit $LASTEXITCODE }}"
     steps:
       - uses: actions/checkout@v4
+      - name: Re-materialize hash-pinned permit fixtures with checked-in attributes
+        run: |
+          git checkout-index --force -- research/phase1c-permits/tests/fixtures/safe-source-fixture.json research/phase1c-permits/tests/fixtures/normalization-contract.json
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
       - name: Verify preinstalled Python 3.12
         run: |
           $python = 'C:\Program Files\Python312\python.exe'
