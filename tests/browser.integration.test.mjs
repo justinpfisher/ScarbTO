@@ -713,7 +713,7 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   const context=await browser.newContext({viewport:{width:1280,height:900}});
   t.after(()=>context.close());
   const page=await context.newPage(),errors=[];
-  page.on('pageerror',err=>errors.push(err.message));
+  page.on('pageerror',err=>errors.push(err.stack||err.message));
   const areaSnapshot={...snapshot,establishments:[
     {...snapshot.establishments[0],neighbourhood:'Ionview',ward:'Scarborough Southwest'},
     {...snapshot.establishments[1],neighbourhood:'Oakridge',ward:'Scarborough Southwest'},
@@ -782,7 +782,7 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   assert.equal(await page.locator('#area-selection').isVisible(),false);
   const centerAfter=await page.evaluate(()=>window.__scarbMap.getCenter().toArray());
   assert.ok(centerAtClear.every((v,i)=>Math.abs(v-centerAfter[i])<.02),'clear preserves map location even after inspecting area geometry');
-  assert.deepEqual(errors,[]);
+  assert.deepEqual(errors,[],errors.join('\n\n'));
 });
 
 test('mobile area panel is closeable and the selected-area chip remains usable without the panel', {timeout:90_000}, async t=>{
