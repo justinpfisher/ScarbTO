@@ -29,6 +29,7 @@ let selectedCallsExpiryTimer=null, selectedCallsExpiryDeadlineMono=null, selecte
 let mapUnavailable = false;
 let councilBoundary = null;
 let areaExplorer = null;
+let mapLegendCollapsed=globalThis.matchMedia?.('(max-width: 570px)').matches||false;
 
 function clearSelectedCallsExpiry(){
   clearTimeout(selectedCallsExpiryTimer);selectedCallsExpiryTimer=null;
@@ -113,11 +114,24 @@ function syncControls() {
   $('beach-filter-note').hidden=!beachMode;
   $('selected-calls-filter-note').hidden=!selectedCallsMode;
   $('selected-calls-map-note').hidden=!selectedCallsMode;
-  $('map-legend').hidden=selectedCallsMode;
+  $('map-legend').hidden=mapUnavailable;
+  document.querySelectorAll('[data-legend-mode]').forEach(item=>{
+    item.hidden=item.dataset.legendMode==='dinesafe'?(beachMode||selectedCallsMode):item.dataset.legendMode==='beach'?(!beachMode||selectedCallsMode):false;
+  });
+  syncMapLegend();
   $('map').setAttribute('aria-label',selectedCallsMode?'Map background only; selected calls are not mapped individually':'Interactive map of DineSafe establishments and beach sample locations');
   document.querySelectorAll('#search,#neighbourhood,#window,.outcomes button').forEach(control=>{control.disabled=beachMode||selectedCallsMode;});
   syncDataStatus();
   areaExplorer?.updateMode();
+}
+function syncMapLegend(){
+  const button=$('map-legend-toggle'),items=$('map-legend-items');
+  if(!button||!items)return;
+  items.hidden=mapLegendCollapsed;
+  $('map-legend').classList.toggle('collapsed',mapLegendCollapsed);
+  button.setAttribute('aria-expanded',String(!mapLegendCollapsed));
+  button.setAttribute('aria-label',mapLegendCollapsed?'Show map key':'Hide map key');
+  const icon=button.querySelector('span');if(icon)icon.textContent=mapLegendCollapsed?'+':'−';
 }
 function populateNeighbourhoods() {
   const names=[...new Set(snapshot.establishments.map(e=>e.neighbourhood).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'en-CA'));
@@ -221,7 +235,13 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
     records=matches.sort((a,b)=>b.inspection_date.localeCompare(a.inspection_date)||a.name.localeCompare(b.name));
   }
   $('results-count').textContent=`${records.length.toLocaleString('en-CA')} in view`;
-  if(!records.length){list.append(els('p','empty','No matching places in the current map view. Widen the date or outcome filters, or choose "Show all Scarborough".'));finishListRedraw(list,previousFocus);return;}
+  if(!records.length){
+    list.append(els('p','empty','No matching places in the current map view. Clear or widen filters, or fit the map to Scarborough.'));
+    const actions=els('div','empty-actions');
+    const reset=els('button','empty-action','Clear filters');reset.type='button';reset.addEventListener('click',()=>$('reset').click());actions.append(reset);
+    if(map){const fit=els('button','empty-action','Fit Scarborough');fit.type='button';fit.addEventListener('click',fitAll);actions.append(fit);}
+    list.append(actions);finishListRedraw(list,previousFocus);return;
+  }
   for(const entry of pageRecords(records,listLimit,selectedId)) {
     const card=els('div','record-card');
     card.dataset.id=entry.id;
@@ -231,11 +251,12 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
     head.append(els('span','status-label '+outcomeClass(entry.status),entry.status));
     button.append(head,els('div','record-address',displayAddress(entry.address)||'Address unavailable'));
     const meta=els('div','record-meta');
-    meta.append(els('span','',localDate(entry.inspection_date)));
+    meta.append(els('span','inspection-date','Inspection: '+localDate(entry.inspection_date)));
     if(entry.neighbourhood)meta.append(els('span','',entry.neighbourhood));
     if(entry.event){
       const title={first_seen:'New to feed',new_inspection:'New inspection recorded',status_changed:`Changed from ${entry.event.previous_status||'unknown'}`} [entry.event.kind] || 'Updated';
       meta.append(els('span','',title));
+      meta.append(els('span','observed-date','First observed by Scarb.TO: '+publishedAt(entry.event.detected_at)));
     }
     button.append(meta);
     button.addEventListener('click',()=>selectPlace(entry.id,true));
@@ -245,11 +266,12 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
       button.setAttribute('aria-controls',detailId);
       const detail=els('div','record-details');
       detail.id=detailId;
-      const inspectionDetail = typeof entry.inspection_detail === 'string'
-        ? entry.inspection_detail : (entry.type === 'None' ? '' : entry.type || '');
-      const detailNote = inspectionDetail
+      const meaningfulText=value=>typeof value==='string'&&!/^(?:none|null|undefined|n\/a)$/i.test(value.trim())?value.trim():'';
+      const inspectionDetail=meaningfulText(entry.inspection_detail);
+      const establishmentType=meaningfulText(entry.type);
+      const detailNote=inspectionDetail
         ? `Recorded inspection detail: ${inspectionDetail}`
-        : (entry.type && entry.type !== 'None' ? `Establishment category: ${entry.type}` : 'No additional detail in this source row.');
+        : establishmentType?`Establishment category: ${establishmentType}`:'No additional detail in this source row.';
       detail.append(els('p','record-detail-note',detailNote));
       const source=els('a','record-source-link','Open the City DineSafe record');
       source.dataset.id=entry.id;source.href=cityDineSafeRecordUrl(entry.id);source.target='_blank';source.rel='noopener noreferrer';
@@ -369,6 +391,7 @@ async function initMap() {
   }catch(error){setMapUnavailable(error);}
 }
 function bindControls(){
+  $('map-legend-toggle').addEventListener('click',()=>{mapLegendCollapsed=!mapLegendCollapsed;syncMapLegend();});
   document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
     const next=b.dataset.mode;
     if(state.mode==='selected-calls'&&next!=='selected-calls')deactivateSelectedCalls();

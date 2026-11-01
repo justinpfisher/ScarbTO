@@ -72,23 +72,26 @@
             <button type="button" id="area-clear">Clear area</button>
           </div>
           <p id="area-note" class="area-note" role="status" aria-live="polite" hidden></p>
-          <aside id="area-panel" class="area-panel" aria-labelledby="area-title" hidden>
-            <div class="area-panel-header">
-              <div class="area-panel-heading"><p class="area-eyebrow">Explore area</p><h3 id="area-title" tabindex="-1"></h3><p id="area-subtitle"></p></div>
-              <div class="area-panel-actions">
-                <button type="button" id="area-panel-expand" aria-expanded="false" aria-label="Expand area information">Expand</button>
-                <button type="button" id="area-panel-close" aria-label="Close area information">Close</button>
-              </div>
+          <div class="map-legend" id="map-legend" role="group" aria-label="Map key">
+            <button id="map-legend-toggle" class="map-legend-toggle" type="button" aria-expanded="true" aria-controls="map-legend-items">Map key <span aria-hidden="true">−</span></button>
+            <div id="map-legend-items" class="map-legend-items">
+              <span data-legend-mode="dinesafe"><i class="dot pass" aria-hidden="true"></i>Pass</span><span data-legend-mode="dinesafe"><i class="dot conditional" aria-hidden="true"></i>Conditional</span><span data-legend-mode="dinesafe"><i class="dot closed" aria-hidden="true"></i>Closed</span>
+              <span data-legend-mode="beach"><i class="dot beach" aria-hidden="true"></i>Beach sample</span><span data-legend-mode="boundary"><i class="dot boundary" aria-hidden="true"></i>Community Council boundary</span><span data-legend-mode="boundary"><i class="dot outside" aria-hidden="true"></i>Outside area</span>
             </div>
-            <div id="area-content" class="area-content"></div>
-            <div class="area-panel-footer"><button type="button" id="area-panel-fit">View boundary</button><span>Official sources linked above</span></div>
-          </aside>
-          <div class="map-legend" id="map-legend" role="group" aria-label="Map legend"><span><i class="dot pass" aria-hidden="true"></i>Pass</span><span><i class="dot conditional" aria-hidden="true"></i>Conditional</span><span><i class="dot closed" aria-hidden="true"></i>Closed</span><span><i class="dot beach" aria-hidden="true"></i>Beach sample</span><span><i class="dot boundary" aria-hidden="true"></i>Community Council boundary</span><span><i class="dot outside" aria-hidden="true"></i>Outside area</span></div>
+          </div>
           <button class="map-fit" id="fit" type="button" title="Show all Scarborough">Show all Scarborough</button>
         </div>
         <section class="results" id="results" aria-labelledby="results-title">
           <div class="results-header"><div><p class="eyebrow" id="results-kicker">Official inspections</p><h2 id="results-title">Matching places</h2></div><span id="results-count" aria-live="polite"></span></div>
           <p class="results-caption" id="results-caption">Results follow the map and your filters.</p>
+          <aside id="area-panel" class="area-panel" aria-labelledby="area-title" hidden>
+            <div class="area-panel-header">
+              <div class="area-panel-heading"><p class="area-eyebrow">Explore area</p><h3 id="area-title" tabindex="-1"></h3><p id="area-subtitle"></p></div>
+              <div class="area-panel-actions"><button type="button" id="area-panel-expand" aria-expanded="false" aria-label="Expand area information">Expand</button><button type="button" id="area-panel-close" aria-label="Close area information">Close</button></div>
+            </div>
+            <div id="area-content" class="area-content"></div>
+            <div class="area-panel-footer"><button type="button" id="area-panel-fit">View boundary</button><span>Official sources linked above</span></div>
+          </aside>
           <div class="record-list" id="record-list" tabindex="-1" aria-live="polite"><p class="empty">Waiting for a verified City of Toronto data snapshot.</p></div>
         </section>
       </main>
