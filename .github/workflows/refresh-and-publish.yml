@@ -12,16 +12,8 @@ on:
       - 'tests/**'
       - 'package.json'
       - 'package-lock.json'
-      - '.github/workflows/refresh-and-publish.yml'
-  pull_request:
-    paths:
-      - 'docs/**'
-      - 'scripts/**'
-      - 'tests/**'
       - 'research/**'
       - '.github/scripts/test_research_prototypes.py'
-      - 'package.json'
-      - 'package-lock.json'
       - '.github/workflows/refresh-and-publish.yml'
 
 concurrency:
@@ -30,7 +22,12 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on:
+      - self-hosted
+      - Windows
+      - X64
+      - scarbto-gmktec
     permissions:
       contents: read
     timeout-minutes: 15
