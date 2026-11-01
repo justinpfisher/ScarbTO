@@ -4,12 +4,14 @@ import json
 import tempfile
 import subprocess
 import unittest
+from unittest.mock import patch
+from urllib.error import HTTPError
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'scripts'))
 from update_dinesafe import (DataError, build_snapshot, date_string, get_resources, in_geometry,
-    make_activity, normalise, atomic_write, prepare_activity_archives, reconcile_activity_history,
+    make_activity, normalise, atomic_write, download, prepare_activity_archives, reconcile_activity_history,
     AREA_NEIGHBOURHOODS, AREA_WARDS, qualified_area_features)
 
 
@@ -44,6 +46,15 @@ def item(id, name, status, date, lat=43.74,lon=-79.40):
 
 
 class IngestionTests(unittest.TestCase):
+    def test_download_reports_sanitized_source_stage_without_retry(self):
+        failure = HTTPError('https://gis.toronto.ca/query?token=hidden', 503, 'unavailable', {}, None)
+        with patch('update_dinesafe.urlopen', side_effect=failure) as request:
+            with self.assertRaisesRegex(DataError, 'HTTP 503 retrieving official ward geography') as caught:
+                download('https://gis.toronto.ca/query?token=hidden', 'official ward geography')
+        self.assertIn('https://gis.toronto.ca/query', str(caught.exception))
+        self.assertNotIn('token', str(caught.exception))
+        request.assert_called_once()
+
     def test_latest_inspection_and_exclusion_and_names(self):
         csv_data=rows_as_csv([item('10','Northern Café','Pass','2026-10-01'),item('10','Northern Café','Conditional Pass','2026-10-18'),item('11','East, Diner','Closed','2026-10-20',43.84,-79.2),item('99','Outside','Pass','2026-10-15',43.60,-79.6)])
         items,stats,neighbourhoods_geo=normalise(csv_data,wards(),neighbourhoods(),minimum=1)

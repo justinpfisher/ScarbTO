@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: '17 10 * * *'  # Once daily, UTC. Not a real-time inspection feed.
   workflow_dispatch:
+    inputs:
+      release_mode:
+        description: 'Refresh official data, or publish code with the unchanged validated snapshot'
+        type: choice
+        required: true
+        default: refresh
+        options:
+          - refresh
+          - code_only
   push:
     branches: [main]
     paths:
@@ -135,14 +144,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: true
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Retrieve and validate official Toronto data
+        if: inputs.release_mode != 'code_only'
         run: python scripts/update_dinesafe.py
       - name: Validate output is public and usable
+        if: inputs.release_mode != 'code_only'
         run: python scripts/verify_snapshot.py
+      - name: Verify unchanged last-good data for code-only release
+        if: inputs.release_mode == 'code_only'
+        run: python scripts/verify_code_only_release.py
       - name: Persist only validated data and recoverable release baseline
+        if: inputs.release_mode != 'code_only'
         run: |
           git config user.name "Scarb.TO data publisher"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
