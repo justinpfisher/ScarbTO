@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Verify preinstalled Python 3.12
-        shell: pwsh
+        shell: powershell
         run: |
           $python = 'C:\Program Files\Python312\python.exe'
           if (-not (Test-Path -LiteralPath $python)) {
@@ -44,7 +44,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
-          Split-Path -Path $python | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          Add-Content -Path $env:GITHUB_PATH -Value (Split-Path -Path $python) -Encoding ASCII
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -58,7 +58,7 @@ jobs:
       - name: Check production smoke-check script syntax
         run: python -m py_compile scripts/verify_live_overlay.py
       - name: Check JavaScript syntax
-        shell: pwsh
+        shell: powershell
         run: |
           $files = @(
             'docs/logic.mjs',
