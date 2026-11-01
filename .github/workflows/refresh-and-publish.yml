@@ -34,8 +34,8 @@ jobs:
     defaults:
       run:
         shell: >-
-        powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned
-        -Command "$ErrorActionPreference = 'Stop'; . '{0}'; if (Test-Path -LiteralPath variable:\LASTEXITCODE) { exit $LASTEXITCODE }"
+          powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned
+          -Command "$ErrorActionPreference = 'Stop'; . '{0}'; if (Test-Path -LiteralPath variable:\LASTEXITCODE) { exit $LASTEXITCODE }"
     steps:
       - uses: actions/checkout@v4
       - name: Verify preinstalled Python 3.12
