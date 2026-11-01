@@ -31,10 +31,14 @@ jobs:
     permissions:
       contents: read
     timeout-minutes: 15
+    defaults:
+      run:
+        shell: >-
+          powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned
+          -Command "$ErrorActionPreference = 'Stop'; . '{0}'; if (Test-Path -LiteralPath variable:\LASTEXITCODE) {{ exit $LASTEXITCODE }}"
     steps:
       - uses: actions/checkout@v4
       - name: Verify preinstalled Python 3.12
-        shell: powershell
         run: |
           $python = 'C:\Program Files\Python312\python.exe'
           if (-not (Test-Path -LiteralPath $python)) {
@@ -58,7 +62,6 @@ jobs:
       - name: Check production smoke-check script syntax
         run: python -m py_compile scripts/verify_live_overlay.py
       - name: Check JavaScript syntax
-        shell: powershell
         run: |
           $files = @(
             'docs/logic.mjs',
