@@ -12,16 +12,8 @@ on:
       - 'tests/**'
       - 'package.json'
       - 'package-lock.json'
-      - '.github/workflows/refresh-and-publish.yml'
-  pull_request:
-    paths:
-      - 'docs/**'
-      - 'scripts/**'
-      - 'tests/**'
       - 'research/**'
       - '.github/scripts/test_research_prototypes.py'
-      - 'package.json'
-      - 'package-lock.json'
       - '.github/workflows/refresh-and-publish.yml'
 
 concurrency:
@@ -30,7 +22,12 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on:
+      - self-hosted
+      - Windows
+      - X64
+      - scarbto-gmktec
     permissions:
       contents: read
     timeout-minutes: 15
@@ -52,13 +49,22 @@ jobs:
       - name: Check production smoke-check script syntax
         run: python -m py_compile scripts/verify_live_overlay.py
       - name: Check JavaScript syntax
+        shell: pwsh
         run: |
-          node --check docs/logic.mjs
-          node --check docs/area-selection.mjs
-          node --check docs/area-explorer.mjs
-          node --check docs/app.mjs
-          node --check docs/beach-history.mjs
-          node --check docs/selected-calls.mjs
+          $files = @(
+            'docs/logic.mjs',
+            'docs/area-selection.mjs',
+            'docs/area-explorer.mjs',
+            'docs/app.mjs',
+            'docs/beach-history.mjs',
+            'docs/selected-calls.mjs'
+          )
+          foreach ($file in $files) {
+            node --check $file
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+          }
       - name: JavaScript logic tests
         run: node --test tests/logic.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs tests/boundary.test.mjs tests/area-selection.test.mjs
       - name: Offline research prototype tests
