@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -51,8 +52,27 @@ class CodeOnlyReleaseTests(unittest.TestCase):
         # This matches the existing ordinary verifier's comparison behavior.
         self.assertTrue(is_snapshot_fresh(now + timedelta(minutes=1), now))
 
-    def test_data_tree_is_unchanged_from_validated_publisher_commit(self) -> None:
-        self.assertRegex(validate_publisher_tree(ROOT), r"^[0-9a-f]{40}$")
+    def test_publisher_tree_provenance_check_uses_a_synthetic_history(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ROOT) as temp:
+            repo = Path(temp)
+            data = repo / "docs/data"
+            data.mkdir(parents=True)
+            (data / "snapshot.json").write_text("{}", encoding="utf-8")
+            subprocess.run(["git", "init", "--quiet", str(repo)], check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.name", "Scarb.TO data publisher"], check=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"],
+                check=True,
+            )
+            subprocess.run(["git", "-C", str(repo), "add", "docs/data"], check=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "commit", "--quiet", "-m", "data: refresh validated Scarborough DineSafe snapshot"],
+                check=True,
+            )
+            self.assertRegex(validate_publisher_tree(repo), r"^[0-9a-f]{40}$")
+            (data / "untracked.json").write_text("{}", encoding="utf-8")
+            with self.assertRaises(ReleaseError):
+                validate_publisher_tree(repo)
 
     def test_dispatch_requires_main_and_explicit_code_only_event(self) -> None:
         env = {

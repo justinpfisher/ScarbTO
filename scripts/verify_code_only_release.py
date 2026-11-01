@@ -13,6 +13,7 @@ except ImportError:
     from snapshot_integrity import SnapshotIntegrityError, validate_snapshot_integrity
 
 PUBLISHER = "Scarb.TO data publisher"
+PUBLISHER_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"
 PUBLISH_SUBJECT = "data: refresh validated Scarborough DineSafe snapshot"
 
 
@@ -32,11 +33,13 @@ def _git(repo: Path, *args: str) -> str:
 def validate_publisher_tree(repo: str | Path) -> str:
     """Require current docs/data to be exactly the latest validated publisher tree."""
     root = Path(repo)
+    if _git(root, "rev-parse", "--is-shallow-repository") != "false":
+        raise ReleaseError("Full repository history is required to verify snapshot provenance")
     if _git(root, "status", "--porcelain", "--untracked-files=all", "--", "docs/data"):
         raise ReleaseError("Working tree contains uncommitted or untracked docs/data files")
-    record = _git(root, "log", "-1", "--format=%H%x00%an%x00%s", "--", "docs/data")
+    record = _git(root, "log", "-1", "--format=%H%x00%an%x00%ae%x00%cn%x00%ce%x00%s", "--", "docs/data")
     parts = record.split("\x00")
-    if len(parts) != 3 or parts[1:] != [PUBLISHER, PUBLISH_SUBJECT]:
+    if len(parts) != 6 or parts[1:] != [PUBLISHER, PUBLISHER_EMAIL, PUBLISHER, PUBLISHER_EMAIL, PUBLISH_SUBJECT]:
         raise ReleaseError("Latest docs/data change is not a validated publisher commit")
     commit = parts[0]
     published_tree = _git(root, "rev-parse", f"{commit}:docs/data")
