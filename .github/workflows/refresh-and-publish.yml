@@ -33,9 +33,18 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - name: Verify preinstalled Python 3.12
+        shell: pwsh
+        run: |
+          $python = 'C:\Program Files\Python312\python.exe'
+          if (-not (Test-Path -LiteralPath $python)) {
+            throw 'The approved GMKtec Python 3.12 installation is unavailable.'
+          }
+          & $python -c "import sys; assert sys.version_info[:2] == (3, 12), sys.version"
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          Split-Path -Path $python | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
