@@ -273,6 +273,9 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
   }
   function select(area) {
     if (!area || !areaFor(area.kind,area.code)) return;
+    // The boundary-switch notice is actionable only until the replacement
+    // area is selected. Clear it once the user has completed that recovery.
+    showNote('');
     open=true;expanded=false;
     onSelect(area);
     sync();

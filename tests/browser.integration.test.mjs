@@ -799,6 +799,7 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   assert.equal(await page.locator('#area-selection').isVisible(),false);
   await page.locator('#area-choice').selectOption('125');
   await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===1);
+  assert.equal(await page.locator('#area-note').isVisible(),false,'successful selection clears the obsolete boundary-switch notice');
   assert.match(await page.locator('#area-selection-name').textContent(),/Ionview/);
   assert.match(await page.locator('#area-panel').textContent(),/Ward 20 and Ward 21/);
   await page.getByRole('button',{name:'Selected police calls'}).click();

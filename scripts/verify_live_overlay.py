@@ -8,6 +8,7 @@ the official 6-ward/30-neighbourhood output is missing or malformed.
 from __future__ import annotations
 
 import json
+import re
 import sys
 import time
 from urllib.error import HTTPError, URLError
@@ -24,6 +25,19 @@ CHECKS = (
     ('data/snapshot.json', 12_000_000),
 )
 EXPECTED_WARDS = {'20', '21', '22', '23', '24', '25'}
+AREA_EXPLORER_IMPORT = re.compile(
+    r"import\s*\{\s*createAreaExplorer\s*\}\s*from\s*['\"]\./area-explorer\.mjs['\"]"
+)
+AREA_EXPLORER_EXPORT = re.compile(r"export\s+function\s+createAreaExplorer\s*\(")
+
+
+def validate_area_explorer_bundle(app: str, explorer: str) -> None:
+    """Check the served app entry and module contract without assuming layer IDs."""
+    if not AREA_EXPLORER_IMPORT.search(app):
+        raise ValueError('Production app does not import the area explorer module')
+    if not AREA_EXPLORER_EXPORT.search(explorer):
+        raise ValueError('Production area explorer module does not export its entry point')
+
 
 
 def download(path: str, marker: str) -> bytes:
@@ -66,8 +80,7 @@ def verify_once(marker: str) -> None:
     explorer = received['area-explorer.mjs'].decode('utf-8')
     if 'data-area-overlay="neighbourhood"' not in html or 'data-area-overlay="ward"' not in html:
         raise ValueError('Production HTML does not contain the approved area controls')
-    if 'createAreaExplorer' not in app or 'area-region-fill' not in explorer:
-        raise ValueError('Production UI bundle does not contain the area overlay implementation')
+    validate_area_explorer_bundle(app, explorer)
     wards = validate_feature_collection(received['data/scarborough-wards.geojson'], 6, 'wards')
     if wards != EXPECTED_WARDS:
         raise ValueError('Production ward codes differ from six official Scarborough wards')
@@ -77,7 +90,7 @@ def verify_once(marker: str) -> None:
     snapshot = json.loads(received['data/snapshot.json'])
     if snapshot.get('schema_version') != 1 or not snapshot.get('ready') or len(snapshot.get('establishments', [])) < 300:
         raise ValueError('Public DineSafe snapshot is not a validated, populated dataset')
-    print('LIVE VERIFIED: https://scarb.to/ · official areas: 6 wards/30 neighbourhoods; '
+    print('LIVE VERIFIED: https://scarb.to/ | official areas: 6 wards/30 neighbourhoods; '
           f'DineSafe establishments: {len(snapshot["establishments"])}; '
           f'published: {snapshot.get("published_at", "unspecified")}')
 
