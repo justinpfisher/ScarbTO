@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from snapshot_integrity import is_snapshot_fresh
 ROOT = Path(__file__).resolve().parent.parent / 'docs' / 'data'
 s = json.loads((ROOT / 'snapshot.json').read_text(encoding='utf-8'))
 if s.get('schema_version') != 1 or not s.get('ready'):
@@ -17,7 +18,7 @@ for entry in entries:
     if not (-80 < entry['longitude'] < -78 and 43 < entry['latitude'] < 45):
         raise SystemExit('Invalid coordinates')
 when = datetime.fromisoformat(s['published_at'])
-if when.tzinfo is None or datetime.now(timezone.utc)-when > timedelta(hours=3):
+if not is_snapshot_fresh(when, datetime.now(timezone.utc), timedelta(hours=3)):
     raise SystemExit('Snapshot not freshly built; held')
 if not (ROOT/'establishments.csv').is_file() or not (ROOT/'scarborough-neighbourhoods.geojson').is_file():
     raise SystemExit('Required export missing')

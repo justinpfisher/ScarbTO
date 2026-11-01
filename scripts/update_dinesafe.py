@@ -15,7 +15,8 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 CKAN = 'https://ckan0.cf.opendata.inter.prod-toronto.ca/api/3/action/package_show?id=dinesafe'
@@ -111,15 +112,22 @@ class DataError(RuntimeError):
     pass
 
 
-def download(url: str) -> bytes:
+def download(url: str, stage: str) -> bytes:
     req = Request(url, headers=HEADERS)
-    with urlopen(req, timeout=120) as response:
-        if response.status != 200:
-            raise DataError(f'HTTP {response.status} at {url}')
-        blob = response.read(MAX_DOWNLOAD + 1)
-        if len(blob) > MAX_DOWNLOAD:
-            raise DataError('Resource exceeds 100 MiB safety limit')
-        return blob
+    parsed = urlsplit(url)
+    endpoint = f'{parsed.scheme}://{parsed.hostname}{parsed.path}'
+    try:
+        with urlopen(req, timeout=120) as response:
+            if response.status != 200:
+                raise DataError(f'HTTP {response.status} retrieving {stage} from {endpoint}')
+            blob = response.read(MAX_DOWNLOAD + 1)
+            if len(blob) > MAX_DOWNLOAD:
+                raise DataError('Resource exceeds 100 MiB safety limit')
+            return blob
+    except HTTPError as exc:
+        raise DataError(f'HTTP {exc.code} retrieving {stage} from {endpoint}') from None
+    except (URLError, TimeoutError, OSError):
+        raise DataError(f'Network failure retrieving {stage} from {endpoint}') from None
 
 
 def json_bytes(raw: bytes, label: str) -> dict:
@@ -526,11 +534,11 @@ def main() -> None:
         source_url = 'offline-fixture'
         refreshed = None
     else:
-        metadata = json_bytes(download(CKAN), 'CKAN package')
+        metadata = json_bytes(download(CKAN, 'CKAN package metadata'), 'CKAN package')
         source_url, refreshed = get_resources(metadata)
-        raw_csv = download(source_url)
-        raw_wards = download(WARDS + '?' + urlencode(MAP_QUERY))
-        raw_neigh = download(NEIGHBOURHOODS + '?' + urlencode(MAP_QUERY))
+        raw_csv = download(source_url, 'DineSafe CSV')
+        raw_wards = download(WARDS + '?' + urlencode(MAP_QUERY), 'official ward geography')
+        raw_neigh = download(NEIGHBOURHOODS + '?' + urlencode(MAP_QUERY), 'official neighbourhood geography')
     wards = json_bytes(raw_wards, 'wards')
     neighbourhoods = json_bytes(raw_neigh, 'neighbourhoods')
     previous_path = args.output / 'snapshot.json'
