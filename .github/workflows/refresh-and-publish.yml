@@ -69,7 +69,7 @@ jobs:
                   raise SystemExit(f"Hash-pinned fixture differs beyond Windows line endings: {filename}")
               path.write_bytes(canonical)
           '@
-          python -c $code
+          $code | python -
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
