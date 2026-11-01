@@ -38,12 +38,6 @@ jobs:
           -Command "$ErrorActionPreference = 'Stop'; . '{0}'; if (Test-Path -LiteralPath variable:\LASTEXITCODE) {{ exit $LASTEXITCODE }}"
     steps:
       - uses: actions/checkout@v4
-      - name: Re-materialize hash-pinned permit fixtures with checked-in attributes
-        run: |
-          git checkout-index --force -- research/phase1c-permits/tests/fixtures/safe-source-fixture.json research/phase1c-permits/tests/fixtures/normalization-contract.json
-          if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
-          }
       - name: Verify preinstalled Python 3.12
         run: |
           $python = 'C:\Program Files\Python312\python.exe'
@@ -55,6 +49,30 @@ jobs:
             exit $LASTEXITCODE
           }
           Add-Content -Path $env:GITHUB_PATH -Value (Split-Path -Path $python) -Encoding ASCII
+      - name: Restore exact line endings for hash-pinned permit fixtures
+        run: |
+          $code = @'
+          from hashlib import sha256
+          from pathlib import Path
+
+          fixtures = {
+              "research/phase1c-permits/tests/fixtures/safe-source-fixture.json": "87861152b6c3bd1e5a0e3eb03be3e90bc4aba7c0cd3fcc49aaff815aef334818",
+              "research/phase1c-permits/tests/fixtures/normalization-contract.json": "1401a66eed410edbcc99eb86970803b7d0d0be72ae5ddb3178f96f1bcc1dd45d",
+          }
+          for filename, expected in fixtures.items():
+              path = Path(filename)
+              raw = path.read_bytes()
+              if sha256(raw).hexdigest() == expected:
+                  continue
+              canonical = raw.replace(bytes([13, 10]), bytes([10]))
+              if canonical == raw or sha256(canonical).hexdigest() != expected:
+                  raise SystemExit(f"Hash-pinned fixture differs beyond Windows line endings: {filename}")
+              path.write_bytes(canonical)
+          '@
+          python -c $code
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
