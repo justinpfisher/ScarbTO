@@ -313,6 +313,17 @@ async function initMap() {
     setMapUnavailable();
     return;
   }
+  // MapLibre 6 requires WebGL2. Probe before constructing the map so a
+  // browser without WebGL2 reaches the same accessible list fallback as a
+  // constructor or context-loss failure.
+  try{
+    const probe=document.createElement('canvas');
+    if(typeof probe.getContext==='function'){
+      const context=probe.getContext('webgl2');
+      if(!context){setMapUnavailable(new Error('WebGL2 is unavailable'));return;}
+      context.getExtension('WEBGL_lose_context')?.loseContext();
+    }
+  }catch(error){setMapUnavailable(error);return;}
   try{
     try{
       const boundaryResponse=await fetch('data/scarborough-council-boundary.geojson',{cache:'force-cache'});

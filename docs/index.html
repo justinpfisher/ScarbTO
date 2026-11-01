@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#143e3e">
   <meta name="description" content="Scarb.TO - a living map of what has changed across Scarborough, built from official local data.">
   <title>Scarb.TO - Scarborough, as it changes</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -100,8 +100,14 @@
       <div>Scarborough Community Council boundary: <a href="https://open.toronto.ca/dataset/community-council-boundaries/" target="_blank" rel="noopener noreferrer">City of Toronto Open Data</a>, licensed under the <a href="https://open.toronto.ca/open-data-licence/" target="_blank" rel="noopener noreferrer">Open Government Licence - Toronto</a>. The boundary is a visual reference; it does not filter records. Maps by OpenFreeMap and OpenStreetMap contributors, attributed on the map. New activity is identified from daily snapshots; inspection dates can be older than when records are published.</div>
     </footer>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js" defer></script>
-  <script type="module" src="./app.mjs"></script>
+  <script type="module">
+    try {
+      window.maplibregl = await import('https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs');
+    } catch (error) {
+      console.warn('Map library unavailable:', error?.message || error);
+    }
+    await import('./app.mjs');
+  </script>
 </body>
 </html>
 

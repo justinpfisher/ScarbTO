@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 
 class FakeElement {
   constructor(document, tagName = 'div', id = '', className = '') {
@@ -345,4 +346,22 @@ test('resetting selected calls aborts its request and clears its expiry lifecycl
     assert.match(app.document.getElementById('record-list').textContent,/Place 000/);
     assert.equal(app.document.getElementById('record-list').querySelectorAll('.selected-call-row').length,0);
   } finally { await app.cleanup(); }
+});
+
+test('MapLibre production and test pins use a patched, lockfile-matched release', async () => {
+  const [packageJson, lockJson, html, browserTests] = await Promise.all([
+    readFile(new URL('../package.json', import.meta.url), 'utf8').then(JSON.parse),
+    readFile(new URL('../package-lock.json', import.meta.url), 'utf8').then(JSON.parse),
+    readFile(new URL('../docs/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('./browser.integration.test.mjs', import.meta.url), 'utf8'),
+  ]);
+  const version = packageJson.devDependencies['maplibre-gl'];
+  const [major, minor, patch] = version.split('.').map(Number);
+  const patched = major > 6 || (major === 6 && (minor > 4 || (minor === 4 && patch >= 1)));
+  assert.ok(patched, `MapLibre ${version} predates the 6.4.1 sanitizer fix`);
+  assert.equal(lockJson.packages['node_modules/maplibre-gl'].version, version);
+  for (const extension of ['mjs', 'css']) {
+    assert.ok(html.includes(`maplibre-gl@${version}/dist/maplibre-gl.${extension}`));
+    assert.ok(browserTests.includes(`maplibre-gl@${version}/dist/maplibre-gl.${extension}`));
+  }
 });

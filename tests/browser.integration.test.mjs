@@ -91,7 +91,7 @@ function waitForSelectedCallsRequest(page) {
 }
 
 
-async function installLocalRoutes(page, origin, {snapshotStatus = 200, snapshotBody = snapshot, beachStatus = 200, beachDelayMs = 0, selectedCalls = false, selectedCallsDelayMs = 0, selectedCallsSourceAgeMs = 60_000, onSelectedCallsRequest = () => {}} = {}) {
+async function installLocalRoutes(page, origin, {snapshotStatus = 200, snapshotBody = snapshot, beachStatus = 200, beachDelayMs = 0, selectedCalls = false, selectedCallsDelayMs = 0, selectedCallsSourceAgeMs = 60_000, maplibreFailure = false, onSelectedCallsRequest = () => {}} = {}) {
   let beachResponseSent = false;
   let selectedCallsRequestIndex=0;
   const selectedCallsEditDate=Date.now()-selectedCallsSourceAgeMs;
@@ -147,11 +147,23 @@ async function installLocalRoutes(page, origin, {snapshotStatus = 200, snapshotB
       beachResponseSent = true;
       return;
     }
-    if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js') {
-      await route.fulfill({path: resolve(maplibreRoot, 'maplibre-gl.js'), contentType: 'text/javascript'});
+    if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs') {
+      if (maplibreFailure) {
+        await route.fulfill({status: 503, contentType: 'text/plain', body: 'fixture CDN failure'});
+        return;
+      }
+      await route.fulfill({path: resolve(maplibreRoot, 'maplibre-gl.mjs'), contentType: 'text/javascript', headers: {'access-control-allow-origin': '*'}});
       return;
     }
-    if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css') {
+    if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl-shared.mjs') {
+      await route.fulfill({path: resolve(maplibreRoot, 'maplibre-gl-shared.mjs'), contentType: 'text/javascript', headers: {'access-control-allow-origin': '*'}});
+      return;
+    }
+    if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl-worker.mjs') {
+      await route.fulfill({path: resolve(maplibreRoot, 'maplibre-gl-worker.mjs'), contentType: 'text/javascript', headers: {'access-control-allow-origin': '*'}});
+      return;
+    }
+    if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.css') {
       await route.fulfill({path: resolve(maplibreRoot, 'maplibre-gl.css'), contentType: 'text/css'});
       return;
     }
@@ -506,6 +518,29 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
   assert.equal(await invalid.page.locator('.record-item').count(), 0, 'mode switching cannot reveal rejected data');
   assert.equal(await invalid.page.locator('[data-id="must-not-render"]').count(), 0);
   assert.deepEqual(invalid.pageErrors, []);
+});
+
+test('MapLibre module failure still boots accessible DineSafe and beach views', {timeout: 60_000}, async t => {
+  const {server, origin} = await startStaticServer();
+  const browser = await chromium.launch({args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-webgl']});
+  t.after(async () => {
+    await browser.close();
+    await new Promise(resolveClose => server.close(resolveClose));
+  });
+  const context = await browser.newContext({viewport: {width: 1280, height: 900}});
+  t.after(() => context.close());
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  await installLocalRoutes(page, origin, {maplibreFailure: true});
+  await page.goto(origin, {waitUntil: 'domcontentloaded'});
+  await page.locator('#map-fallback:not([hidden])').waitFor();
+  await page.getByRole('button', {name: 'Fixture Cafe'}).waitFor();
+  assert.match(await page.locator('#map-fallback').textContent(), /map unavailable.*searchable results list/i);
+  await page.getByRole('button', {name: 'Beach samples'}).click();
+  await page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
+  assert.equal(await page.locator('.beach-sample-preview-list li').count(), 10);
+  assert.deepEqual(pageErrors, [], 'failed third-party module does not prevent local app/feed boot');
 });
 
 
