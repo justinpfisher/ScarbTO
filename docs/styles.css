@@ -109,6 +109,39 @@
   .area-panel,.area-toggle{scroll-behavior:auto;transition:none!important}
 }
 
+/* Keep the area summary with the results on desktop instead of covering map data. */
+.results .area-panel{position:static;width:auto;max-height:42%;min-height:0;margin:0 12px 10px;box-shadow:none;flex:0 0 auto}
+.results .area-panel.expanded{max-height:55%}
+.results .area-panel .area-content{max-height:230px}
+.results .area-panel.expanded .area-content{max-height:310px}
+.results .area-panel button{min-height:44px}
+.data-status{min-height:44px;display:flex;align-items:center}
+.map-legend{gap:7px;max-width:min(430px,calc(100% - 16px))}
+.map-legend-toggle{min-height:36px;border:0;background:transparent;color:#31584b;font:inherit;font-weight:750;padding:2px 4px;text-align:left}
+.map-legend-toggle,.area-selection button,.map-fit{min-height:44px}
+.map-legend-items{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.map-legend-items[hidden]{display:none!important}
+.map-legend-items [hidden]{display:none!important}
+.map-legend.collapsed{padding:5px 8px}
+.map-legend-items span{white-space:nowrap}
+.empty-actions{display:flex;flex-wrap:wrap;gap:8px;padding:0 21px 18px}
+.empty-action{min-height:44px;border:1px solid #cfddd2;border-radius:8px;background:#fff;color:#235448;padding:9px 12px;font-size:12px;font-weight:720}
+.empty-action:hover{background:#f0f7f2}
+@media(max-width:950px){
+  .results .area-panel{position:fixed;left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));width:auto;max-height:54dvh;height:min(54dvh,460px);margin:0;z-index:30;box-shadow:0 12px 38px #142c2450}
+  .results .area-panel.expanded{top:auto;bottom:max(8px,env(safe-area-inset-bottom));height:min(76dvh,650px);max-height:76dvh}
+  .results .area-panel .area-content{max-height:none}
+  .map-legend{max-width:min(340px,calc(100% - 16px))}
+}
+@media(max-width:570px){
+  .results .area-panel{top:auto;left:8px;right:8px;bottom:max(8px,env(safe-area-inset-bottom));height:min(54dvh,460px);max-height:54dvh}
+  .results .area-panel.expanded{top:auto;bottom:max(8px,env(safe-area-inset-bottom));height:min(76dvh,650px);max-height:76dvh}
+  .map-legend{top:104px;bottom:auto;left:8px;right:auto;max-width:min(270px,calc(100% - 16px));gap:4px}
+  .map-legend-items{gap:7px}
+  .map-legend-toggle{min-height:40px}
+  .data-status{min-height:48px}
+}
+
 
 /* Keep the sheet anchored to the phone viewport, not beneath a scrolled header. */
 @media(max-width:570px){

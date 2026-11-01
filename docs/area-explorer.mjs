@@ -13,6 +13,11 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
   let awaitingMapReady = false, fitAttempt = 0;
   const pendingGeometry = new Map();
   const LIVE_MODES = new Set(['recent', 'all']);
+  const AREA_KINDS=['ward','neighbourhood'];
+  const areaLayerIds=kind=>{
+    const prefix=kind==='ward'?'area-region':'neighbourhood-region';
+    return {source:`${prefix}s`,fill:`${prefix}-fill`,selectedFill:`${prefix}-selected-fill`,line:`${prefix}-line`,selectedLine:`${prefix}-selected-line`};
+  };
 
   function selected() {
     const state = getState();
@@ -150,12 +155,14 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     addLink(boundary,'Confirm your City ward by address','https://www.toronto.ca/city-government/council/members-of-council/');
   }
   function syncOutline() {
-    if (!map?.getLayer?.('area-region-fill')) return;
+    if (!map) return;
     const area=selected();
-    const code=area?.kind===overlay?area.code:'';
-    map.setPaintProperty('area-region-fill','fill-color',['case',['==',['get','AREA_SHORT_CODE'],code],'#26775d','#5a947d']);
-    map.setPaintProperty('area-region-fill','fill-opacity',['case',['==',['get','AREA_SHORT_CODE'],code],0.30,0.075]);
-    map.setPaintProperty('area-region-line','line-width',['case',['==',['get','AREA_SHORT_CODE'],code],3.4,1.35]);
+    for(const kind of AREA_KINDS){
+      const ids=areaLayerIds(kind),code=area?.kind===kind?area.code:'__no_area_selected__';
+      const filter=['==',['get','AREA_SHORT_CODE'],code];
+      if(map.getLayer?.(ids.selectedFill))map.setFilter(ids.selectedFill,filter);
+      if(map.getLayer?.(ids.selectedLine))map.setFilter(ids.selectedLine,filter);
+    }
   }
   function sync() {
     syncButtons();
@@ -164,11 +171,37 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     syncOutline();
   }
   function hideMapOverlay() {
-    if (!map?.getLayer?.('area-region-fill')) return;
-    if (map.getLayoutProperty?.('area-region-fill','visibility')!=='none')
-      map.setLayoutProperty('area-region-fill','visibility','none');
-    if (map.getLayoutProperty?.('area-region-line','visibility')!=='none')
-      map.setLayoutProperty('area-region-line','visibility','none');
+    if (!map) return;
+    for(const kind of AREA_KINDS){
+      const ids=areaLayerIds(kind);
+      for(const id of [ids.fill,ids.selectedFill,ids.line,ids.selectedLine]){
+        if(map.getLayer?.(id)&&map.getLayoutProperty?.(id,'visibility')!=='none')map.setLayoutProperty(id,'visibility','none');
+      }
+    }
+  }
+  function bindAreaLayerEvents(kind, fillId){
+    map.on('click',fillId,event=>{
+      if(overlay!==kind||!LIVE_MODES.has(getState().mode))return;
+      if(map.queryRenderedFeatures?.(event.point,{layers:['single','clusters']})?.length)return;
+      const code=String(event.features?.[0]?.properties?.AREA_SHORT_CODE||'');
+      select(areaFor(kind,code));
+    });
+    map.on('mouseenter',fillId,()=>{if(overlay===kind)map.getCanvas().style.cursor='pointer';});
+    map.on('mouseleave',fillId,()=>{map.getCanvas().style.cursor='';});
+  }
+  function ensureOverlayLayers(kind,current){
+    const ids=areaLayerIds(kind);
+    if(map.getSource(ids.source))return;
+    map.addSource(ids.source,{type:'geojson',data:current});
+    map.addLayer({id:ids.fill,type:'fill',source:ids.source,
+      paint:{'fill-color':'#5a947d','fill-opacity':0.075}},'clusters');
+    map.addLayer({id:ids.selectedFill,type:'fill',source:ids.source,filter:['==',['get','AREA_SHORT_CODE'],'__no_area_selected__'],
+      paint:{'fill-color':'#26775d','fill-opacity':0.30}},'clusters');
+    map.addLayer({id:ids.line,type:'line',source:ids.source,
+      paint:{'line-color':'#246b59','line-width':1.35,'line-opacity':0.80}},'clusters');
+    map.addLayer({id:ids.selectedLine,type:'line',source:ids.source,filter:['==',['get','AREA_SHORT_CODE'],'__no_area_selected__'],
+      paint:{'line-color':'#26775d','line-width':3.4,'line-opacity':0.95}},'clusters');
+    bindAreaLayerEvents(kind,ids.fill);
   }
   function display() {
     if (!map) return;
@@ -186,19 +219,14 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
       return;
     }
     awaitingMapReady=false;
-    const current=cache.get(overlay);
-    if (!map.getSource('area-regions')) {
-      map.addSource('area-regions',{type:'geojson',data:current});
-      map.addLayer({id:'area-region-fill',type:'fill',source:'area-regions',
-        paint:{'fill-color':'#5a947d','fill-opacity':0.075}},'clusters');
-      map.addLayer({id:'area-region-line',type:'line',source:'area-regions',
-        paint:{'line-color':'#246b59','line-width':1.35,'line-opacity':0.80}},'clusters');
-    } else if(displayed!==overlay) map.getSource('area-regions').setData(current);
+    ensureOverlayLayers(overlay,cache.get(overlay));
     displayed=overlay;
-    if (map.getLayoutProperty?.('area-region-fill','visibility')!=='visible')
-      map.setLayoutProperty('area-region-fill','visibility','visible');
-    if (map.getLayoutProperty?.('area-region-line','visibility')!=='visible')
-      map.setLayoutProperty('area-region-line','visibility','visible');
+    for(const kind of AREA_KINDS){
+      const ids=areaLayerIds(kind),visibility=kind===overlay?'visible':'none';
+      for(const id of [ids.fill,ids.selectedFill,ids.line,ids.selectedLine]){
+        if(map.getLayer(id)&&map.getLayoutProperty?.(id,'visibility')!==visibility)map.setLayoutProperty(id,'visibility',visibility);
+      }
+    }
     syncOutline();
   }
   async function loadGeometry(kind) {
@@ -222,15 +250,20 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
       showNote('Boundary overlays and area filters apply only to DineSafe; division totals and beach samples use different geographies.');
       return;
     }
+    const priorSelection=selected();
+    const selectionCleared=next!=='off' && priorSelection && priorSelection.kind!==next;
+    if(selectionCleared){open=false;expanded=false;onClear();}
     const generation=++token;
-    overlay=next;showNote('');sync();
+    overlay=next;showNote(selectionCleared?'The area filter was cleared because it belongs to a different boundary type. Choose a new area to filter the map and list.':'');sync();
     if (next!=='off' && !cache.has(next)) {
       try {
         await loadGeometry(next);
       } catch (error) {
         if (generation!==token) return;
         overlay='off';
-        showNote('Official '+(next==='ward'?'ward':'neighbourhood')+' boundaries are unavailable. Existing map and filters are unchanged.');
+        showNote(selectionCleared
+          ? 'Official '+(next==='ward'?'ward':'neighbourhood')+' boundaries are unavailable. The incompatible area filter was cleared; choose another area when the boundary is available.'
+          : 'Official '+(next==='ward'?'ward':'neighbourhood')+' boundaries are unavailable. Existing map and filters are unchanged.');
         console.warn('Area overlay unavailable:',error?.message||error);
         sync();display();return;
       }
@@ -243,6 +276,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     open=true;expanded=false;
     onSelect(area);
     sync();
+    el('area-title').focus();
   }
   function attachMap(nextMap) {
     map=nextMap;
@@ -251,15 +285,6 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     for(const event of ['styledata','idle']) {
       map.on(event,()=>{if(awaitingMapReady) display();});
     }
-    map.on('click','area-region-fill',event=>{
-      if (overlay==='off' || !LIVE_MODES.has(getState().mode)) return;
-      // Point markers and clusters always take precedence over polygon taps.
-      if (map.queryRenderedFeatures?.(event.point,{layers:['single','clusters']})?.length) return;
-      const code=String(event.features?.[0]?.properties?.AREA_SHORT_CODE||'');
-      select(areaFor(overlay,code));
-    });
-    map.on('mouseenter','area-region-fill',()=>{if (overlay!=='off') map.getCanvas().style.cursor='pointer';});
-    map.on('mouseleave','area-region-fill',()=>{map.getCanvas().style.cursor='';});
     display();
     sync();
   }

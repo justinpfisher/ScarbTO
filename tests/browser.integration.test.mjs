@@ -91,7 +91,7 @@ function waitForSelectedCallsRequest(page) {
 }
 
 
-async function installLocalRoutes(page, origin, {snapshotStatus = 200, snapshotBody = snapshot, beachStatus = 200, beachDelayMs = 0, selectedCalls = false, selectedCallsDelayMs = 0, selectedCallsSourceAgeMs = 60_000, onSelectedCallsRequest = () => {}} = {}) {
+async function installLocalRoutes(page, origin, {snapshotStatus = 200, snapshotBody = snapshot, beachStatus = 200, beachDelayMs = 0, selectedCalls = false, selectedCallsDelayMs = 0, selectedCallsSourceAgeMs = 60_000, maplibreFailure = false, onSelectedCallsRequest = () => {}} = {}) {
   let beachResponseSent = false;
   let selectedCallsRequestIndex=0;
   const selectedCallsEditDate=Date.now()-selectedCallsSourceAgeMs;
@@ -147,11 +147,23 @@ async function installLocalRoutes(page, origin, {snapshotStatus = 200, snapshotB
       beachResponseSent = true;
       return;
     }
-    if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.js') {
-      await route.fulfill({path: resolve(maplibreRoot, 'maplibre-gl.js'), contentType: 'text/javascript'});
+    if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs') {
+      if (maplibreFailure) {
+        await route.fulfill({status: 503, contentType: 'text/plain', body: 'fixture CDN failure'});
+        return;
+      }
+      await route.fulfill({path: resolve(maplibreRoot, 'maplibre-gl.mjs'), contentType: 'text/javascript', headers: {'access-control-allow-origin': '*'}});
       return;
     }
-    if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@5.24.0/dist/maplibre-gl.css') {
+    if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl-shared.mjs') {
+      await route.fulfill({path: resolve(maplibreRoot, 'maplibre-gl-shared.mjs'), contentType: 'text/javascript', headers: {'access-control-allow-origin': '*'}});
+      return;
+    }
+    if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl-worker.mjs') {
+      await route.fulfill({path: resolve(maplibreRoot, 'maplibre-gl-worker.mjs'), contentType: 'text/javascript', headers: {'access-control-allow-origin': '*'}});
+      return;
+    }
+    if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.css') {
       await route.fulfill({path: resolve(maplibreRoot, 'maplibre-gl.css'), contentType: 'text/css'});
       return;
     }
@@ -508,6 +520,29 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
   assert.deepEqual(invalid.pageErrors, []);
 });
 
+test('MapLibre module failure still boots accessible DineSafe and beach views', {timeout: 60_000}, async t => {
+  const {server, origin} = await startStaticServer();
+  const browser = await chromium.launch({args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-webgl']});
+  t.after(async () => {
+    await browser.close();
+    await new Promise(resolveClose => server.close(resolveClose));
+  });
+  const context = await browser.newContext({viewport: {width: 1280, height: 900}});
+  t.after(() => context.close());
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  await installLocalRoutes(page, origin, {maplibreFailure: true});
+  await page.goto(origin, {waitUntil: 'domcontentloaded'});
+  await page.locator('#map-fallback:not([hidden])').waitFor();
+  await page.getByRole('button', {name: 'Fixture Cafe'}).waitFor();
+  assert.match(await page.locator('#map-fallback').textContent(), /map unavailable.*searchable results list/i);
+  await page.getByRole('button', {name: 'Beach samples'}).click();
+  await page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
+  assert.equal(await page.locator('.beach-sample-preview-list li').count(), 10);
+  assert.deepEqual(pageErrors, [], 'failed third-party module does not prevent local app/feed boot');
+});
+
 
 test('selected calls render only after explicit selection and clear after leaving the view at desktop and mobile sizes', {timeout:60_000}, async t=>{
   const {server,origin}=await startStaticServer();
@@ -713,7 +748,8 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   const context=await browser.newContext({viewport:{width:1280,height:900}});
   t.after(()=>context.close());
   const page=await context.newPage(),errors=[];
-  page.on('pageerror',err=>errors.push(err.stack||err.message));
+  let stage='setup';
+  page.on('pageerror',err=>errors.push(stage+': '+(err.stack||err.message)));
   const areaSnapshot={...snapshot,establishments:[
     {...snapshot.establishments[0],neighbourhood:'Ionview',ward:'Scarborough Southwest'},
     {...snapshot.establishments[1],neighbourhood:'Oakridge',ward:'Scarborough Southwest'},
@@ -722,8 +758,10 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   await installLocalRoutes(page,origin,{snapshotBody:areaSnapshot});
   await page.route('**/data/scarborough-wards.geojson',route=>route.fulfill({contentType:'application/geo+json',body:JSON.stringify(areaOverlayFixture('ward'))}));
   await page.route('**/data/scarborough-overlay-neighbourhoods.geojson',route=>route.fulfill({contentType:'application/geo+json',body:JSON.stringify(areaOverlayFixture('neighbourhood'))}));
+  stage='initial navigation';
   await page.goto(origin,{waitUntil:'domcontentloaded'});
   await waitForMap(page);
+  stage='map ready';
   await page.getByRole('button',{name:'All establishments'}).click();
   assert.equal(await page.locator('#area-selection').isVisible(),false);
   assert.equal(await page.locator('[data-area-overlay="off"]').getAttribute('aria-pressed'),'true');
@@ -736,6 +774,7 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
     map.loaded=()=>false;map.isStyleLoaded=()=>false;
   });
   const wardResponse=page.waitForResponse(response=>response.url().includes('scarborough-wards.geojson'));
+  stage='loading ward overlay';
   await page.locator('[data-area-overlay="ward"]').click();
   await wardResponse;
   await page.waitForTimeout(120);
@@ -744,29 +783,36 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
     const map=window.__scarbMap;
     map.loaded=window.__overlayOriginalLoaded;
     map.isStyleLoaded=window.__overlayOriginalStyleLoaded;
-    map.fire('idle');
+    map.triggerRepaint();
   });
+  stage='ward overlay visible';
   await page.waitForFunction(()=>Boolean(window.__scarbMap.getLayer('area-region-fill')),'overlay eventually appears on readiness');
   await page.locator('#area-choice').selectOption('20');
   await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===2);
+  assert.equal(await page.evaluate(()=>document.activeElement?.id),'area-title','area selection moves keyboard focus to the panel heading');
   assert.match(await page.locator('#area-panel').textContent(),/Parthi Kandavel/);
+  assert.equal(await page.locator('#area-panel').evaluate(node=>node.closest('.results')!==null),true,'desktop area details stay with the results column');
+  stage='switching from ward to neighbourhood';
   await page.locator('[data-area-overlay="neighbourhood"]').click();
   await page.waitForFunction(()=>document.querySelector('[data-area-overlay="neighbourhood"]').getAttribute('aria-pressed')==='true');
-  assert.equal(await page.locator('#record-list .record-item').count(),2,'switching visual geometry does not silently change the ward filter');
-  assert.match(await page.locator('#area-selection-name').textContent(),/Ward 20/);
+  assert.equal(await page.locator('#record-list .record-item').count(),3,'switching boundary type clears an incompatible ward filter');
+  assert.equal(await page.locator('#area-selection').isVisible(),false);
   await page.locator('#area-choice').selectOption('125');
   await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===1);
   assert.match(await page.locator('#area-selection-name').textContent(),/Ionview/);
   assert.match(await page.locator('#area-panel').textContent(),/Ward 20 and Ward 21/);
   await page.getByRole('button',{name:'Selected police calls'}).click();
+  stage='selected calls with area panel';
   await page.waitForFunction(()=>document.querySelector('#area-selection-name')?.textContent.includes('not applied'));
   assert.match(await page.locator('#area-panel').textContent(),/geographic filtering is paused/i);
   await page.getByRole('button',{name:'All establishments'}).click();
   await page.locator('[data-area-overlay="off"]').click();
+  stage='hiding overlay';
   assert.equal(await page.locator('#record-list .record-item').count(),1,'hiding outlines retains geographic selection');
   const hidden=await page.evaluate(()=>window.__scarbMap.getLayoutProperty('area-region-fill','visibility'));
   assert.equal(hidden,'none');
   await page.reload({waitUntil:'domcontentloaded'});
+  stage='reload with persistent selection';
   await waitForMap(page);
   assert.equal(await page.locator('[data-area-overlay="off"]').getAttribute('aria-pressed'),'true','outlines off on every page load');
   assert.match(await page.locator('#area-selection-name').textContent(),/Ionview/,'persistent area filter has a visible chip');
@@ -778,11 +824,54 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   assert.equal(await page.locator('[data-area-overlay="off"]').getAttribute('aria-pressed'),'true','fit selected boundary without enabling overlay');
   const centerAtClear=await page.evaluate(()=>window.__scarbMap.getCenter().toArray());
   await page.locator('#area-clear').click();
+  stage='clearing selection';
   await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===3);
   assert.equal(await page.locator('#area-selection').isVisible(),false);
   const centerAfter=await page.evaluate(()=>window.__scarbMap.getCenter().toArray());
   assert.ok(centerAtClear.every((v,i)=>Math.abs(v-centerAfter[i])<.02),'clear preserves map location even after inspecting area geometry');
   assert.deepEqual(errors,[],errors.join('\n\n'));
+});
+
+test('map key collapses accessibly and shows only the active dataset symbols', {timeout:90_000}, async t=>{
+  const {server,origin}=await startStaticServer();
+  const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+  t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
+  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  t.after(()=>context.close());
+  const page=await context.newPage();
+  await installLocalRoutes(page,origin);
+  await page.goto(origin,{waitUntil:'domcontentloaded'});
+  await waitForMap(page);
+  const toggle=page.locator('#map-legend-toggle'),items=page.locator('#map-legend-items');
+  assert.equal(await toggle.getAttribute('aria-expanded'),'false','phone map key starts compact');
+  await toggle.focus();
+  assert.equal(await page.evaluate(()=>document.activeElement?.id),'map-legend-toggle','map key is keyboard focusable');
+  await page.keyboard.press('Enter');
+  assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+  assert.equal(await page.locator('[data-legend-mode="dinesafe"]').first().isVisible(),true);
+  const filterToggle=page.locator('#toggle-filters');
+  if(await filterToggle.isVisible()&&await filterToggle.getAttribute('aria-expanded')!=='true')await filterToggle.click();
+  await page.getByRole('button',{name:'Beach samples'}).click();
+  assert.equal(await page.locator('[data-legend-mode="dinesafe"]').first().isVisible(),false);
+  assert.equal(await page.locator('[data-legend-mode="beach"]').isVisible(),true);
+  assert.equal(await items.getAttribute('hidden'),null,'the key remains available and is filtered to the active source');
+});
+
+test('recent cards distinguish City inspection date from Scarb.TO first-observed date', {timeout:90_000}, async t=>{
+  const {server,origin}=await startStaticServer();
+  const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+  t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
+  const context=await browser.newContext({viewport:{width:1280,height:900}});
+  t.after(()=>context.close());
+  const page=await context.newPage();
+  await page.clock.install({time:new Date('2026-11-01T12:00:00-05:00')});
+  const dated={...snapshot,activity:[{id:'event-a',feed:'dinesafe',kind:'new_inspection',establishment_id:'fixture-a',inspection_date:'2026-10-26',detected_at:'2026-10-31T15:46:44+00:00',status:'Pass',latitude:43.775,longitude:-79.255}]};
+  await installLocalRoutes(page,origin,{snapshotBody:dated});
+  await page.goto(origin,{waitUntil:'domcontentloaded'});
+  await waitForMap(page);
+  const row=page.locator('.record-item').first();
+  assert.match(await row.textContent(),/Inspection: Oct 26, 2026/);
+  assert.match(await row.textContent(),/First observed by Scarb\.TO: Oct 31, 2026/);
 });
 
 test('mobile area panel is closeable and the selected-area chip remains usable without the panel', {timeout:90_000}, async t=>{
@@ -809,8 +898,10 @@ test('mobile area panel is closeable and the selected-area chip remains usable w
   await panel.waitFor({state:'visible'});
   const size=await panel.evaluate(e=>({height:e.getBoundingClientRect().height,width:e.getBoundingClientRect().width}));
   assert.ok(size.width<=390 && size.height<=844*0.60,'mobile bottom sheet fits a phone viewport');
+  assert.equal(await page.evaluate(()=>document.activeElement?.id),'area-title','opening the mobile area panel focuses its heading');
   await page.locator('#area-panel-close').click();
   assert.equal(await panel.isVisible(),false);
+  assert.equal(await page.evaluate(()=>document.activeElement?.id),'area-reopen','closing the mobile panel returns focus to its reopen control');
   assert.equal(await page.locator('#area-selection').isVisible(),true);
   await page.locator('#area-reopen').click();
   assert.equal(await panel.isVisible(),true);

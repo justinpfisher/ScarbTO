@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
 
 class FakeElement {
   constructor(document, tagName = 'div', id = '', className = '') {
@@ -199,6 +200,9 @@ test('production render path handles zero matching records without turning into 
     app.document.getElementById('search').value='no matching place';
     app.document.getElementById('search').dispatch('input');
     assert.match(app.document.getElementById('record-list').textContent,/No matching places in the current map view/);
+    assert.ok(app.document.getElementById('record-list').querySelector('.empty-actions'));
+    app.document.getElementById('record-list').querySelector('.empty-action').click();
+    assert.equal(app.document.getElementById('record-list').querySelectorAll('.record-item').length,1,'empty-state action clears filters and recovers results');
     assert.equal(app.document.getElementById('data-status').classList.contains('error'),false);
   } finally { await app.cleanup(); }
 });
@@ -222,6 +226,28 @@ test('production DineSafe details clean legacy addresses and label upstream cata
     assert.doesNotMatch(row.textContent,/ None /);
     row.click();
     assert.match(list.textContent,/Recorded inspection detail: City finding/);
+  } finally { await app.cleanup(); }
+});
+
+test('production detail view suppresses literal None and keeps establishment category distinct', async () => {
+  const snapshot=fixture();
+  snapshot.establishments[0].inspection_detail='None';
+  snapshot.establishments[0].type='Cafe';
+  let app=await loadApp(snapshot);
+  try {
+    app.map.load();
+    app.document.tabs.find(tab=>tab.dataset.mode==='all').click();
+    app.map.emitLayer('click','single',{features:[{properties:{id:snapshot.establishments[0].id}}]});
+    const details=app.document.getElementById('record-list').querySelector('.record-details').textContent;
+    assert.match(details,/Establishment category: Cafe/);
+    assert.doesNotMatch(details,/None/);
+    await app.cleanup();
+    snapshot.establishments[0].type='None';
+    app=await loadApp(snapshot);
+    app.map.load();app.document.tabs.find(tab=>tab.dataset.mode==='all').click();app.map.emitLayer('click','single',{features:[{properties:{id:snapshot.establishments[0].id}}]});
+    const noDetails=app.document.getElementById('record-list').querySelector('.record-details').textContent;
+    assert.match(noDetails,/No additional detail in this source row/);
+    assert.doesNotMatch(noDetails,/None/);
   } finally { await app.cleanup(); }
 });
 
@@ -345,4 +371,22 @@ test('resetting selected calls aborts its request and clears its expiry lifecycl
     assert.match(app.document.getElementById('record-list').textContent,/Place 000/);
     assert.equal(app.document.getElementById('record-list').querySelectorAll('.selected-call-row').length,0);
   } finally { await app.cleanup(); }
+});
+
+test('MapLibre production and test pins use a patched, lockfile-matched release', async () => {
+  const [packageJson, lockJson, html, browserTests] = await Promise.all([
+    readFile(new URL('../package.json', import.meta.url), 'utf8').then(JSON.parse),
+    readFile(new URL('../package-lock.json', import.meta.url), 'utf8').then(JSON.parse),
+    readFile(new URL('../docs/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('./browser.integration.test.mjs', import.meta.url), 'utf8'),
+  ]);
+  const version = packageJson.devDependencies['maplibre-gl'];
+  const [major, minor, patch] = version.split('.').map(Number);
+  const patched = major > 6 || (major === 6 && (minor > 4 || (minor === 4 && patch >= 1)));
+  assert.ok(patched, `MapLibre ${version} predates the 6.4.1 sanitizer fix`);
+  assert.equal(lockJson.packages['node_modules/maplibre-gl'].version, version);
+  for (const extension of ['mjs', 'css']) {
+    assert.ok(html.includes(`maplibre-gl@${version}/dist/maplibre-gl.${extension}`));
+    assert.ok(browserTests.includes(`maplibre-gl@${version}/dist/maplibre-gl.${extension}`));
+  }
 });
