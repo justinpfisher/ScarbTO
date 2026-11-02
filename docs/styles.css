@@ -150,12 +150,16 @@
 }
 
 /* Outcome pins use shape and a letter as well as colour. */
-.map-legend-items [data-legend-mode='dinesafe'] .dot{width:14px;height:14px;min-width:14px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #fff;box-shadow:0 0 0 1px #52645c;font-size:8px;font-style:normal;font-weight:800;line-height:1;color:#fff}
+.map-legend-items [data-legend-mode='dinesafe'] .dot,.map-legend-items [data-legend-mode='beach'] .dot{width:14px;height:14px;min-width:14px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #fff;box-shadow:0 0 0 1px #52645c;font-size:8px;font-style:normal;font-weight:800;line-height:1;color:#fff}
 .map-legend-items .dot.pass{border-radius:50%}
 .map-legend-items .dot.pass::after{content:'P'}
-.map-legend-items .dot.conditional{background:#a96f12;clip-path:polygon(50% 0,100% 100%,0 100%);padding-top:4px;box-shadow:none}
+.map-legend-items .dot.conditional{background:#a96f12;border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);padding-top:4px;box-shadow:none}
 .map-legend-items .dot.conditional::after{content:'C'}
 .map-legend-items .dot.closed{background:#b3423c;border-radius:2px}
 .map-legend-items .dot.closed::after{content:'X'}
 .map-legend-items .dot.beach{width:12px;height:12px;min-width:12px;transform:rotate(45deg);border-radius:1px}
-.map-legend-items .dot.beach::after{content:'B';transform:rotate(-45deg)}
+.map-legend-items .dot.beach::after{content:'B';display:inline-block;transform:rotate(-45deg)}
+.map-legend.marker-shape-fallback [data-legend-mode='dinesafe'] .dot,.map-legend.marker-shape-fallback [data-legend-mode='beach'] .dot{clip-path:none;transform:none;border-radius:50%;box-shadow:0 0 0 1px #52645c;padding:0}
+.map-legend.marker-shape-fallback .dot.conditional{background:#e2a03d}
+.map-legend.marker-shape-fallback .dot.beach{background:#506c80}
+.map-legend.marker-shape-fallback .dot.beach::after{transform:none}

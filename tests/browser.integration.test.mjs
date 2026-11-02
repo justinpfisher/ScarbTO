@@ -202,6 +202,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await page.goto(origin, {waitUntil: 'networkidle'});
   await waitForMap(page);
   await page.waitForFunction(() => window.__scarbMap.getSource('scarborough-mask') && window.__scarbMap.getSource('scarborough-boundary'));
+  assert.match(await page.locator('#map').getAttribute('aria-label'),/marker shape and letter supplement colour/i,`${name}: runtime map label retains the DineSafe marker explanation`);
   const boundaryState=await page.evaluate(()=>{
     const map=window.__scarbMap;
     const layers=map.getStyle().layers.map(layer=>layer.id);
@@ -242,6 +243,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   assert.equal(await page.locator('.record-item.active').getAttribute('data-id'), 'fixture-a', `${name}: clicking a real rendered MapLibre marker selects its record`);
 
   await page.getByRole('button', {name: 'Beach samples'}).click();
+  assert.match(await page.locator('#map').getAttribute('aria-label'),/reference point; it is not a sample-site coordinate/i,`${name}: map label explains the beach marker location`);
   await page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
   await page.getByText('Latest 10 catalogue rows shown', {exact: false}).waitFor();
   assert.equal(await page.locator('#search').isDisabled(), true, `${name}: DineSafe controls are disabled in beach mode`);

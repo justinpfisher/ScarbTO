@@ -91,7 +91,7 @@ class FakeDocument {
   }
   createElement(tagName) {
     const element=new FakeElement(this,tagName);
-    if(String(tagName).toLowerCase()==='canvas')element.getContext=type=>type==='2d'?{
+    if(String(tagName).toLowerCase()==='canvas')element.getContext=type=>type==='2d'&&this.canvas2dEnabled!==false?{
       clearRect(){},beginPath(){},arc(){},moveTo(){},lineTo(){},closePath(){},rect(){},fill(){},stroke(){},fillText(){},
       getImageData:(_x,_y,width,height)=>({width,height,data:new Uint8ClampedArray(width*height*4)}),
     }:type==='webgl2'?{getExtension:()=>({loseContext(){}})}:null;
@@ -281,10 +281,29 @@ test('DineSafe map markers encode outcomes by shape and letter while retaining m
 
     const html=await readFile(new URL('../docs/index.html',import.meta.url),'utf8');
     const css=await readFile(new URL('../docs/styles.css',import.meta.url),'utf8');
-    assert.match(html,/DineSafe marker shape and letter supplement colour/);
+    assert.match(app.document.getElementById('map').attributes['aria-label'],/marker shape and letter supplement colour/i,'runtime control updates retain the accessible marker description');
+    assert.match(html,/Marker shape and letter supplement colour/);
     assert.ok(css.includes(".dot.pass::after{content:'P'}"));
     assert.ok(css.includes(".dot.conditional::after{content:'C'}"));
     assert.ok(css.includes(".dot.closed::after{content:'X'}"));
+    assert.match(css,/\.map-legend-items \.dot\.conditional\{[^}]*border-radius:0/,'the conditional legend symbol is a triangle, not a circle-triangle overlap');
+    assert.match(css,/\.dot\.beach::after\{[^}]*display:inline-block;transform:rotate\(-45deg\)/,'the beach letter remains upright inside its diamond');
+  } finally { await app.cleanup(); }
+});
+
+test('marker image fallback keeps letter-coded circles and describes their actual encoding', async () => {
+  const app=await loadApp(fixture());
+  try {
+    app.document.canvas2dEnabled=false;
+    app.map.load();
+    assert.equal(app.map.layers.single.type,'circle');
+    assert.equal(app.map.layers['single-letter'].type,'symbol');
+    assert.deepEqual(app.map.layers['single-letter'].layout['text-field'],['match',['get','status'],'Pass','P','Conditional Pass','C','Closed','X','Beach sample','B','?']);
+    assert.equal(app.document.getElementById('map-legend').classList.contains('marker-shape-fallback'),true);
+    assert.match(app.document.getElementById('map').attributes['aria-label'],/Marker letters identify outcomes/);
+    const css=await readFile(new URL('../docs/styles.css',import.meta.url),'utf8');
+    assert.match(css,/marker-shape-fallback \.dot\.conditional\{background:#e2a03d\}/,'fallback legend matches the fallback map colour');
+    assert.match(css,/marker-shape-fallback \.dot\.beach\{background:#506c80\}/,'fallback beach legend uses the fallback circle colour');
   } finally { await app.cleanup(); }
 });
 
