@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 15791)
-Total output lines: 934
-
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -366,7 +363,217 @@ test('rendered DineSafe and beach views work across desktop and mobile', {timeou
     await browser.close();
     await new Promise(resolveClose => server.close(resolveClose));
   });
-  const desktop = await…3791 tokens truncated…e)await page.getByRole('button',{name:'Filters'}).click();
+  const desktop = await exerciseViewport(browser, origin, {name: 'desktop', width: 1365, height: 900, mobile: false});
+  const mobile = await exerciseViewport(browser, origin, {name: 'mobile', width: 390, height: 844, mobile: true});
+  assert.ok(desktop.mapWidth > mobile.mapWidth, 'desktop map viewport is wider than mobile');
+  assert.ok(Math.abs(mobile.center[0] - -79.2252) < 0.002, 'mobile camera remains centered on the beach view');
+});
+
+test('independent feed failures do not suppress the other rendered view', {timeout: 60_000}, async t => {
+  const {server, origin} = await startStaticServer();
+  const browser = await chromium.launch({args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-webgl']});
+  t.after(async () => {
+    await browser.close();
+    await new Promise(resolveClose => server.close(resolveClose));
+  });
+
+  const beachSurvivesDineSafeError = await openScenario(browser, origin, {snapshotStatus: 503}, {initialMode: 'beach'});
+  t.after(() => beachSurvivesDineSafeError.context.close());
+  await beachSurvivesDineSafeError.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
+  assert.equal(await beachSurvivesDineSafeError.page.locator('.beach-sample-preview-list li').count(), 10);
+  assert.match(await beachSurvivesDineSafeError.page.locator('#data-status').textContent(), /Toronto sample rows checked/);
+  await beachSurvivesDineSafeError.page.getByRole('button', {name: 'All establishments'}).click();
+  await beachSurvivesDineSafeError.page.getByText(/Could not load the published dataset \(HTTP 503\)/).waitFor();
+  assert.equal(await beachSurvivesDineSafeError.page.locator('#results-title').textContent(), 'Matching places');
+  assert.equal(await beachSurvivesDineSafeError.page.locator('#results-kicker').textContent(), 'Official inspections');
+  assert.equal(await beachSurvivesDineSafeError.page.locator('#results-caption').textContent(), 'Results follow the map and your filters.');
+  assert.equal(await beachSurvivesDineSafeError.page.locator('#results-count').textContent(), 'Unavailable');
+  await beachSurvivesDineSafeError.page.waitForFunction(() => !window.__scarbMap.querySourceFeatures('places').some(feature => feature.properties.id === 'beach:10'));
+  assert.deepEqual(beachSurvivesDineSafeError.pageErrors, []);
+
+  const dineSafeSurvivesBeachError = await openScenario(browser, origin, {beachStatus: 503}, {initialMode: 'all'});
+  t.after(() => dineSafeSurvivesBeachError.context.close());
+  await dineSafeSurvivesBeachError.page.getByRole('button', {name: 'Fixture Cafe'}).waitFor();
+  await dineSafeSurvivesBeachError.page.getByRole('button', {name: 'Fixture Bakery'}).waitFor();
+  assert.deepEqual(dineSafeSurvivesBeachError.pageErrors, []);
+
+  const readyFalse = {schema_version: 1, ready: false, published_at: null, establishments: [], activity: []};
+  const switchingView = await openScenario(browser, origin, {snapshotBody: readyFalse}, {initialMode: 'beach'});
+  t.after(() => switchingView.context.close());
+  await switchingView.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
+  await switchingView.page.waitForFunction(() => window.__scarbMap.querySourceFeatures('places').some(feature => feature.properties.id === 'beach:10'));
+  await switchingView.page.getByRole('button', {name: 'All establishments'}).click();
+  await switchingView.page.getByText(/No validated DineSafe snapshot has been published/).waitFor();
+  assert.equal(await switchingView.page.locator('#results-title').textContent(), 'Matching places');
+  assert.equal(await switchingView.page.locator('#results-kicker').textContent(), 'Official inspections');
+  assert.equal(await switchingView.page.locator('#results-caption').textContent(), 'Results follow the map and your filters.');
+  assert.equal(await switchingView.page.locator('#results-count').textContent(), '0 in view');
+  await switchingView.page.waitForFunction(() => !window.__scarbMap.querySourceFeatures('places').some(feature => feature.properties.id === 'beach:10'));
+  assert.deepEqual(switchingView.pageErrors, []);
+
+  const rejectedSchema = {...snapshot, schema_version: 2, establishments: [{...snapshot.establishments[0], id: 'should-not-render'}]};
+  const rejectedView = await openScenario(browser, origin, {snapshotBody: rejectedSchema}, {initialMode: 'beach'});
+  t.after(() => rejectedView.context.close());
+  await rejectedView.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
+  await rejectedView.page.getByRole('button', {name: 'All establishments'}).click();
+  await rejectedView.page.getByText(/Could not load the published dataset \(Unsupported schema\)/).waitFor();
+  assert.equal(await rejectedView.page.locator('#results-title').textContent(), 'Matching places');
+  assert.equal(await rejectedView.page.locator('#results-caption').textContent(), 'Results follow the map and your filters.');
+  assert.equal(await rejectedView.page.locator('.record-item[data-id="should-not-render"]').count(), 0);
+  await rejectedView.page.waitForFunction(() => !window.__scarbMap.querySourceFeatures('places').some(feature => feature.properties.id === 'beach:10'));
+  assert.deepEqual(rejectedView.pageErrors, []);
+
+  const manyRecords = {
+    ...snapshot,
+    establishments: Array.from({length: 82}, (_, index) => ({
+      id: `page-${String(index + 1).padStart(3, '0')}`,
+      establishment_id: `page-${String(index + 1).padStart(3, '0')}`,
+      name: `Paging Fixture ${String(index + 1).padStart(3, '0')}`,
+      address: `${index + 1} Test Road`, status: 'Pass', inspection_date: '2026-10-27',
+      longitude: -79.255, latitude: 43.775, neighbourhood: 'Agincourt',
+    })),
+  };
+  const paging = await openScenario(browser, origin, {snapshotBody: manyRecords}, {initialMode: 'all'});
+  t.after(() => paging.context.close());
+  await paging.page.locator('.record-item[data-id="page-001"]').waitFor();
+  assert.equal(await paging.page.locator('.record-item').count(), 80);
+  await paging.page.getByRole('button', {name: 'Show next 2 matches'}).click();
+  assert.equal(await paging.page.locator('.record-item').count(), 82);
+  assert.equal(await paging.page.evaluate(() => document.activeElement?.dataset.id), 'page-081');
+  assert.equal(await paging.page.locator('.record-item[data-id="page-082"]').isVisible(), true);
+  assert.deepEqual(paging.pageErrors, []);
+
+  const delayedBeach = await openScenario(browser, origin, {beachDelayMs: 5_000}, {initialMode: 'all'});
+  t.after(() => delayedBeach.context.close());
+  await delayedBeach.page.getByRole('button', {name: 'Fixture Cafe'}).waitFor({timeout: 2_000});
+  assert.equal(delayedBeach.isBeachResponseSent(), false, 'DineSafe view is available while the independent beach request is still pending');
+  await delayedBeach.page.getByRole('button', {name: 'Beach samples'}).click();
+  await delayedBeach.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor({timeout: 8_000});
+  assert.equal(delayedBeach.isBeachResponseSent(), true);
+  assert.deepEqual(delayedBeach.pageErrors, []);
+});
+
+test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeout: 60_000}, async t => {
+  const {server, origin} = await startStaticServer();
+  const browser = await chromium.launch({args: ['--disable-webgl', '--disable-3d-apis']});
+  t.after(async () => {
+    await browser.close();
+    await new Promise(resolveClose => server.close(resolveClose));
+  });
+
+  const openWithoutMap = async (routeOptions = {}, mode = 'all', expectRecords = true) => {
+    const context = await browser.newContext({viewport: {width: 1280, height: 900}});
+    const page = await context.newPage();
+    const pageErrors = [];
+    page.on('pageerror', error => pageErrors.push(error.message));
+    await page.addInitScript(value => localStorage.setItem('scarbto-filters-v1', JSON.stringify({mode: value})), mode);
+    await installLocalRoutes(page, origin, routeOptions);
+    await page.goto(origin, {waitUntil: 'domcontentloaded'});
+    await page.locator('#map-fallback:not([hidden])').waitFor();
+    if(expectRecords)await page.locator('.record-item').first().waitFor();
+    assert.match(await page.locator('#map-fallback').textContent(), /map unavailable.*searchable results list/i);
+    assert.equal(await page.locator('#map-fallback').getAttribute('aria-live'), 'polite');
+    assert.equal(await page.locator('#map').getAttribute('aria-hidden'), 'true');
+    assert.equal(await page.locator('#fit').isVisible(), false, 'map-only fit control is hidden');
+    assert.equal(await page.locator('#fit').isDisabled(), true, 'map-only fit control is also disabled');
+    assert.equal(await page.locator('#map-legend').isVisible(), false, 'map legend is hidden without a map');
+    return {context, page, pageErrors};
+  };
+
+  const feeds = await openWithoutMap();
+  t.after(() => feeds.context.close());
+  assert.equal(await feeds.page.locator('.record-item').count(), 5, 'all DineSafe fixture records render without map bounds');
+
+  const cafe = feeds.page.getByRole('button', {name: 'Fixture Cafe'});
+  await cafe.focus();
+  await feeds.page.keyboard.press('Enter');
+  assert.equal(await feeds.page.locator('.record-item.active').getAttribute('data-id'), 'fixture-a');
+  const cityLink = feeds.page.locator('#selected-record-details a');
+  assert.equal(await cityLink.count(), 1, 'record source link remains available without map selection');
+  assert.match(await cityLink.getAttribute('href'), /toronto\.ca\/community-people\/health-wellness-care\/health-programs-advice\/food-safety\/dinesafe\/#establishment\/fixture-a/);
+
+  await feeds.page.locator('#search').fill('Bakery');
+  assert.equal(await feeds.page.locator('.record-item').count(), 1, 'search filters the list without a map');
+  assert.match(await feeds.page.locator('.record-item').first().textContent(), /Fixture Bakery/);
+  await feeds.page.locator('#search').fill('');
+  await feeds.page.getByRole('button', {name: 'Beach samples'}).click();
+  await feeds.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
+  assert.equal(await feeds.page.locator('.beach-sample-preview-list li').count(), 10);
+  assert.equal(await feeds.page.locator('.beach-sample-preview a').count(), 3, 'beach provenance links render without map');
+  await feeds.page.getByRole('button', {name: 'All establishments'}).click();
+  assert.equal(await feeds.page.locator('.record-item').count(), 5, 'mode switching restores the DineSafe list');
+  assert.deepEqual(feeds.pageErrors, [], 'map fallback and feed interactions produce no uncaught errors');
+
+  const manyRecords = {
+    ...snapshot,
+    establishments: Array.from({length: 82}, (_, index) => ({
+      id: `no-map-${String(index + 1).padStart(3, '0')}`,
+      establishment_id: `no-map-${String(index + 1).padStart(3, '0')}`,
+      name: `No Map Fixture ${String(index + 1).padStart(3, '0')}`,
+      address: `${index + 1} Test Road`, status: 'Pass', inspection_date: '2026-10-27',
+      longitude: -79.255, latitude: 43.775, neighbourhood: 'Agincourt',
+    })),
+  };
+  const paging = await openWithoutMap({snapshotBody: manyRecords});
+  t.after(() => paging.context.close());
+  assert.equal(await paging.page.locator('.record-item').count(), 80);
+  await paging.page.getByRole('button', {name: 'Show next 2 matches'}).click();
+  assert.equal(await paging.page.locator('.record-item').count(), 82);
+  assert.equal(await paging.page.evaluate(() => document.activeElement?.dataset.id), 'no-map-081');
+  assert.equal(await paging.page.locator('.record-item[data-id="no-map-082"]').isVisible(), true);
+  assert.deepEqual(paging.pageErrors, []);
+
+  const rejected = {...snapshot, schema_version: 2, establishments: [{...snapshot.establishments[0], id: 'must-not-render'}]};
+  const invalid = await openWithoutMap({snapshotBody: rejected}, 'all', false);
+  t.after(() => invalid.context.close());
+  await invalid.page.getByText(/Could not load the published dataset \(Unsupported schema\)/).waitFor();
+  assert.equal(await invalid.page.locator('.record-item').count(), 0, 'unsupported payload records are not rendered');
+  await invalid.page.getByRole('button', {name: 'Beach samples'}).click();
+  assert.equal(await invalid.page.locator('.beach-sample-preview-list li').count(), 10);
+  await invalid.page.getByRole('button', {name: 'All establishments'}).click();
+  await invalid.page.getByText(/Could not load the published dataset \(Unsupported schema\)/).waitFor();
+  assert.equal(await invalid.page.locator('.record-item').count(), 0, 'mode switching cannot reveal rejected data');
+  assert.equal(await invalid.page.locator('[data-id="must-not-render"]').count(), 0);
+  assert.deepEqual(invalid.pageErrors, []);
+});
+
+test('MapLibre module failure still boots accessible DineSafe and beach views', {timeout: 60_000}, async t => {
+  const {server, origin} = await startStaticServer();
+  const browser = await chromium.launch({args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-webgl']});
+  t.after(async () => {
+    await browser.close();
+    await new Promise(resolveClose => server.close(resolveClose));
+  });
+  const context = await browser.newContext({viewport: {width: 1280, height: 900}});
+  t.after(() => context.close());
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+  await installLocalRoutes(page, origin, {maplibreFailure: true});
+  await page.goto(origin, {waitUntil: 'domcontentloaded'});
+  await page.locator('#map-fallback:not([hidden])').waitFor();
+  await page.getByRole('button', {name: 'Fixture Cafe'}).waitFor();
+  assert.match(await page.locator('#map-fallback').textContent(), /map unavailable.*searchable results list/i);
+  await page.getByRole('button', {name: 'Beach samples'}).click();
+  await page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
+  assert.equal(await page.locator('.beach-sample-preview-list li').count(), 10);
+  assert.deepEqual(pageErrors, [], 'failed third-party module does not prevent local app/feed boot');
+});
+
+
+test('selected calls render only after explicit selection and clear after leaving the view at desktop and mobile sizes', {timeout:60_000}, async t=>{
+  const {server,origin}=await startStaticServer();
+  const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+  t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
+  for(const viewport of [{width:1280,height:900},{width:390,height:844,isMobile:true,hasTouch:true}]){
+    let requests=0;
+    const context=await browser.newContext({viewport:{width:viewport.width,height:viewport.height},isMobile:Boolean(viewport.isMobile),hasTouch:Boolean(viewport.hasTouch)});
+    t.after(()=>context.close());
+    const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
+    await traceSelectedCalls(page);
+    await installLocalRoutes(page,origin,{selectedCalls:true,onSelectedCallsRequest:()=>requests++});
+    await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
+    if(viewport.isMobile)await page.getByRole('button',{name:'Filters'}).click();
     assert.equal(requests,0,'the client is idle until the selected-calls view is opened');
     const firstRequest=waitForSelectedCallsRequest(page);
     await page.getByRole('button',{name:'Selected police calls'}).click();
@@ -724,4 +931,3 @@ test('mobile area panel is closeable and the selected-area chip remains usable w
   assert.equal(await page.locator('#area-selection').isVisible(),false);
   assert.deepEqual(errors,[]);
 });
-
