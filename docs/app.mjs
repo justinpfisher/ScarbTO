@@ -21,6 +21,7 @@ try {
   }
 } catch { /* Private browsing, old preferences or disabled storage must not break the map. */ }
 let snapshot = null, beachPreview = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]};
+let neighbourhoodShapesPromise = null;
 let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = false, usingBeach = false, listLimit = 80;
 let dineSafeStatus={text:'Checking official data.',className:''}, dineSafeLoadState='loading', dineSafeLoadError='', beachPreviewState='loading';
 const selectedCallsClient = new SelectedCallsClient();
@@ -339,9 +340,31 @@ function currentBoundaryCamera() {
   return cameraBoundsForViewport(Math.max(320,box.width),Math.max(280,box.height));
 }
 function fitAll() {if(map)map.fitBounds(councilBoundary?COUNCIL_BOUNDARY_BOUNDS:SCARB_BOUNDS,{padding:councilBoundary?24:28,duration:350,maxZoom:11.2});}
-function selectNeighbourhood(){
-  if(!map||!state.neighbourhood)return;
-  const matched=shapes.features.filter(f=>f.properties?.AREA_NAME===state.neighbourhood);
+function loadNeighbourhoodFitShapes(){
+  if(!neighbourhoodShapesPromise){
+    neighbourhoodShapesPromise=fetch('data/scarborough-neighbourhoods.geojson',{cache:'force-cache'})
+      .then(response=>{
+        if(!response.ok)throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(candidate=>{
+        if(candidate?.type!=='FeatureCollection'||!Array.isArray(candidate.features))throw new Error('Invalid neighbourhood geometry');
+        shapes=candidate;
+        return shapes;
+      })
+      .catch(error=>{
+        console.warn('Neighbourhood fit geometry unavailable:',error?.message||error);
+        return shapes;
+      });
+  }
+  return neighbourhoodShapesPromise;
+}
+async function selectNeighbourhood(){
+  const selected=state.neighbourhood;
+  if(!map||!selected)return;
+  const fitShapes=await loadNeighbourhoodFitShapes();
+  if(!map||state.neighbourhood!==selected)return;
+  const matched=fitShapes.features.filter(f=>f.properties?.AREA_NAME===selected);
   const bounds=fitBoundsFromFeatures(matched);
   if(bounds)map.fitBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]],{padding:35,maxZoom:13,duration:350});
 }
@@ -509,7 +532,6 @@ async function loadDineSafeSnapshot() {
     snapshot=candidate;
     dineSafeLoadState=candidate.ready?'ready':'not-ready';dineSafeLoadError='';
     if(!candidate.ready){setDineSafeStatus('Awaiting first validated City data import','warning');performFilters();return;}
-    try{const r=await fetch('data/scarborough-neighbourhoods.geojson',{cache:'force-cache'});if(r.ok)shapes=await r.json();}catch{}
     populateNeighbourhoods();
     const stale=isStale(candidate.published_at);
     const cityReported=cityCatalogueRefreshText(candidate.source?.last_refreshed);

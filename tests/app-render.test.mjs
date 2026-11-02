@@ -113,6 +113,7 @@ class FakeMap {
     this.layers = Object.create(null);
     this.images = Object.create(null);
     this.isLoaded = false;
+    this.fitBoundsCalls = [];
     this.canvas = new FakeElement(document,'div','','map-canvas');
     this.canvas.style = {};
   }
@@ -135,7 +136,7 @@ class FakeMap {
   getZoom() { return 11; }
   getCanvas() { return this.canvas; }
   easeTo() { this.emit('moveend'); }
-  fitBounds() { this.emit('moveend'); }
+  fitBounds(...args) { this.fitBoundsCalls.push(args); this.emit('moveend'); }
   load() { this.isLoaded = true; this.emit('load'); }
 }
 
@@ -159,7 +160,7 @@ function fixture(count = 1, ready = true) {
   };
 }
 
-async function loadApp(snapshot,{selectedFetch} = {}) {
+async function loadApp(snapshot,{selectedFetch,neighbourhoodFetch} = {}) {
   const document = new FakeDocument();
   let map;
   const prior = {
@@ -177,7 +178,9 @@ async function loadApp(snapshot,{selectedFetch} = {}) {
   };
   const ordinaryFetch=async url => url.includes('snapshot.json')
     ? {ok:true,json:async()=>snapshot}
-    : {ok:false};
+    : String(url).includes('scarborough-neighbourhoods.geojson')&&neighbourhoodFetch
+      ? neighbourhoodFetch(url)
+      : {ok:false,status:404};
   globalThis.fetch=async (url,init)=>String(url).includes('C4S_Public_NoGO')&&selectedFetch
     ? selectedFetch(url,init)
     : ordinaryFetch(url,init);
@@ -194,6 +197,59 @@ async function loadApp(snapshot,{selectedFetch} = {}) {
     },
   };
 }
+
+test('DineSafe renders before optional neighbourhood-fit geometry and loads it once on selection', async () => {
+  const geometry={type:'FeatureCollection',features:[{
+    type:'Feature',properties:{AREA_NAME:'Synthetic Area'},
+    geometry:{type:'Polygon',coordinates:[[[-79.3,43.6],[-79.1,43.6],[-79.1,43.8],[-79.3,43.8],[-79.3,43.6]]]},
+  }]};
+  let requests=0,resolveGeometry;
+  const snapshot=fixture(2);
+  snapshot.establishments[1].neighbourhood='Other Area';
+  const app=await loadApp(snapshot,{neighbourhoodFetch:()=>{
+    requests++;
+    return new Promise(resolve=>{resolveGeometry=()=>resolve({ok:true,json:async()=>geometry});});
+  }});
+  try {
+    const list=app.document.getElementById('record-list');
+    assert.equal(list.querySelectorAll('.record-item').length,2,'the first DineSafe rows render without waiting for geometry');
+    assert.equal(requests,0,'startup does not request map-fit-only neighbourhood geometry');
+    app.map.load();
+    const neighbourhood=app.document.getElementById('neighbourhood');
+    neighbourhood.value='Synthetic Area';
+    neighbourhood.dispatch('change');
+    assert.equal(requests,1,'the first legacy neighbourhood selection starts the optional request');
+    assert.equal(list.querySelectorAll('.record-item').length,1,'the list remains available while map-fit geometry is pending');
+    assert.equal(list.querySelector('.record-item').dataset.id,'entry-000','the neighborhood filter is applied before optional map geometry arrives');
+    resolveGeometry();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(app.map.fitBoundsCalls.length,1,'the selected neighbourhood is fitted after geometry arrives');
+    neighbourhood.dispatch('change');
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(requests,1,'the successful geometry response is cached for later selections');
+    assert.equal(app.map.fitBoundsCalls.length,2);
+  } finally { await app.cleanup(); }
+});
+
+test('neighbourhood geometry failure leaves DineSafe selection usable without repeated requests', async () => {
+  let requests=0;
+  const snapshot=fixture(2);
+  snapshot.establishments[1].neighbourhood='Other Area';
+  const app=await loadApp(snapshot,{neighbourhoodFetch:async()=>{requests++;return {ok:false,status:503};}});
+  try {
+    app.map.load();
+    const select=app.document.getElementById('neighbourhood');
+    select.value='Synthetic Area';
+    select.dispatch('change');
+    await new Promise(resolve=>setTimeout(resolve,0));
+    select.dispatch('change');
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(requests,1,'a failed optional geometry request is cached rather than repeatedly retried');
+    assert.equal(app.document.getElementById('record-list').querySelectorAll('.record-item').length,1);
+    assert.equal(app.document.getElementById('record-list').querySelector('.record-item').dataset.id,'entry-000','the DineSafe filter remains active when map geometry cannot be loaded');
+    assert.equal(app.map.fitBoundsCalls.length,0,'a failed request leaves the current map camera alone');
+  } finally { await app.cleanup(); }
+});
 
 test('production render path handles an initial not-ready snapshot', async () => {
   const app = await loadApp(fixture(0,false));
