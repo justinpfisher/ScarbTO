@@ -35,6 +35,8 @@ const snapshot = {
   establishments: [
     {id: 'fixture-a', establishment_id: 'fixture-a', name: 'Fixture Cafe', address: '10 Test Road', status: 'Pass', inspection_date: '2026-10-26', longitude: -79.255, latitude: 43.775, neighbourhood: 'Agincourt'},
     {id: 'fixture-b', establishment_id: 'fixture-b', name: 'Fixture Bakery', address: '20 Sample Avenue', status: 'Conditional Pass', inspection_date: '2026-10-25', longitude: -79.29, latitude: 43.73, neighbourhood: 'Woburn'},
+    {id: 'fixture-c', establishment_id: 'fixture-c', name: 'Conditional Marker Fixture', address: '40 Shape Road', status: 'Conditional Pass', inspection_date: '2026-10-23', longitude: -79.252, latitude: 43.777, neighbourhood: 'Agincourt'},
+    {id: 'fixture-d', establishment_id: 'fixture-d', name: 'Closed Marker Fixture', address: '50 Shape Road', status: 'Closed', inspection_date: '2026-10-22', longitude: -79.258, latitude: 43.777, neighbourhood: 'Agincourt'},
   {id: 'boundary-edge-fixture', establishment_id: 'boundary-edge-fixture', name: 'Boundary Edge Fixture', address: '30 Boundary Road', status: 'Pass', inspection_date: '2026-10-24', longitude: -79.344, latitude: 43.671, neighbourhood: 'Test area'},
   ],
   activity: [],
@@ -198,9 +200,12 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   const page = await context.newPage();
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(error.message));
+  await page.addInitScript(()=>{window.__scarbRenderedQaStarted=performance.now();});
   await installLocalRoutes(page, origin);
   await page.goto(origin, {waitUntil: 'networkidle'});
   await waitForMap(page);
+  const mapReadyMs=await page.evaluate(()=>performance.now()-window.__scarbRenderedQaStarted);
+  console.log(`QA_METRIC synthetic ${name} map ready: ${mapReadyMs.toFixed(1)} ms (local fixture and local style)`);
   await page.waitForFunction(() => window.__scarbMap.getSource('scarborough-mask') && window.__scarbMap.getSource('scarborough-boundary'));
   assert.match(await page.locator('#map').getAttribute('aria-label'),/marker shape and letter supplement colour/i,`${name}: runtime map label retains the DineSafe marker explanation`);
   const boundaryState=await page.evaluate(()=>{
@@ -241,6 +246,14 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await page.waitForFunction(() => window.__scarbMap.queryRenderedFeatures(undefined, {layers: ['single']}).some(feature => feature.properties.id === 'fixture-a'));
   await page.locator('#map').click({position: {x: Math.floor((await page.locator('#map').boundingBox()).width / 2), y: Math.floor((await page.locator('#map').boundingBox()).height / 2)}});
   assert.equal(await page.locator('.record-item.active').getAttribute('data-id'), 'fixture-a', `${name}: clicking a real rendered MapLibre marker selects its record`);
+  await page.waitForFunction(() => {
+    const statuses=new Set(window.__scarbMap.queryRenderedFeatures(undefined,{layers:['single']}).map(feature=>feature.properties.status));
+    return ['Pass','Conditional Pass','Closed'].every(status=>statuses.has(status));
+  });
+  const renderedOutcomes=await page.evaluate(()=>[...new Set(window.__scarbMap.queryRenderedFeatures(undefined,{layers:['single']}).map(feature=>feature.properties.status))].sort());
+  assert.deepEqual(renderedOutcomes,['Closed','Conditional Pass','Pass'],`${name}: P/C/X status markers are rendered in the DineSafe map`);
+  assert.equal(await page.locator('.record-item.active').getAttribute('data-id'),'fixture-a',`${name}: the selected establishment remains highlighted with status markers visible`);
+  await page.screenshot({path:resolve(outputDir,`${name}-dinesafe-markers.png`),fullPage:true});
 
   await page.getByRole('button', {name: 'Beach samples'}).click();
   assert.match(await page.locator('#map').getAttribute('aria-label'),/reference point; it is not a sample-site coordinate/i,`${name}: map label explains the beach marker location`);
