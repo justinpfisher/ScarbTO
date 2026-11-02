@@ -35,6 +35,8 @@ const snapshot = {
   establishments: [
     {id: 'fixture-a', establishment_id: 'fixture-a', name: 'Fixture Cafe', address: '10 Test Road', status: 'Pass', inspection_date: '2026-10-26', longitude: -79.255, latitude: 43.775, neighbourhood: 'Agincourt'},
     {id: 'fixture-b', establishment_id: 'fixture-b', name: 'Fixture Bakery', address: '20 Sample Avenue', status: 'Conditional Pass', inspection_date: '2026-10-25', longitude: -79.29, latitude: 43.73, neighbourhood: 'Woburn'},
+    {id: 'fixture-c', establishment_id: 'fixture-c', name: 'Conditional Marker Fixture', address: '40 Shape Road', status: 'Conditional Pass', inspection_date: '2026-10-23', longitude: -79.252, latitude: 43.777, neighbourhood: 'Agincourt'},
+    {id: 'fixture-d', establishment_id: 'fixture-d', name: 'Closed Marker Fixture', address: '50 Shape Road', status: 'Closed', inspection_date: '2026-10-22', longitude: -79.258, latitude: 43.777, neighbourhood: 'Agincourt'},
   {id: 'boundary-edge-fixture', establishment_id: 'boundary-edge-fixture', name: 'Boundary Edge Fixture', address: '30 Boundary Road', status: 'Pass', inspection_date: '2026-10-24', longitude: -79.344, latitude: 43.671, neighbourhood: 'Test area'},
   ],
   activity: [],
@@ -198,10 +200,14 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   const page = await context.newPage();
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(error.message));
+  await page.addInitScript(()=>{window.__scarbRenderedQaStarted=performance.now();});
   await installLocalRoutes(page, origin);
   await page.goto(origin, {waitUntil: 'networkidle'});
   await waitForMap(page);
+  const mapReadyMs=await page.evaluate(()=>performance.now()-window.__scarbRenderedQaStarted);
+  console.log(`QA_METRIC synthetic ${name} map ready: ${mapReadyMs.toFixed(1)} ms (local fixture and local style)`);
   await page.waitForFunction(() => window.__scarbMap.getSource('scarborough-mask') && window.__scarbMap.getSource('scarborough-boundary'));
+  assert.match(await page.locator('#map').getAttribute('aria-label'),/marker shape and letter supplement colour/i,`${name}: runtime map label retains the DineSafe marker explanation`);
   const boundaryState=await page.evaluate(()=>{
     const map=window.__scarbMap;
     const layers=map.getStyle().layers.map(layer=>layer.id);
@@ -217,6 +223,8 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   });
   assert.ok(boundaryState.layerOrder.every(index=>index>=0));
   assert.ok(boundaryState.layerOrder[0]<boundaryState.layerOrder[1]&&boundaryState.layerOrder[1]<boundaryState.layerOrder[2]&&boundaryState.layerOrder[2]<boundaryState.layerOrder[3],'outside mask and boundary draw below establishment pins');
+  assert.equal(await page.evaluate(()=>window.__scarbMap.getLayer('single')?.type),'symbol','individual outcomes use a shape-and-letter marker layer');
+  assert.equal(await page.evaluate(()=>window.__scarbMap.hasImage('status-pass')&&window.__scarbMap.hasImage('status-conditional')&&window.__scarbMap.hasImage('status-closed')),true,'DineSafe marker images are installed before rendering');
   assert.equal(boundaryState.hasBoundarySource,true,'display uses the independent official council feature');
   assert.equal(boundaryState.hasMaskSource,true);
   assert.equal(boundaryState.hasBoundaryLayer,true);
@@ -238,8 +246,17 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await page.waitForFunction(() => window.__scarbMap.queryRenderedFeatures(undefined, {layers: ['single']}).some(feature => feature.properties.id === 'fixture-a'));
   await page.locator('#map').click({position: {x: Math.floor((await page.locator('#map').boundingBox()).width / 2), y: Math.floor((await page.locator('#map').boundingBox()).height / 2)}});
   assert.equal(await page.locator('.record-item.active').getAttribute('data-id'), 'fixture-a', `${name}: clicking a real rendered MapLibre marker selects its record`);
+  await page.waitForFunction(() => {
+    const statuses=new Set(window.__scarbMap.queryRenderedFeatures(undefined,{layers:['single']}).map(feature=>feature.properties.status));
+    return ['Pass','Conditional Pass','Closed'].every(status=>statuses.has(status));
+  });
+  const renderedOutcomes=await page.evaluate(()=>[...new Set(window.__scarbMap.queryRenderedFeatures(undefined,{layers:['single']}).map(feature=>feature.properties.status))].sort());
+  assert.deepEqual(renderedOutcomes,['Closed','Conditional Pass','Pass'],`${name}: P/C/X status markers are rendered in the DineSafe map`);
+  assert.equal(await page.locator('.record-item.active').getAttribute('data-id'),'fixture-a',`${name}: the selected establishment remains highlighted with status markers visible`);
+  await page.screenshot({path:resolve(outputDir,`${name}-dinesafe-markers.png`),fullPage:true});
 
   await page.getByRole('button', {name: 'Beach samples'}).click();
+  assert.match(await page.locator('#map').getAttribute('aria-label'),/reference point; it is not a sample-site coordinate/i,`${name}: map label explains the beach marker location`);
   await page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
   await page.getByText('Latest 10 catalogue rows shown', {exact: false}).waitFor();
   assert.equal(await page.locator('#search').isDisabled(), true, `${name}: DineSafe controls are disabled in beach mode`);
@@ -465,7 +482,7 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
 
   const feeds = await openWithoutMap();
   t.after(() => feeds.context.close());
-  assert.equal(await feeds.page.locator('.record-item').count(), 3, 'DineSafe records render without map bounds');
+  assert.equal(await feeds.page.locator('.record-item').count(), 5, 'all DineSafe fixture records render without map bounds');
 
   const cafe = feeds.page.getByRole('button', {name: 'Fixture Cafe'});
   await cafe.focus();
@@ -484,7 +501,7 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
   assert.equal(await feeds.page.locator('.beach-sample-preview-list li').count(), 10);
   assert.equal(await feeds.page.locator('.beach-sample-preview a').count(), 3, 'beach provenance links render without map');
   await feeds.page.getByRole('button', {name: 'All establishments'}).click();
-  assert.equal(await feeds.page.locator('.record-item').count(), 3, 'mode switching restores the DineSafe list');
+  assert.equal(await feeds.page.locator('.record-item').count(), 5, 'mode switching restores the DineSafe list');
   assert.deepEqual(feeds.pageErrors, [], 'map fallback and feed interactions produce no uncaught errors');
 
   const manyRecords = {
@@ -882,7 +899,7 @@ test('mobile area panel is closeable and the selected-area chip remains usable w
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
   t.after(()=>context.close());
   const page=await context.newPage(),errors=[];
-  page.on('pageerror',err=>errors.push(err.message));
+  page.on('pageerror',err=>errors.push(err.stack || err.message));
   await installLocalRoutes(page,origin,{snapshotBody:{...snapshot,establishments:[
     {...snapshot.establishments[0],neighbourhood:'Ionview',ward:'Scarborough Centre'},
     {...snapshot.establishments[1],neighbourhood:'Oakridge',ward:'Scarborough Southwest'}

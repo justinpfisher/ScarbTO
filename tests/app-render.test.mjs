@@ -89,7 +89,14 @@ class FakeDocument {
     if (!this.elements.has(id)) this.elements.set(id,new FakeElement(this,'div',id,id === 'record-list' ? 'record-list' : ''));
     return this.elements.get(id);
   }
-  createElement(tagName) { return new FakeElement(this,tagName); }
+  createElement(tagName) {
+    const element=new FakeElement(this,tagName);
+    if(String(tagName).toLowerCase()==='canvas')element.getContext=type=>type==='2d'&&this.canvas2dEnabled!==false?{
+      clearRect(){},beginPath(){},arc(){},moveTo(){},lineTo(){},closePath(){},rect(){},fill(){},stroke(){},fillText(){},
+      getImageData:(_x,_y,width,height)=>({width,height,data:new Uint8ClampedArray(width*height*4)}),
+    }:type==='webgl2'?{getExtension:()=>({loseContext(){}})}:null;
+    return element;
+  }
   querySelectorAll(selector) {
     if (selector === '.tab') return this.tabs;
     if (selector === '.chip') return this.chips;
@@ -103,6 +110,8 @@ class FakeMap {
     this.document = document;
     this.handlers = Object.create(null);
     this.sources = Object.create(null);
+    this.layers = Object.create(null);
+    this.images = Object.create(null);
     this.isLoaded = false;
     this.canvas = new FakeElement(document,'div','','map-canvas');
     this.canvas.style = {};
@@ -118,7 +127,8 @@ class FakeMap {
   }
   addControl() {}
   addSource(id) { this.sources[id] = {setData(data) { this.data = data; }}; }
-  addLayer() {}
+  addImage(id,image,options) { this.images[id]={image,options}; }
+  addLayer(layer) { this.layers[layer.id]=layer; }
   getSource(id) { return this.sources[id]; }
   getBounds() { return {contains:() => true}; }
   loaded() { return this.isLoaded; }
@@ -248,6 +258,53 @@ test('production detail view suppresses literal None and keeps establishment cat
     const noDetails=app.document.getElementById('record-list').querySelector('.record-details').textContent;
     assert.match(noDetails,/No additional detail in this source row/);
     assert.doesNotMatch(noDetails,/None/);
+  } finally { await app.cleanup(); }
+});
+
+test('DineSafe map markers encode outcomes by shape and letter while retaining map selection', async () => {
+  const snapshot=fixture(4);
+  snapshot.establishments[0].status='Pass';
+  snapshot.establishments[1].status='Conditional Pass';
+  snapshot.establishments[2].status='Closed';
+  snapshot.establishments[3].status='Beach sample';
+  const app=await loadApp(snapshot);
+  try {
+    app.map.load();
+    const layer=app.map.layers.single;
+    assert.equal(layer.type,'symbol');
+    assert.deepEqual(Object.keys(app.map.images).sort(),['status-beach','status-closed','status-conditional','status-other','status-pass']);
+    assert.deepEqual(layer.layout['icon-image'],['match',['get','status'],'Pass','status-pass','Conditional Pass','status-conditional','Closed','status-closed','Beach sample','status-beach','status-other']);
+    assert.equal(app.map.images['status-conditional'].options.pixelRatio,2);
+    app.document.tabs.find(tab=>tab.dataset.mode==='all').click();
+    app.map.emitLayer('click','single',{features:[{properties:{id:snapshot.establishments[2].id}}]});
+    assert.equal(app.map.sources.places.data.features.find(feature=>feature.properties.id===snapshot.establishments[2].id).properties.selected,true,'the existing map click path marks the same record selected');
+
+    const html=await readFile(new URL('../docs/index.html',import.meta.url),'utf8');
+    const css=await readFile(new URL('../docs/styles.css',import.meta.url),'utf8');
+    assert.match(app.document.getElementById('map').attributes['aria-label'],/marker shape and letter supplement colour/i,'runtime control updates retain the accessible marker description');
+    assert.match(html,/Marker shape and letter supplement colour/);
+    assert.ok(css.includes(".dot.pass::after{content:'P'}"));
+    assert.ok(css.includes(".dot.conditional::after{content:'C'}"));
+    assert.ok(css.includes(".dot.closed::after{content:'X'}"));
+    assert.match(css,/\.map-legend-items \.dot\.conditional\{[^}]*border-radius:0/,'the conditional legend symbol is a triangle, not a circle-triangle overlap');
+    assert.match(css,/\.dot\.beach::after\{[^}]*display:inline-block;transform:rotate\(-45deg\)/,'the beach letter remains upright inside its diamond');
+  } finally { await app.cleanup(); }
+});
+
+test('marker image fallback keeps letter-coded circles and describes their actual encoding', async () => {
+  const app=await loadApp(fixture());
+  try {
+    app.document.canvas2dEnabled=false;
+    app.map.load();
+    assert.equal(app.map.layers.single.type,'circle');
+    assert.equal(app.map.layers['single-letter'].type,'symbol');
+    assert.deepEqual(app.map.layers['single-letter'].layout['text-field'],['match',['get','status'],'Pass','P','Conditional Pass','C','Closed','X','Beach sample','B','?']);
+    assert.equal(app.document.getElementById('map-legend').classList.contains('marker-shape-fallback'),true);
+    assert.match(app.document.getElementById('map').attributes['aria-label'],/Marker letters identify outcomes/);
+    const css=await readFile(new URL('../docs/styles.css',import.meta.url),'utf8');
+    assert.match(css,/marker-shape-fallback \.dot\.conditional\{background:#e2a03d\}/,'fallback legend matches the fallback map colour');
+    assert.match(css,/marker-shape-fallback \.dot\.closed\{background:#c4534c\}/,'fallback Closed legend matches the fallback map colour');
+    assert.match(css,/marker-shape-fallback \.dot\.beach\{background:#506c80\}/,'fallback beach legend uses the fallback circle colour');
   } finally { await app.cleanup(); }
 });
 

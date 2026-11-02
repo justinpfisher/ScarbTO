@@ -30,6 +30,7 @@ let mapUnavailable = false;
 let councilBoundary = null;
 let areaExplorer = null;
 let mapLegendCollapsed=globalThis.matchMedia?.('(max-width: 570px)').matches||false;
+let statusMarkerImagesAvailable=true;
 
 function clearSelectedCallsExpiry(){
   clearTimeout(selectedCallsExpiryTimer);selectedCallsExpiryTimer=null;
@@ -73,6 +74,30 @@ function localDate(iso) {
   return Number.isFinite(t) ? new Intl.DateTimeFormat('en-CA',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}).format(t):'Date unavailable';
 }
 function outcomeClass(status){return status==='Closed'?'closed':status==='Conditional Pass'?'conditional':'pass';}
+function addStatusMarkerImages(mapInstance){
+  const definitions=[
+    ['pass','Pass','#318f62','circle','P'],
+    ['conditional','Conditional Pass','#a96f12','triangle','C'],
+    ['closed','Closed','#b3423c','square','X'],
+    ['beach','Beach sample','#506c80','diamond','B'],
+    ['other','other','#667d71','circle','?'],
+  ];
+  try{
+    for(const [id,,color,shape,label] of definitions){
+      const canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;
+      const context=canvas.getContext('2d');if(!context)return false;
+      context.clearRect(0,0,32,32);context.fillStyle=color;context.strokeStyle='#fff';context.lineWidth=2;
+      context.beginPath();
+      if(shape==='circle')context.arc(16,16,12,0,Math.PI*2);
+      else if(shape==='triangle'){context.moveTo(16,3);context.lineTo(30,28);context.lineTo(2,28);context.closePath();}
+      else if(shape==='square')context.rect(4,4,24,24);
+      else{context.moveTo(16,2);context.lineTo(30,16);context.lineTo(16,30);context.lineTo(2,16);context.closePath();}
+      context.fill();context.stroke();context.fillStyle='#fff';context.font='bold 13px sans-serif';context.textAlign='center';context.textBaseline='middle';context.fillText(label,16,17);
+      mapInstance.addImage(`status-${id}`,context.getImageData(0,0,32,32),{pixelRatio:2});
+    }
+    return true;
+  }catch{return false;}
+}
 function syncDataStatus() {
   const status=$('data-status');
   status.classList.remove('error','warning');
@@ -103,6 +128,17 @@ function setDineSafeStatus(text,className='') {
   dineSafeStatus={text,className};
   syncDataStatus();
 }
+function syncMapAccessibilityLabel(){
+  const beachMode=state.mode==='beach',selectedCallsMode=state.mode==='selected-calls';
+  const mapLabel=selectedCallsMode
+    ?'Map background only; selected calls are not mapped individually'
+    :beachMode
+      ?'Interactive map of Scarborough beach sample reference point; it is not a sample-site coordinate'
+      :statusMarkerImagesAvailable
+        ?'Interactive map of DineSafe establishments. Marker shape and letter supplement colour; the matching list spells out each outcome.'
+        :'Interactive map of DineSafe establishments. Marker letters identify outcomes; map colour is supplementary and the matching list spells out each outcome.';
+  $('map').setAttribute('aria-label',mapLabel);
+}
 function syncControls() {
   $('window').value=state.days;
   $('neighbourhood').value=state.areaKind==='neighbourhood'?(areaFor('neighbourhood',state.areaCode)?.name||''):state.neighbourhood;
@@ -119,7 +155,7 @@ function syncControls() {
     item.hidden=item.dataset.legendMode==='dinesafe'?(beachMode||selectedCallsMode):item.dataset.legendMode==='beach'?(!beachMode||selectedCallsMode):false;
   });
   syncMapLegend();
-  $('map').setAttribute('aria-label',selectedCallsMode?'Map background only; selected calls are not mapped individually':'Interactive map of DineSafe establishments and beach sample locations');
+  syncMapAccessibilityLabel();
   document.querySelectorAll('#search,#neighbourhood,#window,.outcomes button').forEach(control=>{control.disabled=beachMode||selectedCallsMode;});
   syncDataStatus();
   areaExplorer?.updateMode();
@@ -129,6 +165,7 @@ function syncMapLegend(){
   if(!button||!items)return;
   items.hidden=mapLegendCollapsed;
   $('map-legend').classList.toggle('collapsed',mapLegendCollapsed);
+  $('map-legend').classList.toggle('marker-shape-fallback',!statusMarkerImagesAvailable);
   button.setAttribute('aria-expanded',String(!mapLegendCollapsed));
   button.setAttribute('aria-label',mapLegendCollapsed?'Show map key':'Hide map key');
   const icon=button.querySelector('span');if(icon)icon.textContent=mapLegendCollapsed?'+':'−';
@@ -373,7 +410,15 @@ async function initMap() {
         map.addSource('places',{type:'geojson',data:{type:'FeatureCollection',features:[]},cluster:true,clusterMaxZoom:13,clusterRadius:38});
         map.addLayer({id:'clusters',type:'circle',source:'places',filter:['has','point_count'],paint:{'circle-color':'#174d43','circle-radius':['step',['get','point_count'],18,30,23,150,29],'circle-opacity':.90,'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
         map.addLayer({id:'cluster-count',type:'symbol',source:'places',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-size':12},paint:{'text-color':'#fff'}});
-        map.addLayer({id:'single',type:'circle',source:'places',filter:['!',['has','point_count']],paint:{'circle-color':['match',['get','status'],'Pass','#318f62','Conditional Pass','#e2a03d','Closed','#c4534c','Beach sample','#506c80','#667d71'],'circle-radius':['case',['get','selected'],11,7],'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
+        statusMarkerImagesAvailable=addStatusMarkerImages(map);
+        syncMapLegend();
+        syncMapAccessibilityLabel();
+        if(statusMarkerImagesAvailable){
+          map.addLayer({id:'single',type:'symbol',source:'places',filter:['!',['has','point_count']],layout:{'icon-image':['match',['get','status'],'Pass','status-pass','Conditional Pass','status-conditional','Closed','status-closed','Beach sample','status-beach','status-other'],'icon-size':['case',['get','selected'],1.15,1],'icon-allow-overlap':true,'icon-ignore-placement':true}});
+        }else{
+          map.addLayer({id:'single',type:'circle',source:'places',filter:['!',['has','point_count']],paint:{'circle-color':['match',['get','status'],'Pass','#318f62','Conditional Pass','#e2a03d','Closed','#c4534c','Beach sample','#506c80','#667d71'],'circle-radius':['case',['get','selected'],11,7],'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
+          map.addLayer({id:'single-letter',type:'symbol',source:'places',filter:['!',['has','point_count']],layout:{'text-field':['match',['get','status'],'Pass','P','Conditional Pass','C','Closed','X','Beach sample','B','?'],'text-size':9,'text-allow-overlap':true,'text-ignore-placement':true},paint:{'text-color':'#fff','text-halo-color':'#344b42','text-halo-width':0.5}});
+        }
         map.on('click','clusters',e=>{const geom=e.features?.[0]?.geometry;if(geom?.type==='Point')map.easeTo({center:geom.coordinates,zoom:Math.min(map.getZoom()+2,15),duration:350});});
         map.on('click','single',e=>{const id=String(e.features?.[0]?.properties?.id||'');if(id)selectPlace(id,false,true);});
         for(const layer of ['clusters','single']){map.on('mouseenter',layer,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',layer,()=>map.getCanvas().style.cursor='');}
