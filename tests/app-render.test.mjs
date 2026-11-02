@@ -114,6 +114,7 @@ class FakeMap {
     this.images = Object.create(null);
     this.isLoaded = false;
     this.fitBoundsCalls = [];
+    this.easeToCalls = [];
     this.canvas = new FakeElement(document,'div','','map-canvas');
     this.canvas.style = {};
   }
@@ -135,8 +136,8 @@ class FakeMap {
   loaded() { return this.isLoaded; }
   getZoom() { return 11; }
   getCanvas() { return this.canvas; }
-  easeTo() { this.emit('moveend'); }
-  fitBounds(...args) { this.fitBoundsCalls.push(args); this.emit('moveend'); }
+  easeTo(...args) { this.easeToCalls.push(args); this.emit('movestart'); this.emit('moveend'); }
+  fitBounds(...args) { this.fitBoundsCalls.push(args); this.emit('movestart'); this.emit('moveend'); }
   load() { this.isLoaded = true; this.emit('load'); }
 }
 
@@ -271,6 +272,47 @@ test('pending neighbourhood fit cannot override a later Fit Scarborough action',
     resolveGeometry();
     await new Promise(resolve=>setTimeout(resolve,0));
     assert.equal(app.map.fitBoundsCalls.length,1,'late neighborhood geometry cannot override Fit Scarborough');
+  } finally { await app.cleanup(); }
+});
+
+test('pending neighbourhood fit cannot override result-selection camera movement', async () => {
+  let resolveGeometry;
+  const geometry={type:'FeatureCollection',features:[{
+    type:'Feature',properties:{AREA_NAME:'Synthetic Area'},
+    geometry:{type:'Polygon',coordinates:[[[-79.3,43.6],[-79.1,43.6],[-79.1,43.8],[-79.3,43.8],[-79.3,43.6]]]},
+  }]};
+  const app=await loadApp(fixture(),{neighbourhoodFetch:()=>new Promise(resolve=>{
+    resolveGeometry=()=>resolve({ok:true,json:async()=>geometry});
+  })});
+  try {
+    app.map.load();
+    const select=app.document.getElementById('neighbourhood');
+    select.value='Synthetic Area';select.dispatch('change');
+    app.document.getElementById('record-list').querySelector('.record-item').click();
+    assert.equal(app.map.easeToCalls.length,1,'selecting a result requests its camera position');
+    resolveGeometry();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(app.map.fitBoundsCalls.length,0,'late neighborhood geometry cannot override the selected result camera');
+  } finally { await app.cleanup(); }
+});
+
+test('pending neighbourhood fit yields to direct map camera movement', async () => {
+  let resolveGeometry;
+  const geometry={type:'FeatureCollection',features:[{
+    type:'Feature',properties:{AREA_NAME:'Synthetic Area'},
+    geometry:{type:'Polygon',coordinates:[[[-79.3,43.6],[-79.1,43.6],[-79.1,43.8],[-79.3,43.8],[-79.3,43.6]]]},
+  }]};
+  const app=await loadApp(fixture(),{neighbourhoodFetch:()=>new Promise(resolve=>{
+    resolveGeometry=()=>resolve({ok:true,json:async()=>geometry});
+  })});
+  try {
+    app.map.load();
+    const select=app.document.getElementById('neighbourhood');
+    select.value='Synthetic Area';select.dispatch('change');
+    app.map.emit('movestart');
+    resolveGeometry();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(app.map.fitBoundsCalls.length,0,'new map movement supersedes the pending fit');
   } finally { await app.cleanup(); }
 });
 
