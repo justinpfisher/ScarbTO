@@ -22,6 +22,7 @@ try {
 } catch { /* Private browsing, old preferences or disabled storage must not break the map. */ }
 let snapshot = null, beachPreview = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]};
 let neighbourhoodShapesPromise = null;
+let neighbourhoodFitRequestId = 0;
 let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = false, usingBeach = false, listLimit = 80;
 let dineSafeStatus={text:'Checking official data.',className:''}, dineSafeLoadState='loading', dineSafeLoadError='', beachPreviewState='loading';
 const selectedCallsClient = new SelectedCallsClient();
@@ -339,7 +340,7 @@ function currentBoundaryCamera() {
   const box=$('map').getBoundingClientRect();
   return cameraBoundsForViewport(Math.max(320,box.width),Math.max(280,box.height));
 }
-function fitAll() {if(map)map.fitBounds(councilBoundary?COUNCIL_BOUNDARY_BOUNDS:SCARB_BOUNDS,{padding:councilBoundary?24:28,duration:350,maxZoom:11.2});}
+function fitAll() {neighbourhoodFitRequestId++;if(map)map.fitBounds(councilBoundary?COUNCIL_BOUNDARY_BOUNDS:SCARB_BOUNDS,{padding:councilBoundary?24:28,duration:350,maxZoom:11.2});}
 function loadNeighbourhoodFitShapes(){
   if(!neighbourhoodShapesPromise){
     neighbourhoodShapesPromise=fetch('data/scarborough-neighbourhoods.geojson',{cache:'force-cache'})
@@ -360,10 +361,11 @@ function loadNeighbourhoodFitShapes(){
   return neighbourhoodShapesPromise;
 }
 async function selectNeighbourhood(){
+  const requestId=++neighbourhoodFitRequestId;
   const selected=state.neighbourhood;
   if(!map||!selected)return;
   const fitShapes=await loadNeighbourhoodFitShapes();
-  if(!map||state.neighbourhood!==selected)return;
+  if(requestId!==neighbourhoodFitRequestId||!map||state.neighbourhood!==selected||!['recent','all'].includes(state.mode))return;
   const matched=fitShapes.features.filter(f=>f.properties?.AREA_NAME===selected);
   const bounds=fitBoundsFromFeatures(matched);
   if(bounds)map.fitBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]],{padding:35,maxZoom:13,duration:350});
@@ -462,6 +464,7 @@ function bindControls(){
   $('map-legend-toggle').addEventListener('click',()=>{mapLegendCollapsed=!mapLegendCollapsed;syncMapLegend();});
   document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{
     const next=b.dataset.mode;
+    if(next!==state.mode)neighbourhoodFitRequestId++;
     if(state.mode==='selected-calls'&&next!=='selected-calls')deactivateSelectedCalls();
     state.mode=next;
     if(next==='all')state.days='all';else if(next==='recent'&&state.days==='all')state.days='30';

@@ -231,6 +231,49 @@ test('DineSafe renders before optional neighbourhood-fit geometry and loads it o
   } finally { await app.cleanup(); }
 });
 
+test('pending neighbourhood fit cannot move the map after switching modes', async () => {
+  let resolveGeometry;
+  const geometry={type:'FeatureCollection',features:[{
+    type:'Feature',properties:{AREA_NAME:'Synthetic Area'},
+    geometry:{type:'Polygon',coordinates:[[[-79.3,43.6],[-79.1,43.6],[-79.1,43.8],[-79.3,43.8],[-79.3,43.6]]]},
+  }]};
+  const app=await loadApp(fixture(),{neighbourhoodFetch:()=>new Promise(resolve=>{
+    resolveGeometry=()=>resolve({ok:true,json:async()=>geometry});
+  })});
+  try {
+    app.map.load();
+    const select=app.document.getElementById('neighbourhood');
+    select.value='Synthetic Area';select.dispatch('change');
+    assert.equal(app.map.fitBoundsCalls.length,0);
+    app.document.tabs.find(tab=>tab.dataset.mode==='beach').click();
+    resolveGeometry();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(app.map.fitBoundsCalls.length,0,'a response from the abandoned DineSafe fit does not move the Beach camera');
+    assert.equal(app.document.getElementById('results-title').textContent,'Beach samples');
+  } finally { await app.cleanup(); }
+});
+
+test('pending neighbourhood fit cannot override a later Fit Scarborough action', async () => {
+  let resolveGeometry;
+  const geometry={type:'FeatureCollection',features:[{
+    type:'Feature',properties:{AREA_NAME:'Synthetic Area'},
+    geometry:{type:'Polygon',coordinates:[[[-79.3,43.6],[-79.1,43.6],[-79.1,43.8],[-79.3,43.8],[-79.3,43.6]]]},
+  }]};
+  const app=await loadApp(fixture(),{neighbourhoodFetch:()=>new Promise(resolve=>{
+    resolveGeometry=()=>resolve({ok:true,json:async()=>geometry});
+  })});
+  try {
+    app.map.load();
+    const select=app.document.getElementById('neighbourhood');
+    select.value='Synthetic Area';select.dispatch('change');
+    app.document.getElementById('fit').click();
+    assert.equal(app.map.fitBoundsCalls.length,1,'Fit Scarborough applies the later camera request immediately');
+    resolveGeometry();
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(app.map.fitBoundsCalls.length,1,'late neighborhood geometry cannot override Fit Scarborough');
+  } finally { await app.cleanup(); }
+});
+
 test('neighbourhood geometry failure leaves DineSafe selection usable without repeated requests', async () => {
   let requests=0;
   const snapshot=fixture(2);
