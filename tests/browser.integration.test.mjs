@@ -366,10 +366,10 @@ test('rendered DineSafe list does not wait for optional neighbourhood-fit geomet
   const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
   t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
   let geometryRequests=0;
-  const syntheticSnapshot={...snapshot,establishments:snapshot.establishments.slice(0,2).map(record=>({...record,neighbourhood:'Synthetic Area'}))};
+  const syntheticSnapshot={...snapshot,establishments:snapshot.establishments.slice(0,2).map((record,index)=>({...record,neighbourhood:index===0?'Synthetic Area':'Other Area'}))};
   const geometry={type:'FeatureCollection',features:[{
     type:'Feature',properties:{AREA_NAME:'Synthetic Area'},
-    geometry:{type:'Polygon',coordinates:[[[-79.3,43.6],[-79.1,43.6],[-79.1,43.8],[-79.3,43.8],[-79.3,43.6]]]},
+    geometry:{type:'Polygon',coordinates:[[[-79.20,43.695],[-79.17,43.695],[-79.17,43.725],[-79.20,43.725],[-79.20,43.695]]]},
   }]};
   const scenario=await openScenario(browser,origin,{snapshotBody:syntheticSnapshot,neighbourhoodGeometry:geometry,neighbourhoodDelayMs:500,onNeighbourhoodGeometryRequest:()=>geometryRequests++});
   t.after(()=>scenario.context.close());
@@ -378,14 +378,17 @@ test('rendered DineSafe list does not wait for optional neighbourhood-fit geomet
   await page.getByRole('button',{name:'Fixture Cafe'}).waitFor();
   assert.equal(await page.locator('.record-item').count(),2,'the DineSafe list renders from the snapshot while the map geometry remains unloaded');
   assert.equal(geometryRequests,0,'initial map, list and filter startup do not fetch neighborhood-fit GeoJSON');
-  const initialCenter=await page.evaluate(()=>window.__scarbMap.getCenter().toArray());
   const geometryResponse=page.waitForResponse(response=>response.url().includes('/data/scarborough-neighbourhoods.geojson'));
   await page.locator('#neighbourhood').selectOption({label:'Synthetic Area'});
+  assert.equal(geometryRequests,1,'legacy neighborhood selection starts the optional geometry request');
+  assert.equal(await page.locator('.record-item').count(),1,'the selected-area DineSafe result remains available while the delayed geometry request is pending');
   const response=await geometryResponse;
   assert.equal(response.status(),200);
-  assert.equal(geometryRequests,1,'legacy neighborhood selection starts the optional geometry request');
-  await page.waitForFunction(center=>Math.abs(window.__scarbMap.getCenter().lat-43.7)>0.02||Math.abs(window.__scarbMap.getCenter().lng+79.2)>0.02,initialCenter,{timeout:10_000});
-  assert.equal(await page.locator('.record-item').count(),2,'the selected neighborhood filter remains usable after fitting');
+  await page.waitForFunction(()=>{
+    const center=window.__scarbMap.getCenter();
+    return center.lat>=43.695&&center.lat<=43.725&&center.lng>=-79.20&&center.lng<=-79.17;
+  },null,{timeout:10_000});
+  assert.equal(await page.locator('.record-item').count(),1,'the selected neighborhood filter remains active after fitting');
   assert.deepEqual(scenario.pageErrors,[]);
 });
 
