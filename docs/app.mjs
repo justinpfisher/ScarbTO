@@ -73,6 +73,30 @@ function localDate(iso) {
   return Number.isFinite(t) ? new Intl.DateTimeFormat('en-CA',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}).format(t):'Date unavailable';
 }
 function outcomeClass(status){return status==='Closed'?'closed':status==='Conditional Pass'?'conditional':'pass';}
+function addStatusMarkerImages(mapInstance){
+  const definitions=[
+    ['pass','Pass','#318f62','circle','P'],
+    ['conditional','Conditional Pass','#a96f12','triangle','C'],
+    ['closed','Closed','#b3423c','square','X'],
+    ['beach','Beach sample','#506c80','diamond','B'],
+    ['other','other','#667d71','circle','?'],
+  ];
+  try{
+    for(const [id,,color,shape,label] of definitions){
+      const canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;
+      const context=canvas.getContext('2d');if(!context)return false;
+      context.clearRect(0,0,32,32);context.fillStyle=color;context.strokeStyle='#fff';context.lineWidth=2;
+      context.beginPath();
+      if(shape==='circle')context.arc(16,16,12,0,Math.PI*2);
+      else if(shape==='triangle'){context.moveTo(16,3);context.lineTo(30,28);context.lineTo(2,28);context.closePath();}
+      else if(shape==='square')context.rect(4,4,24,24);
+      else{context.moveTo(16,2);context.lineTo(30,16);context.lineTo(16,30);context.lineTo(2,16);context.closePath();}
+      context.fill();context.stroke();context.fillStyle='#fff';context.font='bold 13px sans-serif';context.textAlign='center';context.textBaseline='middle';context.fillText(label,16,17);
+      mapInstance.addImage(`status-${id}`,context.getImageData(0,0,32,32),{pixelRatio:2});
+    }
+    return true;
+  }catch{return false;}
+}
 function syncDataStatus() {
   const status=$('data-status');
   status.classList.remove('error','warning');
@@ -373,7 +397,11 @@ async function initMap() {
         map.addSource('places',{type:'geojson',data:{type:'FeatureCollection',features:[]},cluster:true,clusterMaxZoom:13,clusterRadius:38});
         map.addLayer({id:'clusters',type:'circle',source:'places',filter:['has','point_count'],paint:{'circle-color':'#174d43','circle-radius':['step',['get','point_count'],18,30,23,150,29],'circle-opacity':.90,'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
         map.addLayer({id:'cluster-count',type:'symbol',source:'places',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-size':12},paint:{'text-color':'#fff'}});
-        map.addLayer({id:'single',type:'circle',source:'places',filter:['!',['has','point_count']],paint:{'circle-color':['match',['get','status'],'Pass','#318f62','Conditional Pass','#e2a03d','Closed','#c4534c','Beach sample','#506c80','#667d71'],'circle-radius':['case',['get','selected'],11,7],'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
+        if(addStatusMarkerImages(map)){
+          map.addLayer({id:'single',type:'symbol',source:'places',filter:['!',['has','point_count']],layout:{'icon-image':['match',['get','status'],'Pass','status-pass','Conditional Pass','status-conditional','Closed','status-closed','Beach sample','status-beach','status-other'],'icon-size':['case',['get','selected'],1.15,1],'icon-allow-overlap':true,'icon-ignore-placement':true}});
+        }else{
+          map.addLayer({id:'single',type:'circle',source:'places',filter:['!',['has','point_count']],paint:{'circle-color':['match',['get','status'],'Pass','#318f62','Conditional Pass','#e2a03d','Closed','#c4534c','Beach sample','#506c80','#667d71'],'circle-radius':['case',['get','selected'],11,7],'circle-stroke-width':2,'circle-stroke-color':'#fff'}});
+        }
         map.on('click','clusters',e=>{const geom=e.features?.[0]?.geometry;if(geom?.type==='Point')map.easeTo({center:geom.coordinates,zoom:Math.min(map.getZoom()+2,15),duration:350});});
         map.on('click','single',e=>{const id=String(e.features?.[0]?.properties?.id||'');if(id)selectPlace(id,false,true);});
         for(const layer of ['clusters','single']){map.on('mouseenter',layer,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',layer,()=>map.getCanvas().style.cursor='');}

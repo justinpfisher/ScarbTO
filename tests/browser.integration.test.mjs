@@ -217,6 +217,8 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   });
   assert.ok(boundaryState.layerOrder.every(index=>index>=0));
   assert.ok(boundaryState.layerOrder[0]<boundaryState.layerOrder[1]&&boundaryState.layerOrder[1]<boundaryState.layerOrder[2]&&boundaryState.layerOrder[2]<boundaryState.layerOrder[3],'outside mask and boundary draw below establishment pins');
+  assert.equal(await page.evaluate(()=>window.__scarbMap.getLayer('single')?.type),'symbol','individual outcomes use a shape-and-letter marker layer');
+  assert.equal(await page.evaluate(()=>window.__scarbMap.hasImage('status-pass')&&window.__scarbMap.hasImage('status-conditional')&&window.__scarbMap.hasImage('status-closed')),true,'DineSafe marker images are installed before rendering');
   assert.equal(boundaryState.hasBoundarySource,true,'display uses the independent official council feature');
   assert.equal(boundaryState.hasMaskSource,true);
   assert.equal(boundaryState.hasBoundaryLayer,true);
