@@ -303,6 +303,7 @@ test('marker image fallback keeps letter-coded circles and describes their actua
     assert.match(app.document.getElementById('map').attributes['aria-label'],/Marker letters identify outcomes/);
     const css=await readFile(new URL('../docs/styles.css',import.meta.url),'utf8');
     assert.match(css,/marker-shape-fallback \.dot\.conditional\{background:#e2a03d\}/,'fallback legend matches the fallback map colour');
+    assert.match(css,/marker-shape-fallback \.dot\.closed\{background:#c4534c\}/,'fallback Closed legend matches the fallback map colour');
     assert.match(css,/marker-shape-fallback \.dot\.beach\{background:#506c80\}/,'fallback beach legend uses the fallback circle colour');
   } finally { await app.cleanup(); }
 });

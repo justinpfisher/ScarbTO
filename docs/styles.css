@@ -161,5 +161,6 @@
 .map-legend-items .dot.beach::after{content:'B';display:inline-block;transform:rotate(-45deg)}
 .map-legend.marker-shape-fallback [data-legend-mode='dinesafe'] .dot,.map-legend.marker-shape-fallback [data-legend-mode='beach'] .dot{clip-path:none;transform:none;border-radius:50%;box-shadow:0 0 0 1px #52645c;padding:0}
 .map-legend.marker-shape-fallback .dot.conditional{background:#e2a03d}
+.map-legend.marker-shape-fallback .dot.closed{background:#c4534c}
 .map-legend.marker-shape-fallback .dot.beach{background:#506c80}
 .map-legend.marker-shape-fallback .dot.beach::after{transform:none}
