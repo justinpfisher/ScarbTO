@@ -28,6 +28,7 @@ try {
   const requestedArea=areaFor(params.get('areaKind'),params.get('areaCode'));
   if(requestedArea){
     state.areaKind=requestedArea.kind;state.areaCode=requestedArea.code;state.neighbourhood='';
+    state.status='all';
     initialAreaOverlay=requestedArea.kind;
     const requestedMode=params.get('mode');
     if(['recent','all'].includes(requestedMode))state.mode=requestedMode;

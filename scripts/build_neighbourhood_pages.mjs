@@ -21,6 +21,10 @@ export function renderAliasPage(alias,canonicalSlug){
   return `<!doctype html>\n<html lang="en-CA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="canonical" href="https://scarb.to${destination}"><meta http-equiv="refresh" content="0;url=${destination}"><title>Scarb.TO neighbourhood page</title></head><body><p>This neighbourhood page has moved. <a href="${destination}">Continue to ${esc(canonicalSlug.replaceAll('-',' '))}</a>.</p><script>location.replace(${JSON.stringify(destination)}+location.search+location.hash);</script></body></html>\n`;
 }
 
+export function normalizeGeneratedText(value){
+  return String(value).replace(/\r\n/g,'\n');
+}
+
 export function buildPageFiles(areas=NEIGHBOURHOODS,template=readFileSync(TEMPLATE_PATH,'utf8')){
   const files=new Map(),slugs=new Set();
   for(const [code,area] of Object.entries(areas)){
@@ -45,7 +49,7 @@ export function runBuild({check=false,root=REPO_ROOT}={}){
     const target=path.join(root,...relative.split('/'));
     if(check){
       let current='';try{current=readFileSync(target,'utf8');}catch{}
-      if(current!==content){console.error(`Generated neighbourhood page is missing or stale: ${relative}`);mismatches++;}
+      if(normalizeGeneratedText(current)!==normalizeGeneratedText(content)){console.error(`Generated neighbourhood page is missing or stale: ${relative}`);mismatches++;}
     }else{
       mkdirSync(path.dirname(target),{recursive:true});writeFileSync(target,content,'utf8');
     }

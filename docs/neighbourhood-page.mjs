@@ -65,7 +65,7 @@ async function loadPage(){
     const response=await fetch('../data/snapshot.json',{cache:'no-cache'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const candidate=await response.json();
-    if(candidate?.schema_version!==1||candidate.ready!==true||!Array.isArray(candidate.establishments))throw new Error('No validated City snapshot is available');
+    if(candidate?.schema_version!==1||candidate.ready!==true||!Array.isArray(candidate.establishments)||candidate.establishments.length===0)throw new Error('No validated City snapshot is available');
     const records=filterEstablishments(candidate.establishments,{mode:'all',status:'all',days:'all',neighbourhood:'',areaKind:'neighbourhood',areaCode:area.code,search:''});
     const stale=isStale(candidate.published_at);
     const cityTime=cityCatalogueRefreshText(candidate.source?.last_refreshed);

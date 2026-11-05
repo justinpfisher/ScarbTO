@@ -982,22 +982,27 @@ test('static neighbourhood pages use the qualified set and route into the same s
   t.after(()=>context.close());
   const page=await context.newPage(),errors=[];
   page.on('pageerror',err=>errors.push(err.stack||err.message));
-  const pageSnapshot={...snapshot,published_at:'2026-11-04T18:04:05Z',source:{last_refreshed:'2026-11-04T18:00:00Z'},establishments:[{
+  const freshAt=new Date(Date.now()-30_000).toISOString();
+  const pageSnapshot={...snapshot,published_at:freshAt,source:{last_refreshed:freshAt},establishments:[{
     id:'west-rouge-fixture',establishment_id:'west-rouge-fixture',name:'West Rouge Fixture Cafe',address:'10 Sample Road',status:'Pass',inspection_date:'2026-11-03',inspection_detail:'Food handling room maintained in sanitary condition.',latitude:43.78,longitude:-79.12,neighbourhood:'West Rouge',ward:'Scarborough-Rouge Park'
   }]};
   await installLocalRoutes(page,origin,{snapshotBody:pageSnapshot,neighbourhoodGeometry:areaOverlayFixture('neighbourhood')});
   await page.goto(`${origin}/westrouge/`,{waitUntil:'domcontentloaded'});
   await page.waitForURL(url=>url.pathname==='/west-rouge/',{timeout:5_000});
+  await page.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.startsWith('Scarb.TO checked'));
   assert.match(await page.getByRole('heading',{level:1}).textContent(),/West Rouge/);
   assert.match(await page.locator('#feed-status').textContent(),/Scarb\.TO checked/);
   assert.match(await page.locator('#feed-status').textContent(),/City catalogue timestamp/);
+  await page.waitForFunction(()=>document.querySelectorAll('#inspection-list .record-item').length===1);
   assert.equal(await page.locator('#inspection-list .record-item').count(),1);
   assert.match(await page.locator('#inspection-list').textContent(),/Inspection detail: Food handling room/);
   assert.equal(await page.getByRole('link',{name:'Find an Ontario MPP'}).getAttribute('href'),'https://www.ola.org/en/members/current');
   assert.equal(await page.getByRole('link',{name:'Find a federal MP'}).getAttribute('href'),'https://www.ourcommons.ca/Members/en/search');
   assert.match(await page.locator('#ward-links').textContent(),/Ward 25/);
+  await page.evaluate(()=>localStorage.setItem('scarbto-filters-v1',JSON.stringify({status:'Closed'})));
   await page.locator('#map-link').click();
   await waitForMap(page);
+  await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===1);
   const url=new URL(page.url());
   assert.equal(url.searchParams.get('areaKind'),'neighbourhood');
   assert.equal(url.searchParams.get('areaCode'),'143');
@@ -1007,6 +1012,32 @@ test('static neighbourhood pages use the qualified set and route into the same s
   assert.equal(await page.locator('#record-list .record-item').count(),1);
   await page.locator('#area-reopen').click();
   assert.equal(await page.getByRole('link',{name:'Open West Rouge neighbourhood page'}).getAttribute('href'),'/west-rouge/');
+
+  const stalePage=await context.newPage();
+  stalePage.on('pageerror',err=>errors.push(err.stack||err.message));
+  const staleSnapshot={...pageSnapshot,published_at:'2020-01-01T00:00:00.000Z',source:{last_refreshed:'2020-01-01T00:00:00.000Z'}};
+  await installLocalRoutes(stalePage,origin,{snapshotBody:staleSnapshot});
+  await stalePage.goto(`${origin}/west-rouge/`,{waitUntil:'domcontentloaded'});
+  await stalePage.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.includes('may be stale'));
+  await stalePage.waitForFunction(()=>document.querySelectorAll('#inspection-list .record-item').length===1);
+  assert.match(await stalePage.locator('#feed-status').textContent(),/may be stale/);
+  assert.equal(await stalePage.locator('#inspection-list .record-item').count(),1);
+
+  const zeroAreaPage=await context.newPage();
+  const otherAreaSnapshot={...pageSnapshot,establishments:[{...pageSnapshot.establishments[0],neighbourhood:'Agincourt North'}]};
+  await installLocalRoutes(zeroAreaPage,origin,{snapshotBody:otherAreaSnapshot});
+  await zeroAreaPage.goto(`${origin}/west-rouge/`,{waitUntil:'domcontentloaded'});
+  await zeroAreaPage.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.startsWith('Scarb.TO checked'));
+  await zeroAreaPage.waitForFunction(()=>document.querySelector('#record-summary')?.textContent.includes('Showing 0 of 0'));
+  assert.equal(await zeroAreaPage.locator('#inspection-list .record-item').count(),0);
+
+  const emptyGlobalPage=await context.newPage();
+  const emptyGlobalSnapshot={...pageSnapshot,establishments:[]};
+  await installLocalRoutes(emptyGlobalPage,origin,{snapshotBody:emptyGlobalSnapshot});
+  await emptyGlobalPage.goto(`${origin}/west-rouge/`,{waitUntil:'domcontentloaded'});
+  await emptyGlobalPage.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.includes('unavailable'));
+  assert.equal(await emptyGlobalPage.locator('#inspection-list .record-item').count(),0);
+  assert.equal(await emptyGlobalPage.locator('#record-summary').textContent(),'');
   assert.deepEqual(errors,[],errors.join('\n\n'));
 });
 
@@ -1017,9 +1048,11 @@ test('neighbourhood page remains readable on a narrow phone viewport', {timeout:
   const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   t.after(()=>context.close());
   const page=await context.newPage();
-  await installLocalRoutes(page,origin,{snapshotBody:{...snapshot,published_at:'2026-11-04T18:04:05Z',source:{last_refreshed:'2026-11-04'},establishments:[{...snapshot.establishments[0],neighbourhood:'West Rouge'}]}});
+  const freshAt=new Date(Date.now()-30_000).toISOString();
+  await installLocalRoutes(page,origin,{snapshotBody:{...snapshot,published_at:freshAt,source:{last_refreshed:freshAt},establishments:[{...snapshot.establishments[0],neighbourhood:'West Rouge'}]}});
   await page.goto(`${origin}/west-rouge/`,{waitUntil:'domcontentloaded'});
   await page.getByRole('heading',{name:'West Rouge'}).waitFor();
+  await page.waitForFunction(()=>document.querySelectorAll('#inspection-list .record-item').length===1);
   assert.equal(await page.locator('#map-link').isVisible(),true);
   const dimensions=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:window.innerWidth}));
   assert.ok(dimensions.width<=dimensions.viewport,`page has horizontal overflow: ${JSON.stringify(dimensions)}`);

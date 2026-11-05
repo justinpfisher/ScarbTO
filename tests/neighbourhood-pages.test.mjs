@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {NEIGHBOURHOODS} from '../docs/area-selection.mjs';
-import {buildPageFiles,renderAliasPage,renderAreaPage} from '../scripts/build_neighbourhood_pages.mjs';
+import {buildPageFiles,normalizeGeneratedText,renderAliasPage,renderAreaPage} from '../scripts/build_neighbourhood_pages.mjs';
 import {neighbourhoodPagePath,slugForName} from '../docs/neighbourhood-routes.mjs';
 import {readFileSync} from 'node:fs';
 
@@ -22,6 +22,10 @@ test('slugging is stable for punctuation and HTML template content is escaped',(
   assert.match(renderAreaPage('<title>{{NAME}}</title><main data-area-code="{{CODE}}"><link href="/{{SLUG}}/">','1',{name:'<unsafe>'}),/&lt;unsafe&gt;/);
 });
 
+test('generated-page comparison normalizes Windows checkout line endings',()=>{
+  assert.equal(normalizeGeneratedText('first\r\nsecond\r\n'),'first\nsecond\n');
+});
+
 test('the generated West Rouge route and alias match their reusable source template',()=>{
   const template=readFileSync(new URL('../docs/neighbourhood-page.template.html',import.meta.url),'utf8');
   const pages=buildPageFiles(NEIGHBOURHOODS,template);
@@ -34,6 +38,6 @@ test('checked-in neighborhood pages match the reusable template output',()=>{
   const pages=buildPageFiles(NEIGHBOURHOODS,template);
   for(const [relative,expected] of pages){
     const actual=readFileSync(new URL(`../${relative}`,import.meta.url),'utf8');
-    assert.equal(actual,expected,`${relative} is stale; regenerate with scripts/build_neighbourhood_pages.mjs`);
+    assert.equal(normalizeGeneratedText(actual),normalizeGeneratedText(expected),`${relative} is stale; regenerate with scripts/build_neighbourhood_pages.mjs`);
   }
 });
