@@ -22,7 +22,7 @@ function renderWards(area){
     const link=document.createElement('a');
     link.href=councillorFor(code)?.url||'https://www.toronto.ca/city-government/council/members-of-council/';
     link.target='_blank';link.rel='noopener noreferrer';
-    link.textContent=`Ward ${code} - ${ward.name}: City councillor information`;
+    link.textContent=`Ward ${code} — ${ward.name}: City councillor information`;
     item.append(link);list.append(item);
   }
 }
@@ -39,7 +39,7 @@ function renderRecords(records){
       const heading=document.createElement('h3');heading.textContent=escapeText(row.name)||'Unnamed establishment';item.append(heading);
       const meta=document.createElement('p');meta.className='record-meta';
       const parts=[escapeText(row.status)||'Inspection outcome not supplied',row.inspection_date?`Inspected ${escapeText(row.inspection_date)}`:'Inspection date not supplied',displayAddress(row.address)||'Address not supplied'];
-      meta.textContent=parts.join(' � ');item.append(meta);
+      meta.textContent=parts.join(' · ');item.append(meta);
       if(row.inspection_detail){const detail=document.createElement('p');detail.className='record-detail';detail.textContent=`Inspection detail: ${escapeText(row.inspection_detail)}`;item.append(detail);}
       if(row.id!==undefined&&row.id!==null&&String(row.id)!==''){
         const source=document.createElement('a');source.className='record-source';source.href=cityDineSafeRecordUrl(row.id);source.target='_blank';source.rel='noopener noreferrer';source.textContent='View official City record';item.append(source);
@@ -57,7 +57,7 @@ async function loadPage(){
   if(!root)return;
   const area=areaFor('neighbourhood',root.dataset.areaCode);
   if(!area){setStatus('This neighbourhood page is unavailable. Choose an area from the Scarb.TO map.','error');return;}
-  document.title=`${area.name} � Scarb.TO`;
+  document.title=`${area.name} · Scarb.TO`;
   byId('page-title').textContent=area.name;
   byId('map-link').href=`/?areaKind=neighbourhood&areaCode=${encodeURIComponent(area.code)}&mode=all&days=all`;
   renderWards(area);
