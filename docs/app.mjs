@@ -10,6 +10,7 @@ const $ = id => document.getElementById(id);
 const SCARB_BOUNDS = [[-79.43,43.65],[-79.09,43.89]];
 const STORAGE_KEY = 'scarbto-filters-v1';
 let state = {...DEFAULTS};
+let initialAreaOverlay = null;
 try {
   const remembered = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
   if (['recent','all','beach'].includes(remembered.mode)) state.mode = remembered.mode;
@@ -20,6 +21,20 @@ try {
     state.areaKind=remembered.areaKind;state.areaCode=String(remembered.areaCode);state.neighbourhood='';
   }
 } catch { /* Private browsing, old preferences or disabled storage must not break the map. */ }
+// Stable neighbourhood pages link into the same filtered map/list experience.
+// Accept only a qualified area identity; query strings never override record data.
+try {
+  const params=new URLSearchParams(location.search);
+  const requestedArea=areaFor(params.get('areaKind'),params.get('areaCode'));
+  if(requestedArea){
+    state.areaKind=requestedArea.kind;state.areaCode=requestedArea.code;state.neighbourhood='';
+    initialAreaOverlay=requestedArea.kind;
+    const requestedMode=params.get('mode');
+    if(['recent','all'].includes(requestedMode))state.mode=requestedMode;
+    const requestedDays=params.get('days');
+    if(['7','30','90','all'].includes(requestedDays))state.days=requestedDays;
+  }
+} catch { /* An invalid shared link leaves the ordinary saved view intact. */ }
 let snapshot = null, beachPreview = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]};
 let neighbourhoodShapesPromise = null;
 let neighbourhoodFitRequestId = 0;
@@ -170,7 +185,7 @@ function syncMapLegend(){
   $('map-legend').classList.toggle('marker-shape-fallback',!statusMarkerImagesAvailable);
   button.setAttribute('aria-expanded',String(!mapLegendCollapsed));
   button.setAttribute('aria-label',mapLegendCollapsed?'Show map key':'Hide map key');
-  const icon=button.querySelector('span');if(icon)icon.textContent=mapLegendCollapsed?'+':'−';
+  const icon=button.querySelector('span');if(icon)icon.textContent=mapLegendCollapsed?'+':'-';
 }
 function populateNeighbourhoods() {
   const names=[...new Set(snapshot.establishments.map(e=>e.neighbourhood).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'en-CA'));
@@ -191,14 +206,14 @@ function performFilters() {
   listLimit=80;
   if(state.mode==='selected-calls'){
     usingBeach=false;visiblePlaces=[];visibleActivity=[];usingActivity=false;
-    $('results-kicker').textContent='Toronto Police Service · on-demand aggregate';
-    $('results-title').textContent='Selected calls — Divisions 41, 42 and 43';
+    $('results-kicker').textContent='Toronto Police Service � on-demand aggregate';
+    $('results-title').textContent='Selected calls - Divisions 41, 42 and 43';
     $('results-caption').textContent='Selected calls published for these divisions; not all crime, police activity, or officer presence. Opening this view requests grouped counts from TPS/Esri. No individual calls or locations are requested or mapped.';
     updateSource();renderList();areaExplorer?.sync();return;
   }
   if(state.mode==='beach'){
     usingBeach=true;visiblePlaces=[];visibleActivity=[];usingActivity=false;
-    $('results-kicker').textContent='Toronto Open Data · dated samples';
+    $('results-kicker').textContent='Toronto Open Data � dated samples';
     $('results-title').textContent=beachPreview?.beach_name||'Beach samples';
     $('results-caption').textContent='A limited sample preview from the Toronto catalogue. Dated measurements are not current swimming advice.';
     updateSource();renderList();
@@ -239,11 +254,11 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
       list.append(els('p','selected-calls-label',view.label));
       $('results-count').textContent=`${view.counts.reduce((sum,row)=>sum+row.count,0).toLocaleString('en-CA')} selected calls`;
       for(const row of view.counts){const item=els('div','selected-call-row');item.append(els('span','',`Division ${row.division.slice(1)}`),els('strong','',row.count.toLocaleString('en-CA')));list.append(item);}
-      list.append(els('p','selected-calls-attribution','Contains information licensed under the Open Government Licence – Ontario.'));
+      list.append(els('p','selected-calls-attribution','Contains information licensed under the Open Government Licence - Ontario.'));
     }else{
       $('results-count').textContent=view.reason==='loading'?'Loading':'Unavailable';
       const message=view.reason==='loading'?'Loading selected counts from Toronto Police Service.':view.reason==='view hidden'?'Counts are cleared while this view is hidden. Reopen the view to request fresh counts.':'Selected-call counts are unavailable or stale. No counts are retained.';
-      list.append(els('p','empty',message));list.append(els('p','selected-calls-attribution','Contains information licensed under the Open Government Licence – Ontario.'));
+      list.append(els('p','empty',message));list.append(els('p','selected-calls-attribution','Contains information licensed under the Open Government Licence - Ontario.'));
     }
     const source=els('a','record-source-link','Open the official TPS selected-calls map');source.href='https://experience.arcgis.com/experience/a22f5295933e48a5b0a4c90cd3c4cae1';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
     finishListRedraw(list,previousFocus);return;
@@ -542,8 +557,8 @@ async function loadDineSafeSnapshot() {
     const stale=isStale(candidate.published_at);
     const cityReported=cityCatalogueRefreshText(candidate.source?.last_refreshed);
     setDineSafeStatus(stale
-      ? `Scarb.TO check may be stale (last published ${publishedAt(candidate.published_at)}) · ${cityReported} · check update history`
-      : `Scarb.TO checked ${publishedAt(candidate.published_at)} · ${cityReported} · not live`,
+      ? `Scarb.TO check may be stale (last published ${publishedAt(candidate.published_at)}) � ${cityReported} � check update history`
+      : `Scarb.TO checked ${publishedAt(candidate.published_at)} � ${cityReported} � not live`,
       stale?'warning':'');
     performFilters();
   }catch(error){
@@ -566,6 +581,7 @@ function boot() {
     }
   });
   syncControls();void initMap();
+  if(initialAreaOverlay)void areaExplorer.setOverlay(initialAreaOverlay);
   // Each feed loads independently so an optional beach request never holds DineSafe hostage.
   void loadBeachPreview();
   void loadDineSafeSnapshot();

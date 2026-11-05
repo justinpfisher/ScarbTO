@@ -1,5 +1,6 @@
 import {areaFor, areaMatches, councillorFor, NEIGHBOURHOODS, WARDS, validateAreaFeatures, BOUNDARY_SOURCES} from './area-selection.mjs';
 import {fitBoundsFromFeatures} from './logic.mjs';
+import {neighbourhoodPagePath} from './neighbourhood-routes.mjs';
 
 /** One geographic selection, with two optional mutually exclusive map outlines.
  * Area visibility is session-only and always begins off; selected-area filters
@@ -59,7 +60,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
       const dictionary=overlay==='ward'?WARDS:NEIGHBOURHOODS;
       if (overlay!=='off') {
         for (const [code,area] of Object.entries(dictionary).sort((a,b)=>a[1].name.localeCompare(b[1].name,'en-CA'))) {
-          const label=overlay==='ward'?'Ward '+code+' — '+area.name:area.name;
+          const label=overlay==='ward'?'Ward '+code+' - '+area.name:area.name;
           const option=make('option','',label);option.value=code;choice.append(option);
         }
       }
@@ -81,16 +82,16 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     const chip=el('area-selection'), panel=el('area-panel');
     chip.hidden=!area;
     if (!area) {panel.hidden=true;open=false;return;}
-    const areaLabel=(area.kind==='ward'?'Ward '+area.code+' — ':'')+area.name;
+    const areaLabel=(area.kind==='ward'?'Ward '+area.code+' - ':'')+area.name;
     el('area-selection-name').textContent=LIVE_MODES.has(getState().mode)
       ? areaLabel : 'DineSafe area (not applied): '+areaLabel;
     panel.hidden=!open;
     if (!open) return;
     const title=el('area-title');
-    title.textContent=area.kind==='ward'?'Ward '+area.code+' · '+area.name:area.name;
+    title.textContent=area.kind==='ward'?'Ward '+area.code+' � '+area.name:area.name;
     const sub=el('area-subtitle');
-    if (area.kind==='ward') sub.textContent='City of Toronto municipal ward · 2018 ward boundaries';
-    else sub.textContent='Toronto Social Planning Neighbourhood '+area.code+' · 2022 boundaries';
+    if (area.kind==='ward') sub.textContent='City of Toronto municipal ward � 2018 ward boundaries';
+    else sub.textContent='Toronto Social Planning Neighbourhood '+area.code+' � 2022 boundaries';
     el('area-panel-expand').setAttribute('aria-expanded',String(expanded));
     el('area-panel-fit').disabled=!map;
     panel.classList.toggle('expanded',expanded);
@@ -123,7 +124,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     if (!LIVE_MODES.has(getState().mode)) addText(dine,'p','area-disclaimer','This area filter applies to DineSafe views, not to police division totals or historical beach samples.');
     if (area.kind==='ward') {
       const rep=councillorFor(area.code);
-      const r=section(content,'City councillor',rep.name+' · '+rep.role);
+      const r=section(content,'City councillor',rep.name+' � '+rep.role);
       if(rep.transition) addText(r,'p','area-disclaimer',rep.transition+' is councillor-elect; term begins November 15, 2026.');
       addLink(r,'Official City profile and office contacts',rep.url);
       addText(r,'p','area-disclaimer','Officeholder information checked October 31, 2026; confirm changes with the City.');
@@ -135,10 +136,12 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
         : 'This neighbourhood lies predominantly in '+names.join(', ')+'. Confirm your exact address.');
       for (const code of area.wards) {
         const rep=councillorFor(code);
-        addLink(r,'Ward '+code+': '+rep.name+' · City office',rep.url);
+        addLink(r,'Ward '+code+': '+rep.name+' � City office',rep.url);
       }
       addText(r,'p','area-disclaimer','The listed wards represent meaningful source-measured overlaps, not whole-neighbourhood containment or population shares.');
       addText(r,'p','area-disclaimer','Scarborough membership is a source-verified majority-area selection of 30 whole City neighbourhoods, not a publisher-assigned district. The DineSafe site retains establishments included by the six municipal wards.');
+      const page=section(content,'Neighbourhood page','Open the permanent source-linked page for this selected neighbourhood.');
+      addLink(page,'Open '+area.name+' neighbourhood page',neighbourhoodPagePath(area.code));
     }
     const ridings=section(content,'Provincial & federal representatives',
       'Their electoral boundaries differ from City wards and neighbourhoods. An area name alone cannot determine your exact MPP or MP.');
@@ -150,7 +153,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     const development=section(content,'Development & permits',
       'Planning applications and issued permits are separate City records. Their public Scarb.TO feed is not yet qualified; no construction claims are shown.');
     addLink(development,'City planning application information','https://www.toronto.ca/city-government/planning-development/application-information-centre/');
-    const boundary=section(content,'Boundary source','Official City of Toronto geography; attribution: Open Government Licence – Toronto.');
+    const boundary=section(content,'Boundary source','Official City of Toronto geography; attribution: Open Government Licence - Toronto.');
     addLink(boundary,'Official boundary dataset',BOUNDARY_SOURCES[area.kind]);
     addLink(boundary,'Confirm your City ward by address','https://www.toronto.ca/city-government/council/members-of-council/');
   }
