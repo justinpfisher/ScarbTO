@@ -53,7 +53,20 @@ def required_text(event: dict, key: str, *, limit: int, event_id: str) -> str:
     value = " ".join(value.split())
     if not value or len(value) > limit or value.casefold() in {"none", "null", "n/a", "unknown"}:
         raise FeedError(f"Invalid {key} in DineSafe event {event_id}")
+    if not is_xml_text(value):
+        raise FeedError(f"Invalid XML character in {key} for DineSafe event {event_id}")
     return value
+
+
+def is_xml_text(value: str) -> bool:
+    """RSS uses XML 1.0, which excludes most C0 control characters."""
+    return all(
+        ord(char) in (0x9, 0xA, 0xD)
+        or 0x20 <= ord(char) <= 0xD7FF
+        or 0xE000 <= ord(char) <= 0xFFFD
+        or 0x10000 <= ord(char) <= 0x10FFFF
+        for char in value
+    )
 
 
 def load_events(history_dir: Path) -> list[dict]:
@@ -74,7 +87,7 @@ def load_events(history_dir: Path) -> list[dict]:
             archive = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise FeedError(f"Invalid activity archive: {path.name}") from exc
-        if not isinstance(archive, dict) or archive.get("schema_version") != 1 or archive.get("month") != month or not isinstance(archive.get("events"), list):
+        if not isinstance(archive, dict) or type(archive.get("schema_version")) is not int or archive.get("schema_version") != 1 or archive.get("month") != month or not isinstance(archive.get("events"), list):
             raise FeedError(f"Invalid activity archive envelope: {path.name}")
 
         for index, event in enumerate(archive["events"]):
@@ -90,7 +103,10 @@ def load_events(history_dir: Path) -> list[dict]:
                 raise FeedError(f"Event timestamp does not match archive month in {context}")
 
             # Other feeds stay out of the RSS feed until separately qualified.
-            if event.get("feed") != "dinesafe":
+            feed = event.get("feed")
+            if not isinstance(feed, str) or not feed:
+                raise FeedError(f"Missing source feed name in {context}")
+            if feed != "dinesafe":
                 continue
             if event.get("kind") not in EVENT_KINDS:
                 raise FeedError(f"Unapproved DineSafe event kind in {context}")
@@ -118,6 +134,8 @@ def load_events(history_dir: Path) -> list[dict]:
                 previous_status = " ".join(previous_status.split())
                 if previous_status.casefold() in {"none", "null", "n/a", "unknown"}:
                     raise FeedError(f"Invalid previous status in DineSafe event {event_id}")
+                if not is_xml_text(previous_status):
+                    raise FeedError(f"Invalid XML character in previous status for DineSafe event {event_id}")
             if event["kind"] == "status_changed" and (not previous_status or previous_status == status):
                 raise FeedError(f"Invalid status-change values in DineSafe event {event_id}")
 
