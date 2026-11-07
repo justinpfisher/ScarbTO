@@ -173,7 +173,7 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
         "Source-linked DineSafe changes first observed by Scarb.TO in Scarborough. "
         "Inspection dates are source dates; first-observed dates are Scarb.TO observations. "
         "A source status may have changed since it was observed. "
-        "Contains information licensed under the Open Government Licence - Toronto. "
+        "Contains information licensed under the Open Government Licence – Toronto. "
         f"Licence: {LICENCE_URL}"
     )
     ET.SubElement(channel, "language").text = "en-CA"
