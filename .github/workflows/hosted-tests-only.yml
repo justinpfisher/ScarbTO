@@ -33,7 +33,7 @@ jobs:
       run:
         shell: >-
           powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned
-          -Command "$ErrorActionPreference = 'Stop'; . '{0}'; if (Test-Path -LiteralPath variable:\\LASTEXITCODE) {{ exit $LASTEXITCODE }}"
+          -Command "$ErrorActionPreference = 'Stop'; . '{0}'; if (Test-Path -LiteralPath variable:\LASTEXITCODE) {{ exit $LASTEXITCODE }}"
     steps:
       - uses: actions/checkout@v4
         with:
