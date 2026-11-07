@@ -14,7 +14,7 @@ These rules apply to automated agents, contributors and development workflows. R
 ## Mandatory GMKtec-first execution policy
 
 - GMKtec is the default authorised computer for development automation, ingestion, builds, testing, scheduled processing and trusted GitHub Actions.
-- Every applicable trusted Actions job must explicitly select a *verified*, project-authorised GMKtec runner using its actual labels. Do not assume a runner has been provisioned from a proposed label in a PR.
+- Every applicable trusted-main production, ingestion, and build job must explicitly select a *verified*, project-authorised GMKtec runner using its actual labels. Do not assume a runner has been provisioned from a proposed label in a PR. The conditional test-only exception below is not a production or ingestion route.
 - Do not use `ubuntu-latest`, other GitHub-hosted runners, dynamic hosted-runner matrices or silent hosted fallback for routine jobs. An unavailable GMKtec runner means queue or hold, **not** automatic reassignment.
 - Never run untrusted public pull-request code on a persistent GMKtec runner. Use restricted repository-scoped runner identity, isolated work directory, minimal token permissions and secret separation.
 - Essential public data refresh or static hosting can receive a narrow, documented hosted exception only when reliability or public availability justifies it. Document cost, permission scope, and why GMKtec-only processing is insufficient. Routine hosted development/testing remains prohibited.
