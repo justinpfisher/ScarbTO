@@ -1,0 +1,141 @@
+name: Conditional ScarbTO test-only fallback
+
+on:
+  workflow_dispatch:
+    inputs:
+      gmktec_unavailable:
+        description: "Confirm fresh host/workload evidence shows this test cannot safely run on GMKtec"
+        type: boolean
+        required: true
+        default: false
+      target_pr:
+        description: "Select the already-open ScarbTO change to test"
+        type: choice
+        required: true
+        options:
+          - "41"
+          - "42"
+
+concurrency:
+  group: scarbto-conditional-hosted-test-only
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: PR ${{ inputs.target_pr }} full test suite (test only)
+    if: >-
+      github.repository == 'justinpfisher/ScarbTO' &&
+      github.event.repository.visibility == 'public' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.gmktec_unavailable == true &&
+      (inputs.target_pr == '41' || inputs.target_pr == '42')
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: >-
+          powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy RemoteSigned
+          -Command "$ErrorActionPreference = 'Stop'; . '{0}'; if (Test-Path -LiteralPath variable:\LASTEXITCODE) {{ exit $LASTEXITCODE }}"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_pr == '41' && 'refs/pull/41/head' || 'refs/pull/42/head' }}
+          persist-credentials: false
+      - name: Verify exact pull request head
+        env:
+          TARGET_PR: ${{ inputs.target_pr }}
+        run: |
+          $pullRef = if ($env:TARGET_PR -eq '41') { 'refs/pull/41/head' } else { 'refs/pull/42/head' }
+          $checkedOut = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $remoteRef = @(git ls-remote origin $pullRef)
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $expected = if ($remoteRef.Count -gt 0) { ($remoteRef[0] -split '\s+')[0] } else { '' }
+          if ([string]::IsNullOrWhiteSpace($expected) -or $checkedOut -ne $expected) {
+            throw "Checked-out PR head changed during setup or does not match $pullRef."
+          }
+          Write-Output "Verified PR #$env:TARGET_PR head $checkedOut"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify Python 3.12
+        run: |
+          python -c "import sys; assert sys.version_info[:2] == (3, 12), sys.version"
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+      - name: Restore exact line endings for hash-pinned permit fixtures
+        run: |
+          $code = @'
+          from hashlib import sha256
+          from pathlib import Path
+
+          fixtures = {
+              "research/phase1c-permits/tests/fixtures/safe-source-fixture.json": "87861152b6c3bd1e5a0e3eb03be3e90bc4aba7c0cd3fcc49aaff815aef334818",
+              "research/phase1c-permits/tests/fixtures/normalization-contract.json": "1401a66eed410edbcc99eb86970803b7d0d0be72ae5ddb3178f96f1bcc1dd45d",
+          }
+          for filename, expected in fixtures.items():
+              path = Path(filename)
+              raw = path.read_bytes()
+              if sha256(raw).hexdigest() == expected:
+                  continue
+              canonical = raw.replace(bytes([13, 10]), bytes([10]))
+              if canonical == raw or sha256(canonical).hexdigest() != expected:
+                  raise SystemExit(f"Hash-pinned fixture differs beyond Windows line endings: {filename}")
+              path.write_bytes(canonical)
+          '@
+          $code | python -
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install pinned browser-test dependencies
+        run: npm ci --ignore-scripts
+      - name: Install Chromium for rendered regression tests
+        run: npx playwright install chromium
+      - name: Unit tests (network-independent)
+        run: python -m unittest discover -s tests -v
+      - name: Check production smoke-check script syntax
+        run: python -m py_compile scripts/verify_live_overlay.py
+      - name: Check JavaScript syntax
+        run: |
+          $files = @(
+            'docs/logic.mjs',
+            'docs/area-selection.mjs',
+            'docs/area-explorer.mjs',
+            'docs/app.mjs',
+            'docs/beach-history.mjs',
+            'docs/selected-calls.mjs'
+          )
+          foreach ($file in $files) {
+            node --check $file
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+          }
+      - name: Neighbourhood page route tests
+        if: inputs.target_pr == '41'
+        run: node --test tests/neighbourhood-pages.test.mjs
+      - name: Neighbourhood page syntax checks
+        if: inputs.target_pr == '41'
+        run: |
+          node --check docs/neighbourhood-page.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check docs/neighbourhood-routes.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node --check scripts/build_neighbourhood_pages.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: JavaScript logic tests
+        run: node --test tests/logic.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs tests/boundary.test.mjs tests/area-selection.test.mjs
+      - name: Install pinned Python test timezone data
+        run: python -m pip install --disable-pip-version-check --no-deps --require-hashes -r .github/requirements-test.txt
+      - name: Offline research prototype tests
+        run: python .github/scripts/test_research_prototypes.py
+      - name: Beach sample view tests
+        run: node tests/beach-history.test.mjs
+      - name: Rendered desktop and mobile browser tests
+        run: node --test tests/browser.integration.test.mjs
