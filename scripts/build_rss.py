@@ -21,6 +21,7 @@ from pathlib import Path
 FEED_URL = "https://scarb.to/feed.xml"
 SITE_URL = "https://scarb.to/"
 SOURCE_URL = "https://open.toronto.ca/dataset/dinesafe/"
+LICENCE_URL = "https://open.toronto.ca/open-data-licence/"
 MAX_ITEMS = 50
 EVENT_ID_RE = re.compile(r"^[0-9a-f]{20}$")
 EVENT_KINDS = {
@@ -171,7 +172,9 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
     ET.SubElement(channel, "description").text = (
         "Source-linked DineSafe changes first observed by Scarb.TO in Scarborough. "
         "Inspection dates are source dates; first-observed dates are Scarb.TO observations. "
-        "A source status may have changed since it was observed."
+        "A source status may have changed since it was observed. "
+        "Contains information licensed under the Open Government Licence - Toronto. "
+        f"Licence: {LICENCE_URL}"
     )
     ET.SubElement(channel, "language").text = "en-CA"
     ET.SubElement(channel, "lastBuildDate").text = format_datetime(built_at.astimezone(timezone.utc))
