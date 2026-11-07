@@ -25,7 +25,7 @@ jobs:
     name: PR ${{ inputs.target_pr }} full test suite (test only)
     if: >-
       github.repository == 'justinpfisher/ScarbTO' &&
-      github.repository_visibility == 'public' &&
+      github.event.repository.visibility == 'public' &&
       github.ref == 'refs/heads/main' &&
       inputs.gmktec_unavailable == true &&
       (inputs.target_pr == '41' || inputs.target_pr == '42')
