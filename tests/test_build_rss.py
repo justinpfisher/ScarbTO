@@ -51,7 +51,7 @@ class BuildRssTests(unittest.TestCase):
             items = channel.findall("item")
             self.assertEqual(root.tag, "rss")
             self.assertEqual(channel.findtext("lastBuildDate"), "Tue, 03 Nov 2026 00:00:00 +0000")
-            self.assertIn("Contains information licensed under the Open Government Licence - Toronto.", channel.findtext("description"))
+            self.assertIn("Contains information licensed under the Open Government Licence – Toronto.", channel.findtext("description"))
             self.assertIn(LICENCE_URL, channel.findtext("description"))
             self_link = channel.find("{http://www.w3.org/2005/Atom}link")
             self.assertEqual(self_link.attrib["href"], FEED_URL)
