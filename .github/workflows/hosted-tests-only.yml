@@ -16,6 +16,10 @@ on:
           - "41"
           - "42"
 
+concurrency:
+  group: scarbto-conditional-hosted-test-only
+  cancel-in-progress: false
+
 jobs:
   test:
     name: PR ${{ inputs.target_pr }} full test suite (test only)
@@ -39,6 +43,20 @@ jobs:
         with:
           ref: ${{ inputs.target_pr == '41' && 'refs/pull/41/head' || 'refs/pull/42/head' }}
           persist-credentials: false
+      - name: Verify exact pull request head
+        env:
+          TARGET_PR: ${{ inputs.target_pr }}
+        run: |
+          $pullRef = if ($env:TARGET_PR -eq '41') { 'refs/pull/41/head' } else { 'refs/pull/42/head' }
+          $checkedOut = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $remoteRef = @(git ls-remote origin $pullRef)
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $expected = if ($remoteRef.Count -gt 0) { ($remoteRef[0] -split '\s+')[0] } else { '' }
+          if ([string]::IsNullOrWhiteSpace($expected) -or $checkedOut -ne $expected) {
+            throw "Checked-out PR head changed during setup or does not match $pullRef."
+          }
+          Write-Output "Verified PR #$env:TARGET_PR head $checkedOut"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
