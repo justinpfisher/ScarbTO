@@ -95,6 +95,32 @@ class BuildRssTests(unittest.TestCase):
             with self.assertRaises(FeedError):
                 load_events(history)
 
+    def test_rejects_missing_feed_name(self):
+        with tempfile.TemporaryDirectory() as temp:
+            history = Path(temp)
+            event = make_event("0" * 20)
+            del event["feed"]
+            write_archive(history, "2026-11", [event])
+            with self.assertRaises(FeedError):
+                load_events(history)
+
+    def test_rejects_boolean_schema_version(self):
+        with tempfile.TemporaryDirectory() as temp:
+            history = Path(temp)
+            (history / "2026-11.json").write_text(
+                json.dumps({"schema_version": True, "month": "2026-11", "events": []}),
+                encoding="utf-8",
+            )
+            with self.assertRaises(FeedError):
+                load_events(history)
+
+    def test_rejects_xml_illegal_source_text(self):
+        with tempfile.TemporaryDirectory() as temp:
+            history = Path(temp)
+            write_archive(history, "2026-11", [make_event("0" * 20, name="Cafe\x01Kitchen")])
+            with self.assertRaises(FeedError):
+                load_events(history)
+
     def test_rejects_noncanonical_inspection_date(self):
         with tempfile.TemporaryDirectory() as temp:
             history = Path(temp)
