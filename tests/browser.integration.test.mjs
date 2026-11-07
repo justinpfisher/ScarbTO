@@ -686,13 +686,13 @@ test('rendered selected-call counts disappear at the upstream freshness deadline
   const context=await browser.newContext({viewport:{width:1280,height:900}});t.after(()=>context.close());
   const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
   await traceSelectedCalls(page);
-  await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsSourceAgeMs:30*60_000-2_000});
+  await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsSourceAgeMs:30*60_000-15_000});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
   const firstRequest=waitForSelectedCallsRequest(page);
   await page.getByRole('button',{name:'Selected police calls'}).click();
   await firstRequest;
   await page.getByText('Division 41',{exact:true}).waitFor();
-  await page.getByText(/selected-call counts unavailable or stale/i).waitFor({timeout:10_000});
+  await page.getByText(/selected-call counts unavailable or stale/i).waitFor({timeout:20_000});
   assert.equal(await page.locator('.selected-call-row').count(),0);
   assert.deepEqual(errors,[]);
 });
