@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
 
-from scripts.build_rss import FEED_URL, SOURCE_URL, FeedError, build_feed, load_events, write_feed
+from scripts.build_rss import FEED_URL, LICENCE_URL, SOURCE_URL, FeedError, build_feed, load_events, write_feed
 
 
 def make_event(event_id="0" * 20, *, month="2026-11", detected_at="2026-11-02T10:00:00+00:00", kind="status_changed", feed="dinesafe", **overrides):
@@ -51,6 +51,8 @@ class BuildRssTests(unittest.TestCase):
             items = channel.findall("item")
             self.assertEqual(root.tag, "rss")
             self.assertEqual(channel.findtext("lastBuildDate"), "Tue, 03 Nov 2026 00:00:00 +0000")
+            self.assertIn("Contains information licensed under the Open Government Licence - Toronto.", channel.findtext("description"))
+            self.assertIn(LICENCE_URL, channel.findtext("description"))
             self_link = channel.find("{http://www.w3.org/2005/Atom}link")
             self.assertEqual(self_link.attrib["href"], FEED_URL)
             self.assertEqual(self_link.attrib["rel"], "self")
