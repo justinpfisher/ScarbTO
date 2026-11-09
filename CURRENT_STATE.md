@@ -8,6 +8,14 @@ The owner approved the integrated resident-release plan and instructed **"Okay. 
 
 The owner specifically raised a permanent address such as `scarb.to/westrouge`. West Rouge is City neighbourhood 143 and already exists in the qualified overlay. P3 will use one reusable page template, a readable canonical route such as `/west-rouge/`, and the short `/westrouge/` forwarding alias. These routes are a specification, **not a claim that pages have been published**.
 
+## Subsequent local qualification evidence - 9 November 2026
+
+These exact-head local checks supplement the dated production checkpoint below; they do not qualify browser rendering or publication:
+
+- PR #41 head `5981ff5211efaeb212ab5576016b61b2e8cc9ba0`: `python -m unittest discover -s tests -v` passed 28 tests; dependency-free Node fixture suites passed 40 tests. The tracked worktree was clean. Rendered-browser qualification remains incomplete because the pinned npm install failed fetching packages with `ENOTFOUND` from `registry.npmjs.org`; no Playwright installation or browser run occurred.
+- PR #42 head `be5cc3df6c75175646a7f84c990b7221557eedd2`: `python -m unittest discover -s tests -v` passed 39 tests, including the RSS feed tests; dependency-free Node fixture suites passed 41 tests. These are local fixture checks only, not exact-head rendered-browser qualification or a production release.
+- A bounded default-resolver check failed for both `registry.npmjs.org` and `github.com` through Windows `Resolve-DnsName` and Node `dns.lookup`. This establishes a host name-resolution failure symptom, not whether its cause is DNS service availability or an execution-network restriction. No resolver settings were changed, and no source or package request was retried.
+
 ## Verified public release and source refresh
 
 - Product code revision: `39ccb989a657ebd00f3dbf3ff69882645b4a53e7`. The code-only [run 41363084003](https://github.com/justinpfisher/ScarbTO/actions/runs/41363084003) completed successfully at 6:40 p.m. EST, preserving the exact last-good data from `e15bdcd3f922f918a0090df0209b0c8497ed5460` and its original timestamps. It did not fetch fresh source data.
