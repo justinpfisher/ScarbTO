@@ -55,11 +55,20 @@ join.
 | Development applications | `8907d8ed-c515-4ce9-b674-9f8c6eefcf0d` | `77f8a66a-bd43-40e6-b6c9-12a2b03a5032` | Address rows, not unique applications |
 | Toronto One Address Repository | `0b3756af-9caf-4f0f-ac28-9c6617adede4` | `64d4e54b-738f-4cd9-a9e7-8050fac8a52f` | Explicit EPSG:4326 CSV only |
 
-The catalogue shows the Toronto Open Data Licence, while CKAN licence fields
-were observed as unspecified. Preserve this discrepancy and attribution. The
-City warns of intermittent CKAN outages. Refresh metadata does not state a
-timezone. A failed or mixed-generation refresh must leave the prior validated
-snapshot intact.
+The Toronto Open Data catalogue shows the Toronto Open Data Licence. An
+earlier bounded CKAN `package_show` observation found the licence field
+unspecified; a metadata-only recheck on 2026-11-09 returned HTTP 200 with
+`license_title: open-government-licence-toronto` for all four packages above.
+The current package names and allowlisted datastore/resource IDs still match
+this contract. The cleared-permits package separately lists the legacy
+2000–2016 resource, which remains outside the configured collection scope.
+This confirms package metadata only: no datastore rows, current row counts,
+generation markers, field schema or pagination were checked, so this does not
+qualify a source snapshot or authorize publication. Preserve the required
+attribution. CKAN `metadata_modified` is returned without a timezone; do not
+interpret it as UTC or as the source-data update time. The City warns of
+intermittent CKAN outages. A failed or mixed-generation refresh must leave the
+prior validated snapshot intact.
 
 ## Record and geography rules
 
