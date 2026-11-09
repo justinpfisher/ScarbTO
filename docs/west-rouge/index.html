@@ -6,6 +6,12 @@
   <meta name="theme-color" content="#143e3e">
   <meta name="description" content="Current, source-linked DineSafe information for West Rouge in Scarborough, Toronto.">
   <link rel="canonical" href="https://scarb.to/west-rouge/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Scarb.TO">
+  <meta property="og:title" content="West Rouge | Scarb.TO">
+  <meta property="og:description" content="Current, source-linked DineSafe information for West Rouge in Scarborough, Toronto.">
+  <meta property="og:url" content="https://scarb.to/west-rouge/">
+  <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="../neighbourhood-page.css">
   <title>West Rouge · Scarb.TO</title>
   <script type="module" src="../neighbourhood-page.mjs"></script>
@@ -21,6 +27,11 @@
       <p class="eyebrow">Scarborough neighbourhood</p>
       <h1 id="page-title">West Rouge</h1>
       <p>Local information from published City of Toronto data, with dates and source limits shown.</p>
+      <div class="page-actions" role="group" aria-label="Page actions">
+        <button class="secondary-button" id="share-page" type="button">Share this neighbourhood</button>
+        <button class="secondary-button" id="print-page" type="button">Print this page</button>
+      </div>
+      <p id="page-action-status" class="page-action-status" role="status" aria-live="polite"></p>
     </section>
 
     <section class="panel explore-panel" aria-labelledby="explore-title">
@@ -63,6 +74,7 @@
     <footer class="page-footer">
       <a href="https://open.toronto.ca/dataset/neighbourhoods/" target="_blank" rel="noopener noreferrer">City neighbourhood boundaries</a>
       <span>Contains information licensed under the Open Government Licence – Toronto.</span>
+      <span class="reuse-note">Before reusing data, review the linked City source and licence terms; retain attribution and source dates.</span>
       <a href="/">Scarb.TO home</a>
     </footer>
   </main>
