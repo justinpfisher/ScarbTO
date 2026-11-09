@@ -157,6 +157,8 @@ jobs:
       - name: Verify unchanged last-good data for code-only release
         if: inputs.release_mode == 'code_only'
         run: python scripts/verify_code_only_release.py
+      - name: Generate source-linked DineSafe RSS
+        run: python scripts/build_rss.py
       - name: Persist only validated data and recoverable release baseline
         if: inputs.release_mode != 'code_only'
         run: |
