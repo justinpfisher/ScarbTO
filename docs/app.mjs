@@ -10,6 +10,7 @@ const $ = id => document.getElementById(id);
 const SCARB_BOUNDS = [[-79.43,43.65],[-79.09,43.89]];
 const STORAGE_KEY = 'scarbto-filters-v1';
 let state = {...DEFAULTS};
+let initialAreaOverlay = null;
 try {
   const remembered = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
   if (['recent','all','beach'].includes(remembered.mode)) state.mode = remembered.mode;
@@ -20,6 +21,21 @@ try {
     state.areaKind=remembered.areaKind;state.areaCode=String(remembered.areaCode);state.neighbourhood='';
   }
 } catch { /* Private browsing, old preferences or disabled storage must not break the map. */ }
+// Stable neighbourhood pages link into the same filtered map/list experience.
+// Accept only a qualified area identity; query strings never override record data.
+try {
+  const params=new URLSearchParams(location.search);
+  const requestedArea=areaFor(params.get('areaKind'),params.get('areaCode'));
+  if(requestedArea){
+    state.areaKind=requestedArea.kind;state.areaCode=requestedArea.code;state.neighbourhood='';
+    state.status='all';
+    initialAreaOverlay=requestedArea.kind;
+    const requestedMode=params.get('mode');
+    if(['recent','all'].includes(requestedMode))state.mode=requestedMode;
+    const requestedDays=params.get('days');
+    if(['7','30','90','all'].includes(requestedDays))state.days=requestedDays;
+  }
+} catch { /* An invalid shared link leaves the ordinary saved view intact. */ }
 let snapshot = null, beachPreview = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]};
 let neighbourhoodShapesPromise = null;
 let neighbourhoodFitRequestId = 0;
@@ -566,6 +582,7 @@ function boot() {
     }
   });
   syncControls();void initMap();
+  if(initialAreaOverlay)void areaExplorer.setOverlay(initialAreaOverlay);
   // Each feed loads independently so an optional beach request never holds DineSafe hostage.
   void loadBeachPreview();
   void loadDineSafeSnapshot();
