@@ -161,7 +161,7 @@ jobs:
         run: python scripts/build_rss.py
       - name: Generate weekly source-linked DineSafe brief
         run: python scripts/build_weekly_brief.py
-      - name: Persist generated editions and validated refresh
+      - name: Persist only validated data and recoverable release baseline
         run: |
           git config user.name "Scarb.TO data publisher"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -173,7 +173,7 @@ jobs:
             if [ "${{ inputs.release_mode }}" = "code_only" ]; then
               git commit -m "publish weekly DineSafe brief"
             else
-              git commit -m "refresh validated DineSafe snapshot and weekly brief"
+              git commit -m "data: refresh validated Scarborough DineSafe snapshot"
             fi
             git push origin HEAD:main
           fi

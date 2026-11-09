@@ -129,6 +129,36 @@ class WeeklyBriefTests(unittest.TestCase):
         self.assertIn("Correction, revision 2", page)
         self.assertIn("Corrected the source event status", page)
 
+    def test_empty_corrected_edition_rebuild_preserves_revision(self):
+        write_archive(self.history, [event("a", "2026-11-03T10:00:00+00:00")])
+        build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
+        manifest_path = self.output / "editions.json"
+        original = json.loads(manifest_path.read_text(encoding="utf-8"))["editions"][0]
+
+        write_archive(self.history, [])
+        correction = {
+            "schema_version": 1,
+            "corrections": {
+                "dinesafe-weekly-2026-11-02": {
+                    "revision": 2,
+                    "explanation": "Removed the observation after validating the corrected source archive.",
+                }
+            },
+        }
+        self.corrections.write_text(json.dumps(correction), encoding="utf-8")
+        revised_at = datetime(2026, 11, 12, 15, tzinfo=timezone.utc)
+        self.assertEqual(build_weekly_brief(self.history, self.output, self.corrections, as_of=revised_at), 0)
+        revised = json.loads(manifest_path.read_text(encoding="utf-8"))["editions"][0]
+        self.assertEqual(revised["revision"], 2)
+        self.assertEqual(revised["event_count"], 0)
+        self.assertEqual(revised["generated_at"], original["generated_at"])
+
+        # The correction is already applied; subsequent refreshes must be idempotent.
+        self.assertEqual(build_weekly_brief(self.history, self.output, self.corrections, as_of=revised_at), 0)
+        repeated = json.loads(manifest_path.read_text(encoding="utf-8"))["editions"][0]
+        self.assertEqual(repeated["revision"], 2)
+        self.assertEqual(repeated["html_sha256"], revised["html_sha256"])
+
     def test_tampered_published_page_fails_closed(self):
         write_archive(self.history, [event("a", "2026-11-03T10:00:00+00:00")])
         build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)

@@ -388,13 +388,16 @@ def build_weekly_brief(
     elif existing is not None:
         if not output_path.is_file() or _sha256(output_path.read_bytes()) != existing["html_sha256"]:
             raise BriefError("Published weekly-brief page differs from its registry hash")
-        record = _correction_record(
-            existing,
-            corrections["corrections"].get(edition_id),
-            generated_at=generated_at,
-            content_hash=content_hash,
-            event_count=0,
-        )
+        if existing["content_sha256"] == content_hash:
+            record = dict(existing)
+        else:
+            record = _correction_record(
+                existing,
+                corrections["corrections"].get(edition_id),
+                generated_at=generated_at,
+                content_hash=content_hash,
+                event_count=0,
+            )
     else:
         record = None
 
