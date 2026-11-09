@@ -1,5 +1,6 @@
 import {areaFor, areaMatches, councillorFor, NEIGHBOURHOODS, WARDS, validateAreaFeatures, BOUNDARY_SOURCES} from './area-selection.mjs';
 import {fitBoundsFromFeatures} from './logic.mjs';
+import {neighbourhoodPagePath} from './neighbourhood-routes.mjs';
 
 /** One geographic selection, with two optional mutually exclusive map outlines.
  * Area visibility is session-only and always begins off; selected-area filters
@@ -139,6 +140,8 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
       }
       addText(r,'p','area-disclaimer','The listed wards represent meaningful source-measured overlaps, not whole-neighbourhood containment or population shares.');
       addText(r,'p','area-disclaimer','Scarborough membership is a source-verified majority-area selection of 30 whole City neighbourhoods, not a publisher-assigned district. The DineSafe site retains establishments included by the six municipal wards.');
+      const page=section(content,'Neighbourhood page','Open the permanent source-linked page for this selected neighbourhood.');
+      addLink(page,'Open '+area.name+' neighbourhood page',neighbourhoodPagePath(area.code));
     }
     const ridings=section(content,'Provincial & federal representatives',
       'Their electoral boundaries differ from City wards and neighbourhoods. An area name alone cannot determine your exact MPP or MP.');

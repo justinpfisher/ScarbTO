@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#143e3e">
+  <meta name="description" content="Current, source-linked DineSafe information for Steeles in Scarborough, Toronto.">
+  <link rel="canonical" href="https://scarb.to/steeles/">
+  <link rel="stylesheet" href="../neighbourhood-page.css">
+  <title>Steeles · Scarb.TO</title>
+  <script type="module" src="../neighbourhood-page.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#inspections">Skip to DineSafe records</a>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Scarb.TO home">Scarb<span>.</span>TO</a>
+    <a class="header-link" href="/">Explore Scarborough</a>
+  </header>
+  <main id="neighbourhood-page" data-area-code="116" data-neighbourhood-page>
+    <section class="page-intro" aria-labelledby="page-title">
+      <p class="eyebrow">Scarborough neighbourhood</p>
+      <h1 id="page-title">Steeles</h1>
+      <p>Local information from published City of Toronto data, with dates and source limits shown.</p>
+    </section>
+
+    <section class="panel explore-panel" aria-labelledby="explore-title">
+      <div>
+        <h2 id="explore-title">Explore this area</h2>
+        <p>Open the Scarb.TO map and results list with this neighbourhood selected.</p>
+      </div>
+      <a class="primary-link" id="map-link" href="/?areaKind=neighbourhood&amp;areaCode=116&amp;mode=all&amp;days=all">Open Steeles in the map and list</a>
+    </section>
+
+    <div class="content-grid">
+      <section class="panel" aria-labelledby="ward-title">
+        <h2 id="ward-title">Municipal ward context</h2>
+        <p class="section-note">Neighbourhood and ward boundaries do not always align. These are the City wards that intersect this neighbourhood, not an address-level representative lookup.</p>
+        <ul id="ward-links" class="link-list"></ul>
+        <p class="section-note">Provincial and federal electoral boundaries are different. For an exact address lookup, use the official tools; Scarb.TO does not collect your address.</p>
+        <ul class="link-list">
+          <li><a href="https://www.ola.org/en/members/current" target="_blank" rel="noopener noreferrer">Find an Ontario MPP</a></li>
+          <li><a href="https://www.ourcommons.ca/Members/en/search" target="_blank" rel="noopener noreferrer">Find a federal MP</a></li>
+        </ul>
+      </section>
+
+      <section class="panel records-panel" id="inspections" aria-labelledby="inspection-title">
+        <h2 id="inspection-title">DineSafe establishments</h2>
+        <p class="section-note">This list uses the City record’s assigned neighbourhood field, the same area filter used in Explore. It does not imply every address lies wholly inside the displayed boundary.</p>
+        <p id="feed-status" class="feed-status" role="status" aria-live="polite">Loading the published City snapshot.</p>
+        <p id="record-summary" class="record-summary"></p>
+        <ol id="inspection-list" class="record-list"></ol>
+        <button id="show-more" class="secondary-button" type="button" hidden>Show more establishments</button>
+        <p class="source-note"><a href="https://open.toronto.ca/dataset/dinesafe/" target="_blank" rel="noopener noreferrer">DineSafe dataset and source information</a> · <a href="https://open.toronto.ca/open-data-licence/" target="_blank" rel="noopener noreferrer">Open Government Licence – Toronto</a></p>
+      </section>
+    </div>
+
+    <section class="panel unavailable-panel" aria-labelledby="other-data-title">
+      <h2 id="other-data-title">Other local information</h2>
+      <p>Neighbourhood historical police totals and planning or permit records are not published here yet. Unavailable data is not zero.</p>
+      <p>Beach measurements are dated samples and are not current swimming advice.</p>
+    </section>
+
+    <footer class="page-footer">
+      <a href="https://open.toronto.ca/dataset/neighbourhoods/" target="_blank" rel="noopener noreferrer">City neighbourhood boundaries</a>
+      <span>Contains information licensed under the Open Government Licence – Toronto.</span>
+      <a href="/">Scarb.TO home</a>
+    </footer>
+  </main>
+</body>
+</html>
