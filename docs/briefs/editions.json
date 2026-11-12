@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "editions": [
+    {
+      "id": "dinesafe-weekly-2026-11-02",
+      "path": "briefs/2026-11-02/",
+      "period_start": "2026-11-02",
+      "period_end": "2026-11-08",
+      "revision": 1,
+      "generated_at": "2026-11-12T14:45:26.036328+00:00",
+      "revised_at": null,
+      "correction_explanation": null,
+      "event_count": 115,
+      "content_sha256": "47c1b91cd0218ddfd55f2d73e4dfcffce94f02b2eb51cf79ee3d19752724a4c3",
+      "html_sha256": "69172d367b836c10ee42a6a45bcf09ce9aa0fb69b81ce0c907449ace21406091"
+    }
+  ]
+}
