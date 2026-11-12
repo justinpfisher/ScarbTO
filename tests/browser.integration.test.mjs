@@ -271,6 +271,8 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await page.screenshot({path:resolve(outputDir,`${name}-dinesafe-markers.png`),fullPage:true});
 
   await page.getByRole('button', {name: 'Beach samples'}).click();
+  assert.equal(await page.locator('#food-filters').isVisible(),false,`${name}: irrelevant food controls are not shown on the beach topic`);
+  assert.equal(await page.locator('.header-right a[href="/neighbourhoods/"]').isVisible(),true,`${name}: neighbourhood directory is discoverable`);
   assert.match(await page.locator('#map').getAttribute('aria-label'),/beach reference point, not the individual sampling locations/i,`${name}: map label explains the beach marker location`);
   await page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
   assert.equal(await page.locator('.beach-sample-date-list>li').count(),2);
@@ -342,11 +344,13 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   assert.ok(dimensions.documentWidth <= dimensions.viewportWidth, `${name}: no horizontal page overflow`);
   assert.ok(dimensions.zoom > 0);
   if (mobile) {
-    const [legend, attribution, fit] = await Promise.all([
-      page.locator('.map-legend').boundingBox(),
-      page.locator('.maplibregl-ctrl-attrib').boundingBox(),
-      page.locator('#fit').boundingBox(),
-    ]);
+    // Sample one layout frame: three remote calls can straddle smooth scrolling.
+    const [legend, attribution, fit] = await page.evaluate(()=>
+      ['.map-legend','.maplibregl-ctrl-attrib','#fit'].map(selector=>{
+        const node=document.querySelector(selector);if(!node)return null;
+        const rect=node.getBoundingClientRect(),style=getComputedStyle(node);
+        return rect.width>0&&rect.height>0&&style.visibility!=='hidden'&&style.display!=='none'?rect.toJSON():null;
+      }));
     assert.ok(legend && attribution && fit, `${name}: map legend, attribution, and fit control remain rendered`);
     const overlaps = legend.x < attribution.x + attribution.width && legend.x + legend.width > attribution.x
       && legend.y < attribution.y + attribution.height && legend.y + legend.height > attribution.y;
@@ -741,6 +745,7 @@ test('resetting during a selected-call request aborts it and prevents late rende
   await page.getByRole('button',{name:'Police calls by division'}).click();
   await firstRequest;
   await page.getByRole('button',{name:'Clear filters'}).click();
+  assert.equal(await page.locator('#food-filters').isVisible(),true,'reset restores relevant food controls');
   await page.waitForTimeout(3_200);
   assert.equal(requests,1,'reset aborts the active first stage');
   assert.equal(await page.locator('.selected-call-row').count(),0,'a late response cannot repopulate calls after reset');
@@ -1109,11 +1114,25 @@ test('static neighbourhood pages use the qualified set and route into the same s
   assert.equal(await stalePage.locator('#inspection-list .record-item').count(),1);
 
   const zeroAreaPage=await context.newPage();
+  const printPage=await context.newPage();
+  const printSnapshot={...pageSnapshot,establishments:Array.from({length:25},(_,i)=>({...pageSnapshot.establishments[0],id:`print-${i}`,establishment_id:`print-${i}`,name:`Print fixture ${i}`}))};
+  await installLocalRoutes(printPage,origin,{snapshotBody:printSnapshot});
+  await printPage.goto(`${origin}/west-rouge/`,{waitUntil:'domcontentloaded'});
+  await printPage.waitForFunction(()=>document.querySelectorAll('#inspection-list .record-item').length===20);
+  await printPage.locator('#inspection-list details summary').first().click();
+  await printPage.evaluate(()=>{window.dispatchEvent(new Event('beforeprint'));window.dispatchEvent(new Event('beforeprint'));});
+  assert.equal(await printPage.locator('#inspection-list .record-item').count(),25,'print includes records beyond the first screen');
+  assert.equal(await printPage.locator('#inspection-list details:not([open])').count(),0,'all findings remain visible for print');
+  await printPage.evaluate(()=>{window.dispatchEvent(new Event('afterprint'));window.dispatchEvent(new Event('afterprint'));});
+  assert.equal(await printPage.locator('#inspection-list .record-item').count(),20,'cancel/finish restores original pagination');
+  assert.equal(await printPage.locator('#inspection-list details').first().getAttribute('open'),'','original expansion is restored');
+  await printPage.getByRole('button',{name:'Show more records'}).click();
+  assert.equal(await printPage.locator('#inspection-list .record-item').count(),25,'pagination still works after print');
   const otherAreaSnapshot={...pageSnapshot,establishments:[{...pageSnapshot.establishments[0],neighbourhood:'Agincourt North'}]};
   await installLocalRoutes(zeroAreaPage,origin,{snapshotBody:otherAreaSnapshot});
   await zeroAreaPage.goto(`${origin}/west-rouge/`,{waitUntil:'domcontentloaded'});
   await zeroAreaPage.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.startsWith('Food inspection records checked'));
-  await zeroAreaPage.waitForFunction(()=>document.querySelector('#record-summary')?.textContent.includes("I didn't find any places labelled with this neighbourhood"));
+  await zeroAreaPage.waitForFunction(()=>document.querySelector('#record-summary')?.textContent.includes("I didn't find any DineSafe records with source coordinates in this neighbourhood"));
   assert.equal(await zeroAreaPage.locator('#inspection-list .record-item').count(),0);
 
   const emptyGlobalPage=await context.newPage();

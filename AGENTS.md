@@ -16,6 +16,8 @@ These rules apply to automated agents, contributors and development workflows. R
 
 ## Mandatory GMKtec-first execution policy
 
+Community Publishing generators, exports and embeds follow the owner-approved [COMMUNITY_PUBLISHING.md](COMMUNITY_PUBLISHING.md). Preserve its evidence, edition continuity and source limits; it is a separate follow-on, not an additional resident-release gate.
+
 - GMKtec is the default authorised computer for development automation, ingestion, builds, testing, scheduled processing and trusted GitHub Actions.
 - Every applicable trusted-main production, ingestion, and build job must explicitly select a *verified*, project-authorised GMKtec runner using its actual labels. Do not assume a runner has been provisioned from a proposed label in a PR. The conditional test-only exception below is not a production or ingestion route.
 - Do not use `ubuntu-latest`, other GitHub-hosted runners, dynamic hosted-runner matrices or silent hosted fallback for routine jobs. An unavailable GMKtec runner means queue or hold, **not** automatic reassignment.
@@ -41,5 +43,3 @@ These rules apply to automated agents, contributors and development workflows. R
 - Do not modify domain DNS, unrelated mail records, repository visibility or private credentials merely to advance an ordinary feature.
 - Work independently through manageable blockers. If physical GMKtec/provider access is unavailable, complete safe independent changes and record the precise outstanding owner action in CURRENT_STATE.md. Do not repeatedly ask for an approval already granted.
 - Retire superseded branches/PRs after confirming that newer merged work covers them. Keep one primary integration queue; the GitHub repository is the source of truth.
-
-

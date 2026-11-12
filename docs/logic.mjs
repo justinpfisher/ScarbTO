@@ -4,6 +4,15 @@ import {areaMatches} from './area-selection.mjs';
 export const STATUS = ['Pass', 'Conditional Pass', 'Closed'];
 export const DEFAULTS = Object.freeze({mode:'recent',status:'all',days:'30',neighbourhood:'',areaKind:'',areaCode:'',search:''});
 
+// A matching name/address is a research lead, never proof that two source IDs
+// identify the same business. Do not merge or suppress either record.
+export function relatedSourceRecords(items, entry) {
+  const key=value=>String(value||'').normalize('NFKC').trim().toLocaleLowerCase('en-CA').replace(/\s+/g,' ');
+  const name=key(entry.name),address=key(entry.address);
+  if(!name||!address)return [];
+  return items.filter(other=>String(other.id)!==String(entry.id)&&key(other.name)===name&&key(other.address)===address);
+}
+
 export function dayInWindow(date, days, now = new Date()) {
   if (days === 'all') return true;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;

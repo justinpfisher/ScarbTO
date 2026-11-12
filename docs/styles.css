@@ -167,5 +167,17 @@
 
 @media(max-width:420px){.brand-lockup{width:64px}}
 
+/* Keep navigation and source context legible without changing the pending identity. */
+.header-right{flex-wrap:wrap;gap:10px}.header-right a{min-height:44px;display:inline-flex;align-items:center}
+#food-filters[hidden]{display:none!important}
+.related-source-records{font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.related-source-records summary{cursor:pointer;min-height:44px;padding:12px 0}
+.related-source-records li{margin:8px 0}
+.area-eyebrow,#area-subtitle,.area-section .area-disclaimer,.area-panel-footer{color:#405e50;font-size:12px}
+.source-provenance,.area-overlay-note,.filter-note,.mobile-hint{font-size:13px;line-height:1.5}
+.eyebrow,.results-caption,.filter-footer{color:#405e50;font-size:12px}
+.filters input::placeholder{color:#52685d}
+@media(max-width:570px){.site-header{height:auto;min-height:88px;gap:12px;padding:10px 0}.header-right{justify-content:flex-end;font-size:12px;gap:4px 10px}.header-place{width:100%;text-align:right}}
+
 /* Source context belongs beside the results, not in a competing hero badge. */
 .results .data-status{margin:8px 15px;padding:7px 9px;max-width:none;width:auto;text-align:left;font-weight:500;min-height:0;display:block;background:transparent}.results .data-status.warning{background:#fff0d9}.results .data-status.error{background:#fce8e7}.source-provenance{margin:0 15px 12px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}.source-provenance summary{cursor:pointer;min-height:44px;padding:12px 0}.source-provenance p{margin:8px 0}.view-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.view-tabs .tab{min-width:0;min-height:44px;overflow-wrap:anywhere}.inspection-originals{overflow-wrap:anywhere}.inspection-originals summary{min-height:44px;padding:12px 0;cursor:pointer}

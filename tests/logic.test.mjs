@@ -1,7 +1,16 @@
 import {readerDate, readerDateTime} from '../docs/reader-date.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dayInWindow, filterEstablishments, filterActivity, isStale, displayAddress, cityCatalogueRefreshText, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from '../docs/logic.mjs';
+import {dayInWindow, filterEstablishments, filterActivity, isStale, displayAddress, cityCatalogueRefreshText, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures, relatedSourceRecords} from '../docs/logic.mjs';
+
+test('similar names remain separate source identities, not proven aliases',()=>{
+  const first={id:'old',name:'Example Cafe',address:'10 Main St'};
+  const second={id:'new',name:'EXAMPLE CAFE',address:'10  MAIN ST'};
+  const records=[first,second,{id:'elsewhere',name:first.name,address:'12 Main St'}];
+  assert.deepEqual(relatedSourceRecords(records,first),[second]);
+  assert.equal(records.length,3);
+  assert.deepEqual(relatedSourceRecords(records,{...first,address:''}),[]);
+});
 const now = new Date('2026-10-24T15:00:00Z');
 const data = [
  {name:'Alpha Café',address:'123 Main',status:'Pass',neighbourhood:'Agincourt',inspection_date:'2026-10-21'},

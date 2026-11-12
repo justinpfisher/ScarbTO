@@ -147,7 +147,7 @@ def _render_edition(payload: dict, record: dict) -> bytes:
     rows = [
         f'<li id="event-{esc(event["id"])}">'
         f'<strong>{esc(event["name"])}: {esc(EVENT_KINDS[event["kind"]])}</strong> '
-        f'<span>({esc(event["neighbourhood"])}; neighbourhood named in the City record)</span> '
+        f'<span>({esc(event["neighbourhood"])}; neighbourhood matched by Scarb.TO)</span> '
         f'<span>DineSafe result when added: {esc(event["status"])}.</span> '
         + (f'<span>Previous status: {esc(event["previous_status"])}.</span> ' if event["kind"] == "status_changed" and event["previous_status"] else "")
         + f'<span>Inspection date: <time datetime="{esc(event["inspection_date"])}">{reader_date(date.fromisoformat(event["inspection_date"]))}</time>.</span> '
@@ -189,9 +189,9 @@ def _render_edition(payload: dict, record: dict) -> bytes:
     <h1>{esc(title)}</h1>
     <p>There's plenty to explore in Scarborough's food inspection records. I've brought together the updates I added from {_fmt_date(start)} through {_fmt_date(end)}. Start with a place you know, or follow a neighbourhood name and see what turns up.</p>
     <p>These updates come from City DineSafe records, not visits to these places. This is not a complete account of City activity, and results may have changed since.</p>
-    <details><summary>Explore the week's patterns</summary><p>{len(events)} recorded updates span {len(area_counts)} neighbourhood names in the City records. One place can have more than one update. Here's how those records fit together.</p><p>I group each Monday-to-Sunday week using Toronto time (America/Toronto). Added dates use that same local calendar.</p>
-    <div class="summary"><section><h2>What was added</h2><ul>{kinds}</ul></section><section><h2>By neighbourhood in the City records</h2><ul>{areas}</ul></section></div>
-    <p>I use the neighbourhood names in DineSafe records. Some of those neighbourhoods extend beyond the six Scarborough wards used to select these places. The inspection date tells you when the inspection happened; “Added to Scarb.TO” tells you when I first recorded the update, not when this page went live. A place newly added here is not necessarily a new business.</p></details><p>These are dated results, not a current safety assessment. Check the City's record before relying on an older result.</p>
+    <details><summary>Explore the week's patterns</summary><p>{len(events)} recorded updates span {len(area_counts)} neighbourhoods matched by Scarb.TO. One place can have more than one update. Here's how those records fit together.</p><p>I group each Monday-to-Sunday week using Toronto time (America/Toronto). Added dates use that same local calendar.</p>
+    <div class="summary"><section><h2>What was added</h2><ul>{kinds}</ul></section><section><h2>By matched neighbourhood</h2><ul>{areas}</ul></section></div>
+    <p>I match the coordinates supplied with DineSafe records to City neighbourhood boundaries. These neighbourhood assignments are made by Scarb.TO, not labels supplied by DineSafe. Inaccurate source coordinates can put a place in the wrong neighbourhood. Some of those neighbourhoods extend beyond the six Scarborough wards used to select these places. The inspection date tells you when the inspection happened; “Added to Scarb.TO” tells you when I first recorded the update, not when this page went live. A place newly added here is not necessarily a new business.</p></details><p>These are dated results, not a current safety assessment. Check the City's record before relying on an older result.</p>
     {correction}
     <h2>Explore the updates</h2>
     <ol>{''.join(rows)}</ol>

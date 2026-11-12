@@ -197,7 +197,8 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
         guid = ET.SubElement(item, "guid", {"isPermaLink": "false"})
         guid.text = f"urn:scarbto:dinesafe:{event['id']}"
         ET.SubElement(item, "pubDate").text = format_datetime(event["detected_at"])
-        details = [f"Neighbourhood in the City record: {event['neighbourhood']}."]
+        details = [f"Neighbourhood matched by Scarb.TO: {event['neighbourhood']}."]
+        details.append("I match source coordinates to City neighbourhood boundaries; this is not a neighbourhood label supplied by DineSafe. Inaccurate source coordinates can put a place in the wrong neighbourhood.")
         if event["previous_status"]:
             details.append(f"Previous DineSafe status: {event['previous_status']}.")
         details.extend([

@@ -5,6 +5,7 @@ import {buildPageFiles,normalizeGeneratedText,renderAliasPage,renderAreaPage} fr
 import {neighbourhoodPagePath,slugForName} from '../docs/neighbourhood-routes.mjs';
 import {readFileSync} from 'node:fs';
 import {initializePageActions} from '../docs/neighbourhood-page-actions.mjs';
+import {installAreaPrint} from '../docs/neighbourhood-page.mjs';
 
 test('the qualified 30 neighbourhood IDs generate unique canonical pages and the West Rouge alias',()=>{
   const pages=buildPageFiles();
@@ -32,7 +33,9 @@ test('the generated West Rouge route and alias match their reusable source templ
   const pages=buildPageFiles(NEIGHBOURHOODS,template);
   assert.equal(pages.get('docs/west-rouge/index.html').includes('<h1 id="page-title">West Rouge</h1>'),true);
   assert.match(pages.get('docs/west-rouge/index.html'),/Let's explore West Rouge/);
-  assert.match(pages.get('docs/west-rouge/index.html'),/I use the neighbourhood listed in each City record, just like the map/);
+  assert.match(pages.get('docs/west-rouge/index.html'),/I match each DineSafe record's source coordinates to the City's neighbourhood boundaries/);
+  assert.match(pages.get('docs/west-rouge/index.html'),/not a neighbourhood label supplied by DineSafe/);
+  assert.match(pages.get('docs/west-rouge/index.html'),/not a confirmed count of distinct businesses/);
   assert.match(pages.get('docs/west-rouge/index.html'),/neighbourhood boundaries and ward boundaries don't always line up/);
   assert.match(renderAliasPage('westrouge','west-rouge'),/location\.replace\("\/west-rouge\/"\+location\.search\+location\.hash\)/);
 });
@@ -83,4 +86,21 @@ test('checked-in neighborhood pages match the reusable template output',()=>{
     const actual=readFileSync(new URL(`../${relative}`,import.meta.url),'utf8');
     assert.equal(normalizeGeneratedText(actual),normalizeGeneratedText(expected),`${relative} is stale; regenerate with scripts/build_neighbourhood_pages.mjs`);
   }
+});
+
+test('printing includes records after the first 20 and restores original expanded state after cancellation or completion',()=>{
+  const handlers={},original=Array.from({length:20},(_,id)=>({id,open:id===2}));
+  const summary={textContent:'Showing 20 of 25'},showMore={hidden:false};let focused=false;
+  const focus={isConnected:true,focus:()=>{focused=true;}};
+  const list={childNodes:original,replaceChildren(...nodes){this.childNodes=nodes;},querySelectorAll(){return this.childNodes;}};
+  installAreaPrint({windowRef:{addEventListener:(name,fn)=>{handlers[name]=fn;}},documentRef:{activeElement:focus},list,summary,showMore,
+    renderAll:()=>{list.childNodes=Array.from({length:25},(_,id)=>({id,open:false}));summary.textContent='Showing 25 of 25';showMore.hidden=true;}});
+  handlers.beforeprint();handlers.beforeprint();
+  assert.equal(list.childNodes.length,25);assert.equal(list.childNodes[24].id,24);
+  assert.ok(list.childNodes.every(row=>row.open));
+  handlers.afterprint();handlers.afterprint();
+  assert.deepEqual(list.childNodes,original);assert.equal(list.childNodes[2],original[2]);
+  assert.equal(list.childNodes[2].open,true);assert.equal(list.childNodes[1].open,false);
+  assert.equal(summary.textContent,'Showing 20 of 25');assert.equal(showMore.hidden,false);assert.equal(focused,true);
+  handlers.beforeprint();handlers.afterprint();assert.deepEqual(list.childNodes,original);
 });

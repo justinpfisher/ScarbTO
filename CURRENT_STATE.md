@@ -23,6 +23,8 @@ The integrated resident release remains in progress across the approved packages
 - **Planning and permits remain unqualified and unpublished.** Public permit export stays disabled. The earlier OAR tunnel-layer HTTP 403 remains a separate access boundary; do not retry or route around it. No editorial change qualifies a new source.
 - **Stabilization remains outstanding:** assess consecutive scheduled validated refreshes, a real weekly publication cycle, full deployed resident journeys, recovery and operating time against the original acceptance criteria. Successful code-only runs do not establish source-refresh continuity.
 
+**Community Publishing:** [Owner-approved specification](COMMUNITY_PUBLISHING.md) is merged in PR #56. Implementation is in progress as a separate follow-on, not a gate for the resident UX release. No production PDF, custom publisher profile or embed completion is claimed.
+
 ## Approved integrated release — execution started
 
 **12 November UX investigation and owner follow-through: documented; implementation pending.** The owner accepted the practical recommendations and clarified prominent neighbourhood maps, separate branding/newspaper specifications, automatic freshness, no recurring human curation and multiple saved public areas, then instructed “Let's action as recommended.” Enduring decisions are in [ARCHITECTURE.md](ARCHITECTURE.md#owner-approved-ux-follow-through-and-operating-model-12-november-2026); [dated audit evidence](research/ux/2026-11-12-resident-ux.md) distinguishes observed defects, design judgements and untested risks. Dot remains sole release coordinator. This documentation does not claim a tested, merged, deployed or live implementation of those follow-ups.
@@ -46,7 +48,7 @@ The owner specifically raised a permanent address such as `scarb.to/westrouge`. 
 
 The existing implementation writer released the compact contextual Key, phone-default collapsed Key, desktop area information in the results column, closeable mobile area sheet, focus handling, useful clear/fit empty-state controls, distinct inspection and first-observed dates, placeholder-detail cleanup, separate geographic layers, MapLibre 6.4.1 and library/WebGL fallback. Independent rendered tests and public HTTP checks passed.
 
-The deployed 1 November behaviour clears an incompatible selected area when switching between neighbourhood and ward overlays and explains the reset. Closing the information panel or turning outlines Off still retains the selected area in the inspected release. **The owner superseded that Off requirement on 12 November:** turning Boundaries Off must clear map-selected geography while preserving unrelated filters. The implementation correction is pending; closing the panel remains a distinct action. The broader P2 work, including stable public record/area URLs and complete resident journey acceptance, is not thereby complete.
+The deployed 1 November behaviour clears an incompatible selected area when switching between neighbourhood and ward overlays and explains the reset. Closing the information panel or turning outlines Off still retains the selected area in the inspected release. **The owner superseded that Off requirement on 12 November:** turning Boundaries Off must clear map-selected geography while preserving unrelated filters. PR #55 released and verified that correction above; closing the panel remains a distinct action. The broader P2 work, including stable public record/area URLs and complete resident journey acceptance, is not thereby complete.
 
 ## Feed coverage and source boundaries
 
@@ -108,4 +110,3 @@ The historical 1 November P4 research above is not a current dispatch or proof t
 - [Toronto Open Government Licence](https://open.toronto.ca/open-data-licence/)
 
 Do not record prepared, reviewed, tested, merged, deployed or live work as interchangeable states. The integrated resident release remains in progress.
-

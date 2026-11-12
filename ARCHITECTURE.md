@@ -212,9 +212,11 @@ After the desktop/mobile investigation, the owner clarified neighbourhood map pr
 
 ### Community-newspaper downloads (12 November 2026 direction)
 
+The owner-approved [Community Publishing specification](COMMUNITY_PUBLISHING.md) now defines coverage combinations/custom profiles, edition-aware copy, hard length limits, print packages and lightweight website embeds. It supersedes the earlier undecided coverage/profile framing below. Publication-specific dimensions, exact footprints, rights and endorsements still require evidence; unresolved named presets do not block generic qualified outputs. Preserve the separate-follow-on boundary and existing resident commitments.
+
 Provide a discoverable download entry from neighbourhood pages. The website, briefs and publisher outputs must derive from the same qualified records and history, without a separately maintained publication or recurring owner preparation.
 
-The minimum useful workflow is **choose coverage and edition period → preview the automatically assembled material → download**. Supply a ready-to-place PDF plus editable text, with a separate print-capable map where useful. The parallel newspaper exercise determines actual publication dimensions, column/colour/file specifications, deadlines and coverage/profile behaviour; there is no assumed universal quarter-page size or exact newspaper-to-neighbourhood equivalence. Do not silently invent a publication's boundary, partnership or endorsement. Saved publisher coverage and any combination of neighbourhoods must follow the resulting specification, not an unverified catchment assumption.
+The minimum useful workflow is **choose coverage and edition period → preview the automatically assembled material → download**. Supply a ready-to-place PDF plus editable text, with a separate print-capable map where useful. The approved Community Publishing specification defines coverage/profile behaviour; named publication dimensions, column/colour/file specifications and deadlines still require verification; there is no assumed universal quarter-page size or exact newspaper-to-neighbourhood equivalence. Do not silently invent a publication's boundary, partnership or endorsement. Saved publisher coverage and any combination of neighbourhoods must follow the resulting specification, not an unverified catchment assumption.
 
 Preserve source attribution and map/asset reuse rights; web display permission is not automatically print redistribution permission. Include covered dates, information cut-off, edition/version and a stable web reference or QR code. Issued editions are dated evidence: preserve their identity and record corrections rather than silently replacing their history. Quiet periods create no invented news. Never turn incomplete inspection evidence into a comprehensive-sounding print summary, historical beach samples into current advice, division counts into neighbourhood incidents or a newly imported record into a claimed business opening.
 
@@ -293,5 +295,3 @@ These files should support maps, lists, neighbourhood update pages, RSS and even
 - Verify the actual `scarb.to` production HTTPS response, data and mobile map after releases; a successful CI job alone is insufficient.
 - Maintain regression coverage for DineSafe missing-address placeholders, inspection-detail labels and source-versus-publication freshness; check `CURRENT_STATE.md` before treating older defects as unresolved.
 - Confirm runner availability and proper isolation on the physical GMKtec before activating proposed infrastructure workflows.
-
-

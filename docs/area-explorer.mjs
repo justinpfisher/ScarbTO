@@ -107,11 +107,12 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     const matching=isDineSafe
       ? getVisiblePlaces().filter(place=>areaMatches(place,{areaKind:area.kind,areaCode:area.code})).length : null;
     const dine=section(content,'Food inspection results',places
-      ? places.length.toLocaleString('en-CA')+' places in the City records I have; '+(isDineSafe
+      ? places.length.toLocaleString('en-CA')+' DineSafe source records; '+(isDineSafe
         ? matching.toLocaleString('en-CA')+' currently match your DineSafe filters.'
         : 'the DineSafe area filter is paused while you view another source.')
-      : 'I could not load checked DineSafe records, so no place count is shown.');
+      : 'I could not load checked DineSafe records, so no record count is shown.');
     addText(dine,'p','area-disclaimer','These are the latest inspections in the records I have, not a live list of every restaurant.');
+    addText(dine,'p','area-disclaimer','I match source coordinates to City boundary polygons. Coordinates can be imperfect; this is not an independent address check. Different source IDs remain separate records, even when names and addresses match.');
     if (snapshot?.published_at) {
       const stamp=new Date(snapshot.published_at);
       const published=Number.isFinite(stamp.valueOf())
