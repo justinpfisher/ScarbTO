@@ -30,9 +30,9 @@ class CodeOnlyReleaseTests(unittest.TestCase):
         self.assertEqual(
             PINNED_BASELINE,
             {
-                "commit": "3117a556e3d0b2c065883a89dd61c06dc43e1c6d",
-                "tree": "ed44710f95ed6c653356bdfb78db67e1868c7ea6",
-                "run_id": 42869825091,
+                "commit": "7ff53874cd75769f1bb75c7cfcfae404ce61448b",
+                "tree": "f9fd994243e32a7262913f352b85fc534e7bf934",
+                "run_id": 43279147086,
             },
         )
 

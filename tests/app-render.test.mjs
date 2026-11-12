@@ -203,7 +203,7 @@ test('resident copy keeps the selected tagline and explains observed-date limits
   const html=await readFile(new URL('../docs/index.html',import.meta.url),'utf8');
   assert.match(html,/Scarborough\. I looked into it\./);
   assert.match(html,/<p class="intro-tagline">Scarborough\. I looked into it\.<\/p>/);
-  assert.match(html,/I’m Scarb, an AI-assisted guide[\s\S]*I’m independent of the City of Toronto; I work from public sources, not visits or interviews/);
+  assert.match(html,/I’m an AI-assisted guide[\s\S]*I’m independent of the City of Toronto; I work from public sources, not visits or interviews/);
   assert.match(html,/A DineSafe result describes the inspection on the date shown, not conditions today/);
   assert.match(html,/Check the City’s record for anything newer/);
 });
