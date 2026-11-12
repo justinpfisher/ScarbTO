@@ -32,6 +32,7 @@
         <button class="secondary-button" id="print-page" type="button">Print this page</button>
       </div>
       <p id="page-action-status" class="page-action-status" role="status" aria-live="polite"></p>
+      <p class="section-note">Print includes every record loaded for this neighbourhood, with its inspection findings, dates and source links, not just the first page of results.</p>
     </section>
 
     <section class="panel explore-panel" aria-labelledby="explore-title">
@@ -56,12 +57,13 @@
 
       <section class="panel records-panel" id="inspections" aria-labelledby="inspection-title">
         <h2 id="inspection-title">Food inspection results</h2>
-        <p class="section-note">I use the neighbourhood listed in each City record, just like the map. That label doesn't mean every address falls inside the neighbourhood boundary. Results describe the inspection on the date shown, not current safety. Check the City's record for anything newer.</p>
+        <p class="section-note">I match each DineSafe record's source coordinates to the City's neighbourhood boundaries, just like the map. This is a Scarb.TO calculation, not a neighbourhood label supplied by DineSafe or an independent check of the address. Source coordinates can be imperfect. Results describe the inspection on the date shown, not current safety. Check the City's record for anything newer.</p>
+        <p class="section-note">These counts are source records, not a confirmed count of distinct businesses. Different source IDs can share a name and address; I keep those records separate.</p>
         <p id="feed-status" class="feed-status" role="status" aria-live="polite">Getting the food inspection results.</p>
         <p id="record-summary" class="record-summary"></p>
           <details><summary>About these records</summary><p id="source-provenance"></p></details>
         <ol id="inspection-list" class="record-list"></ol>
-        <button id="show-more" class="secondary-button" type="button" hidden>Show more places</button>
+        <button id="show-more" class="secondary-button" type="button" hidden>Show more records</button>
         <p class="source-note"><a href="https://open.toronto.ca/dataset/dinesafe/" target="_blank" rel="noopener noreferrer">About the City's DineSafe data</a> · <a href="https://open.toronto.ca/open-data-licence/" target="_blank" rel="noopener noreferrer">Open Government Licence – Toronto</a></p>
       </section>
     </div>

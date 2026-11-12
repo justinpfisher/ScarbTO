@@ -2,8 +2,8 @@
   "schema_version": 1,
   "corrections": {
     "dinesafe-weekly-2026-11-02": {
-      "revision": 3,
-      "explanation": "Updated the editorial voice and made dates easier to read, with exact recording times in optional details. The reporting period, recorded updates, City results and original preparation time are unchanged."
+      "revision": 4,
+      "explanation": "Corrected the neighbourhood attribution: Scarb.TO matches source coordinates to City neighbourhood boundaries; DineSafe does not supply these neighbourhood labels. Source coordinate errors can affect the match. The archived records, reporting period and original preparation time are unchanged."
     }
   }
 }

@@ -3,7 +3,7 @@ import {viewFromSearch,searchFromView} from './view-state.mjs';
 import {renderInspectionFindings} from './inspection-findings.mjs';
 import {areaFor, areaForName} from './area-selection.mjs';
 import {createAreaExplorer} from './area-explorer.mjs';
-import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, displayAddress, cityCatalogueRefreshText, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from './logic.mjs';
+import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, displayAddress, cityCatalogueRefreshText, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures, relatedSourceRecords} from './logic.mjs';
 import {beginListRedraw, finishListRedraw, revealSelectedRecord} from './list-focus.mjs';
 import {beachPreviewFeature, renderBeachSamplePreview, validateBeachSamplePreview} from './beach-history.mjs';
 import {SelectedCallsClient, selectedCallsPolicy, selectedCallsMessage} from './selected-calls.mjs';
@@ -182,6 +182,7 @@ function syncControls() {
   document.querySelectorAll('.chip').forEach(b=>{let hit=b.dataset.status===state.status;b.classList.toggle('selected',hit);b.setAttribute('aria-pressed',String(hit));});
   const beachMode=state.mode==='beach';
   const selectedCallsMode=state.mode==='selected-calls';
+  if($('food-filters'))$('food-filters').hidden=beachMode||selectedCallsMode;
   $('beach-filter-note').hidden=!beachMode;
   $('selected-calls-filter-note').hidden=!selectedCallsMode;
   $('selected-calls-map-note').hidden=!selectedCallsMode;
@@ -307,7 +308,7 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
   } else {
     records=matches.sort((a,b)=>b.inspection_date.localeCompare(a.inspection_date)||a.name.localeCompare(b.name));
   }
-  $('results-count').textContent=`${records.length.toLocaleString('en-CA')} in view`;
+  $('results-count').textContent=`${records.length.toLocaleString('en-CA')} records in view`;
   if(!records.length){
     list.append(els('p','empty','No places match this view. There is more to explore: try fewer filters or show all of Scarborough. Missing results do not mean nothing has happened here.'));
     const actions=els('div','empty-actions');
@@ -340,6 +341,18 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
       const detail=els('div','record-details');
       detail.id=detailId;
       detail.append(renderInspectionFindings(document,entry));
+      const related=relatedSourceRecords(snapshot.establishments,entry);
+      if(related.length){
+        const identity=els('details','related-source-records');
+        identity.append(els('summary','', 'Similar names in the source'));
+        identity.append(els('p','', 'Other source records have this name and address. Their IDs differ, so I have kept them separate. This is not proof that they are the same business.'));
+        identity.append(els('p','',`This source record ID: ${entry.id}`));
+        for(const other of related){
+          const link=els('a','record-source-link',`${other.name}: ${other.status}, inspected ${localDate(other.inspection_date)} (ID ${other.id})`);
+          link.href=cityDineSafeRecordUrl(other.id);link.target='_blank';link.rel='noopener noreferrer';identity.append(link);
+        }
+        detail.append(identity);
+      }
       const source=els('a','record-source-link','See the City DineSafe record');
       source.dataset.id=entry.id;source.href=cityDineSafeRecordUrl(entry.id);source.target='_blank';source.rel='noopener noreferrer';
       detail.append(source);card.append(detail);

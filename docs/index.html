@@ -20,7 +20,7 @@
           <img class="brand-lockup" src="./assets/brand/scarbto-connected.svg" alt="Scarb.TO, with the three-line wave and cliff mark">
         </picture>
       </a>
-      <div class="header-right"><span class="header-place">Scarborough, Toronto</span><a href="#about" class="about-link">About & sources</a></div>
+      <div class="header-right"><span class="header-place">Scarborough, Toronto</span><a href="/neighbourhoods/" class="about-link">Neighbourhoods</a><a href="/briefs/" class="about-link">Weekly briefs</a><a href="#about" class="about-link">About & sources</a></div>
     </header>
     <div class="intro-row">
       <div><p class="intro-tagline">Scarborough. I looked into it.</p><h1>So much to explore in Scarborough.</h1><p>I love following the data trails here. Come explore the places, records and boundaries I’ve brought together.</p></div>
@@ -46,6 +46,7 @@
         </div>
         <p id="beach-filter-note" class="filter-note" hidden>These are historical beach samples, not today's swimming advice. The search and filters below are for food inspections.</p>
         <p id="selected-calls-filter-note" class="filter-note" hidden>When you open this view, I request totals from Toronto Police Service's Esri service. They stay only in this tab's memory until they expire. I don't request individual calls or their locations.</p>
+        <div id="food-filters">
         <label for="search">Find a place</label>
         <input id="search" type="search" placeholder="Name or address" autocomplete="off" spellcheck="false">
         <div class="control-grid">
@@ -63,8 +64,8 @@
             <button class="chip" data-status="Closed" aria-pressed="false" type="button"><span class="dot closed"></span> Closed</button>
           </div>
         </fieldset>
-        <div class="filter-footer"><button id="reset" class="text-action" type="button">Clear filters</button><span>Filters saved on this device</span></div>
         <div class="mobile-hint">Your filters narrow both the map and the list.</div></div>
+        <div class="filter-footer"><button id="reset" class="text-action" type="button">Clear filters</button><span>Food inspection filters saved on this device</span></div></div>
       </aside>
       <main class="map-results">
         <div class="map-panel">
