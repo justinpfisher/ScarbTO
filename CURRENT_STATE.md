@@ -4,7 +4,7 @@
 
 ## Current release status - 12 November 2026
 
-The integrated resident release remains in progress across the approved packages P0-P8. Do not confuse the released increments below with completion of site-wide voice, source qualification or stabilization.
+The integrated resident release remains in progress across the approved packages P0-P8. Do not confuse the released increments below with completion of source qualification or stabilization.
 
 - **Latest verified production:** PR #50 merged as `7bc2e9473ff6aae98a6155df030e755daf21b2ec`, exact qualified tree `8af9157f30679f0da24a784584bbbfbce85f5ac0`. Existing code-only run [43256961102](https://github.com/justinpfisher/ScarbTO/actions/runs/43256961102) passed all trusted-main tests, unchanged-data provenance, Pages deployment and live HTTP/boundary verification. Independent checks matched all 50 public pages/runtime assets/brief receipt to the qualified bytes; all 50 RSS items retained the expected titles, links, GUIDs, dates and descriptions. Live Chrome verified runtime/map/empty-state copy, restored results, brief navigation, revision disclosure and the West Rouge alias. [Full release receipt](https://github.com/justinpfisher/ScarbTO/pull/50#issuecomment-6829254329).
 - **PR #49 branding/partial voice:** merged as `2d13af48931e68cd39564b5631cdca71e4ddbc8a`; connected desktop lockup and standalone mobile mark passed isolated rendered tests and live asset hash checks. Code-only run [43238577797](https://github.com/justinpfisher/ScarbTO/actions/runs/43238577797) succeeded. This was a partial voice increment, not site-wide conversion.
