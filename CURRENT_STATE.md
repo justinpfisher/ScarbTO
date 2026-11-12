@@ -4,6 +4,8 @@
 
 ## Current release status - 12 November 2026
 
+**New owner-approved personality revision, PR #52:** Source integration is prepared for the enthusiastic data-explorer voice and reader-friendly weekday dates. This direction supersedes the personality used in PR #50. The source candidate is not yet qualified or deployed: GMKtec is offline, and generated neighbourhood pages, the explicit weekly revision 3, isolated tests, trusted-main publication and live verification remain pending. The released PR #50 evidence below applies to its previous copy, not this new direction. No hosted test fallback or source refresh was initiated.
+
 The integrated resident release remains in progress across the approved packages P0-P8. Do not confuse the released increments below with completion of source qualification or stabilization.
 
 - **Latest verified production:** PR #50 merged as `7bc2e9473ff6aae98a6155df030e755daf21b2ec`, exact qualified tree `8af9157f30679f0da24a784584bbbfbce85f5ac0`. Existing code-only run [43256961102](https://github.com/justinpfisher/ScarbTO/actions/runs/43256961102) passed all trusted-main tests, unchanged-data provenance, Pages deployment and live HTTP/boundary verification. Independent checks matched all 50 public pages/runtime assets/brief receipt to the qualified bytes; all 50 RSS items retained the expected titles, links, GUIDs, dates and descriptions. Live Chrome verified runtime/map/empty-state copy, restored results, brief navigation, revision disclosure and the West Rouge alias. [Full release receipt](https://github.com/justinpfisher/ScarbTO/pull/50#issuecomment-6829254329).
@@ -62,9 +64,9 @@ The older state record described 106,000 of 446,979 cleared rows from an October
 
 Remaining engineering work is specific: planning lacks qualified map locations; reduced OAR lookup/accounting can confuse known outside-Scarborough records with genuinely unlocated records; record-specific planning links and safe public descriptions require qualification; production export/history/retention are not yet established. Preserve all count, generation, hash, overlap, EOF, identity, geography, privacy and licence gates. Full acquisition supports validation, not an obligation to send every historical record to a phone.
 
-## P1 identity and voice — direction adopted; lockup under review
+## Historical P1 identity preparation — superseded by the releases above
 
-The owner adopted the Lake & Land visual direction and original three-line wave/cliff mark, and selected “Scarborough. I looked into it.” The connected-contour treatment is the working lockup direction; the production artwork still needs visual qualification. The approved Scarb editorial voice is prepared on a local branch, including homepage/footer, DineSafe captions, neighbourhood pages and the RSS channel description. It is not deployed.
+The owner adopted the Lake & Land visual direction and original three-line wave/cliff mark, and selected “Scarborough. I looked into it.” The connected-contour treatment was selected as the working lockup direction. This older checkpoint preceded the visual qualification and initial voice releases recorded above. The newly approved personality revision in PR #52 is a separate pending update; do not treat the earlier copy as implementing it.
 
 The eight-record main specimen uses frozen, attributed records from the 1 November 11:51 a.m. snapshot; it is not current public data. Its source/date statements and 27 contrast calculations were independently checked. Prototype browser checks are not production WCAG certification or resident research. Existing approved UX work can continue independently of brand adoption.
 
@@ -80,7 +82,7 @@ The eight-record main specimen uses frozen, attributed records from the 1 Novemb
 ## Current next actions and blocked work
 
 1. **P3 neighbourhood pages:** released with PR #41 and verified on 31 canonical/alias production routes. Continue using the published template and qualified identifiers; do not reopen the completed P3 route task.
-2. **PR #42 RSS:** the current source candidate is locally qualified on the current main base. The independent reviewer found no blocking source or test issue and requested only the status corrections in this update. After reviewer verification, follow the ordinary merge, trusted-main CI/publisher, and live RSS verification path. The local 50-item render is not a public feed release.
+2. **PR #42 RSS:** released and verified live with 50 source-linked items. PR #52 updates the authoritative RSS prose/date formatting as part of the new personality revision; that candidate still requires existing qualification and live verification. Do not reopen the completed initial RSS release.
 3. **Refresh continuity:** trusted-main run 42649253851 recovered the earlier failed publisher and verified one deployment. Continue checking the scheduled refreshes and weekly publication against the original stabilization criteria; do not call one successful run a completed stabilization window.
 4. **P4 planning/permit qualification:** PR #44 only corrected CKAN metadata. Continue source-generation/count, row-identity, complete-capture, licence and geographic qualification using the established resumable controls when the permitted source/runner path is available. Keep all permit exports disabled; the OAR tunnel 403 remains an access boundary.
 5. **Remaining P0-P8 scope:** finish P2 resident journeys, planning and permit qualification, P5/P6 development representation and integrated briefs/change history, and the remaining stabilization checks. Keep each source's gaps visible until qualified; preserve the adopted direction and standalone mark; do not use an unqualified lockup.

@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.build_rss import EVENT_KINDS, LICENCE_URL, SOURCE_URL, FeedError, load_events
+from scripts.build_rss import EVENT_KINDS, LICENCE_URL, SOURCE_URL, FeedError, load_events, reader_date
 
 SITE_URL = "https://scarb.to/"
 BRIEFS_URL = f"{SITE_URL}briefs/"
@@ -133,7 +133,7 @@ def _content_payload(start: date, end: date, events: list[dict]) -> dict:
 
 
 def _fmt_date(value: date) -> str:
-    return value.strftime("%b %-d, %Y") if os.name != "nt" else value.strftime("%b %#d, %Y")
+    return reader_date(value, weekday=False)
 
 
 def _render_edition(payload: dict, record: dict) -> bytes:
@@ -142,7 +142,7 @@ def _render_edition(payload: dict, record: dict) -> bytes:
     events = payload["events"]
     kind_counts = Counter(event["kind"] for event in events)
     area_counts = Counter(event["neighbourhood"] for event in events)
-    title = f"Food inspection updates {start:%b %d}–{end:%b %d, %Y}"
+    title = f"Food inspection updates: {_fmt_date(start)} to {_fmt_date(end)}"
     esc = html.escape
     rows = [
         f'<li id="event-{esc(event["id"])}">'
@@ -150,8 +150,9 @@ def _render_edition(payload: dict, record: dict) -> bytes:
         f'<span>({esc(event["neighbourhood"])}; neighbourhood named in the City record)</span> '
         f'<span>DineSafe result when added: {esc(event["status"])}.</span> '
         + (f'<span>Previous status: {esc(event["previous_status"])}.</span> ' if event["kind"] == "status_changed" and event["previous_status"] else "")
-        + f'<span>Inspection date: {esc(event["inspection_date"])}.</span> '
-        + f'<span>Added to Scarb.TO: {esc(datetime.fromisoformat(event["detected_at"]).astimezone(ZoneInfo(TORONTO)).strftime("%b %d, %Y %H:%M %Z"))}.</span>'
+        + f'<span>Inspection date: <time datetime="{esc(event["inspection_date"])}">{reader_date(date.fromisoformat(event["inspection_date"]))}</time>.</span> '
+        + f'<span>Added to Scarb.TO: <time datetime="{esc(event["detected_at"])}">{reader_date(datetime.fromisoformat(event["detected_at"]).astimezone(ZoneInfo(TORONTO)).date())}</time>.</span>'
+        + f'<details><summary>Exact recording time</summary><p>I first recorded this update at {esc(event["detected_at"])}. This is not the inspection time or this page\'s publication time.</p></details>'
         + "</li>"
         for event in events
     ]
@@ -168,7 +169,7 @@ def _render_edition(payload: dict, record: dict) -> bytes:
         correction = (
             f'<aside><strong>Correction, revision {record["revision"]}:</strong> '
             f'{esc(record["correction_explanation"])} '
-            f'<span>Updated {esc(record["revised_at"])}.</span></aside>'
+            f'<span>Updated {reader_date(datetime.fromisoformat(record["revised_at"]).astimezone(ZoneInfo(TORONTO)).date())}.</span></aside>'
         )
     first_generated = esc(record["generated_at"])
     page = f'''<!doctype html>
@@ -176,7 +177,7 @@ def _render_edition(payload: dict, record: dict) -> bytes:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Food inspection updates added to Scarb.TO during the week shown, with the City records and dates behind them.">
+  <meta name="description" content="Explore a week of Scarborough food inspection updates with me, with dates and City DineSafe sources to follow.">
   <link rel="canonical" href="{BRIEFS_URL}{start.isoformat()}/">
   <link rel="alternate" type="application/rss+xml" title="Scarb.TO food inspection updates" href="/feed.xml">
   <title>{esc(title)} | Scarb.TO</title>
@@ -186,15 +187,16 @@ def _render_edition(payload: dict, record: dict) -> bytes:
   <nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/briefs/">All weekly briefs</a> · <a href="/feed.xml">DineSafe RSS</a></nav>
   <main>
     <h1>{esc(title)}</h1>
-    <p>Here are the food inspection updates I added from {_fmt_date(start)} through {_fmt_date(end)}, using Toronto time. They come from City DineSafe records, not visits to these places. This is not a complete account of City activity, and results may have changed since.</p>
-    <details><summary>About these updates</summary><p><strong>{len(events)} recorded updates</strong> across {len(area_counts)} neighbourhood names in the City records. One place can have more than one update.</p>
+    <p>There's plenty to explore in Scarborough's food inspection records. I've brought together the updates I added from {_fmt_date(start)} through {_fmt_date(end)}. Start with a place you know, or follow a neighbourhood name and see what turns up.</p>
+    <p>These updates come from City DineSafe records, not visits to these places. This is not a complete account of City activity, and results may have changed since.</p>
+    <details><summary>Explore the week's patterns</summary><p>{len(events)} recorded updates span {len(area_counts)} neighbourhood names in the City records. One place can have more than one update. Here's how those records fit together.</p><p>I group each Monday-to-Sunday week using Toronto time (America/Toronto). Added dates use that same local calendar.</p>
     <div class="summary"><section><h2>What was added</h2><ul>{kinds}</ul></section><section><h2>By neighbourhood in the City records</h2><ul>{areas}</ul></section></div>
     <p>I use the neighbourhood names in DineSafe records. Some of those neighbourhoods extend beyond the six Scarborough wards used to select these places. The inspection date tells you when the inspection happened; “Added to Scarb.TO” tells you when I first recorded the update, not when this page went live. A place newly added here is not necessarily a new business.</p></details><p>These are dated results, not a current safety assessment. Check the City's record before relying on an older result.</p>
     {correction}
-    <h2>The updates</h2>
+    <h2>Explore the updates</h2>
     <ol>{''.join(rows)}</ol>
-    <p>See the source: <a href="{SOURCE_URL}">City of Toronto DineSafe Open Data</a>. This brief uses information licensed under the <a href="{LICENCE_URL}">Open Government Licence – Toronto</a>.</p>
-    <details><summary>Edition details</summary><p><small>Edition ID: {esc(record["id"])}. Revision: {record["revision"]}. First prepared: {first_generated} (UTC). That is when this edition was made, not when it went live. I leave individual addresses and map coordinates out of these briefs.</small></p></details><p>Scarb.TO's editorial voice is AI-assisted, not first-hand reporting.</p>
+    <p>Want to follow the trail? Start with <a href="{SOURCE_URL}">City of Toronto DineSafe Open Data</a>. This brief uses information licensed under the <a href="{LICENCE_URL}">Open Government Licence – Toronto</a>.</p>
+    <details><summary>How this edition was made</summary><p><small>Edition ID: {esc(record["id"])}. Revision: {record["revision"]}. First prepared: {first_generated} (UTC). Revised: {esc(record["revised_at"] or "Not revised")}. These are the edition's preparation times, not when it went live. I leave individual addresses and map coordinates out of these briefs.</small></p></details><p>I love following these records. Scarb.TO's editorial voice is AI-assisted, not first-hand reporting.</p>
   </main>
 </body>
 </html>
@@ -215,7 +217,7 @@ def _render_index(manifest: dict, current_start: date, current_end: date, has_cu
         quiet = ""
     page = f'''<!doctype html>
 <html lang="en-CA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Weekly briefs | Scarb.TO</title><style>body{{font:1rem/1.55 system-ui,sans-serif;max-width:60rem;margin:auto;padding:1rem;color:#163c3c}}a{{color:#075c73}}li{{margin:.75rem 0}}</style></head>
-<body><nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/feed.xml">DineSafe RSS</a></nav><main><h1>Weekly food inspection briefs</h1><p>A week at a time: the food inspection updates I added from City DineSafe records, with dates and sources so you can look closer. A week without new records here does not mean nothing happened. I only make a brief when there are updates to share.</p>{quiet}<h2>Published editions</h2><ul>{links}</ul></main></body></html>
+<body><nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/feed.xml">DineSafe RSS</a></nav><main><h1>A week of food inspection discoveries</h1><p>I love seeing how these records fit together. Pick a week and explore the food inspection updates I gathered from City DineSafe records, with dates and sources to follow. A week without new records here does not mean nothing happened. I only make a brief when there are updates to share.</p>{quiet}<h2>Choose a week to explore</h2><ul>{links}</ul></main></body></html>
 '''
     return page.encode("utf-8")
 

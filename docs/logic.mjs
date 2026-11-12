@@ -1,3 +1,4 @@
+import {readerDate} from './reader-date.mjs';
 import {areaMatches} from './area-selection.mjs';
 /** Pure presentation/filtering functions; safe to test without a browser. */
 export const STATUS = ['Pass', 'Conditional Pass', 'Closed'];
@@ -51,9 +52,10 @@ export function cityCatalogueRefreshText(value) {
   if (typeof value !== 'string') return 'The City has not supplied a catalogue refresh time';
   const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$/);
   if (!match) return 'The City has not supplied a catalogue refresh time';
-  const [, date, clock, zone] = match;
-  const suffix = zone ? (zone === 'Z' ? ' UTC' : ' ' + zone) : (clock ? ' (time zone not specified)' : ' (date only)');
-  return 'City catalogue date: ' + date + (clock ? ' ' + clock : '') + suffix;
+  const formatted = readerDate(value);
+  if (formatted === 'Date unavailable') return 'The City has not supplied a usable catalogue date';
+  // Unknown-zone source dates are displayed as stated, never shifted to Toronto.
+  return 'City catalogue date: ' + formatted;
 }
 
 export function fitBoundsFromFeatures(features) {

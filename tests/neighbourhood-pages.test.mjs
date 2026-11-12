@@ -31,8 +31,9 @@ test('the generated West Rouge route and alias match their reusable source templ
   const template=readFileSync(new URL('../docs/neighbourhood-page.template.html',import.meta.url),'utf8');
   const pages=buildPageFiles(NEIGHBOURHOODS,template);
   assert.equal(pages.get('docs/west-rouge/index.html').includes('<h1 id="page-title">West Rouge</h1>'),true);
-  assert.match(pages.get('docs/west-rouge/index.html'),/Here's what the City's DineSafe records say about West Rouge/);
+  assert.match(pages.get('docs/west-rouge/index.html'),/Let's explore West Rouge/);
   assert.match(pages.get('docs/west-rouge/index.html'),/I use the neighbourhood listed in each City record, just like the map/);
+  assert.match(pages.get('docs/west-rouge/index.html'),/neighbourhood boundaries and ward boundaries don't always line up/);
   assert.match(renderAliasPage('westrouge','west-rouge'),/location\.replace\("\/west-rouge\/"\+location\.search\+location\.hash\)/);
 });
 

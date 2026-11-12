@@ -1,3 +1,4 @@
+import {readerDate, readerDateTime} from './reader-date.mjs';
 import {areaFor, areaForName} from './area-selection.mjs';
 import {createAreaExplorer} from './area-explorer.mjs';
 import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, displayAddress, cityCatalogueRefreshText, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from './logic.mjs';
@@ -82,15 +83,8 @@ function els(tag, cls, value) {
   if (value !== undefined && value !== null) element.textContent = String(value);
   return element;
 }
-function publishedAt(iso) {
-  const date=new Date(iso);
-  if (!Number.isFinite(date.valueOf())) return 'date unavailable';
-  return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(date);
-}
-function localDate(iso) {
-  const t = Date.parse((iso || '').slice(0,10)+'T12:00:00Z');
-  return Number.isFinite(t) ? new Intl.DateTimeFormat('en-CA',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}).format(t):'Date unavailable';
-}
+function publishedAt(iso) { return readerDate(iso); }
+function localDate(iso) { return readerDate(iso); }
 function outcomeClass(status){return status==='Closed'?'closed':status==='Conditional Pass'?'conditional':'pass';}
 function addStatusMarkerImages(mapInstance){
   const definitions=[
@@ -122,7 +116,7 @@ function syncDataStatus() {
   if(state.mode==='selected-calls'){
     if(selectedCallsViewState.status==='available')status.classList.add('warning');else if(selectedCallsViewState.reason!=='loading')status.classList.add('error');
     status.textContent=selectedCallsViewState.status==='available'
-      ? `TPS last changed these records ${publishedAt(selectedCallsViewState.sourceEditedAt)}; checked ${publishedAt(selectedCallsViewState.fetchedAt)}. Older counts are removed.`
+      ? `TPS last changed these records ${readerDateTime(selectedCallsViewState.sourceEditedAt)}; checked ${readerDateTime(selectedCallsViewState.fetchedAt)}. Older counts are removed.`
       : selectedCallsViewState.reason==='loading'?'Loading selected TPS call counts for Divisions 41, 42 and 43.'
       : 'I cannot verify fresh selected-call counts right now, so none are shown.';
     return;
@@ -131,7 +125,7 @@ function syncDataStatus() {
     if(beachPreviewState==='loading')status.textContent='Loading the historical beach samples.';
     else if(beachPreview){
       const latest=beachPreview.records.reduce((value,row)=>row.collectionDate>value?row.collectionDate:value,'0000-00-00');
-      status.textContent=`City sample records checked ${beachPreview.retrieved_on}; latest sample ${latest}. Not current swimming advice.`;
+      status.textContent=`City sample records checked ${readerDate(beachPreview.retrieved_on)}; latest sample ${readerDate(latest)}. Not current swimming advice.`;
       status.classList.add('warning');
     }else{
       status.textContent='I could not load the historical beach samples. They are not current swimming advice.';
@@ -216,7 +210,7 @@ function performFilters() {
     usingBeach=true;visiblePlaces=[];visibleActivity=[];usingActivity=false;
     $('results-kicker').textContent='Toronto Open Data · dated samples';
     $('results-title').textContent=beachPreview?.beach_name||'Beach samples';
-    $('results-caption').textContent='Here are a few historical water samples from the City catalogue. They describe the dates shown, not whether it is safe to swim today.';
+    $('results-caption').textContent='These water samples open another trail through the records. Here are a few records from the City catalogue to explore by date. They are historical measurements, not current swimming advice.';
     updateSource();renderList();
     return;
   }
@@ -224,8 +218,8 @@ function performFilters() {
   if(!snapshot?.ready){
     visiblePlaces=[];visibleActivity=[];usingActivity=false;
     $('results-kicker').textContent='Official inspections';
-    $('results-title').textContent='Matching places';
-    $('results-caption').textContent='Results follow the map and your filters.';
+    $('results-title').textContent='Places to explore';
+    $('results-caption').textContent='Explore the map or browse the list. Your filters work in both.';
     updateSource();renderList();
     return;
   }
@@ -238,10 +232,10 @@ function performFilters() {
   const activeIds=new Set(visibleActivity.map(e=>e.establishment_id));
   visiblePlaces=usingActivity ? eligible.filter(e=>activeIds.has(e.id)) : filterEstablishments(snapshot.establishments||[],state);
   $('results-kicker').textContent=state.mode==='recent'?(usingActivity?'Added to Scarb.TO':'Latest City inspection records'):'Places with DineSafe records';
-  $('results-title').textContent=state.mode==='recent'?(usingActivity?'Recent changes':'Recently inspected'):'Matching places';
-  $('results-caption').textContent=usingActivity?'Here’s what I found comparing the City records from day to day. The inspection date may be earlier than when a record first appeared here.':
-    state.mode==='recent'?'These places have recent inspection dates. That doesn’t mean their records are new; check the City’s record for current details.':
-    'Here’s the latest City inspection record I have for each place.';
+  $('results-title').textContent=state.mode==='recent'?(usingActivity?'Recent changes':'Recently inspected'):'Places to explore';
+  $('results-caption').textContent=usingActivity?'This is where the records get interesting: compare them from day to day and the changes come into view. Here’s what I found in DineSafe. The inspection date may be earlier than when a record first appeared here.':
+    state.mode==='recent'?'Here’s another way into the records: places with recent inspection dates. That doesn’t mean their records are new; check the City’s record for current details.':
+    'Pick a place and explore its latest DineSafe inspection record with me. Each one links back to the City source.';
   updateSource();renderList();areaExplorer?.sync();
 }
 function renderList({focusMore = false, revealSelection = false} = {}) {
@@ -291,7 +285,7 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
   }
   $('results-count').textContent=`${records.length.toLocaleString('en-CA')} in view`;
   if(!records.length){
-    list.append(els('p','empty','No places match this view. Try fewer filters or show all of Scarborough. This does not mean nothing has happened here.'));
+    list.append(els('p','empty','No places match this view. There is more to explore: try fewer filters or show all of Scarborough. Missing results do not mean nothing has happened here.'));
     const actions=els('div','empty-actions');
     const reset=els('button','empty-action','Clear filters');reset.type='button';reset.addEventListener('click',()=>$('reset').click());actions.append(reset);
     if(map){const fit=els('button','empty-action','Fit Scarborough');fit.type='button';fit.addEventListener('click',fitAll);actions.append(fit);}
@@ -398,7 +392,7 @@ function setMapUnavailable(error) {
   panel?.classList.add('map-unavailable');
   const fallback=$('map-fallback');
   fallback.hidden=false;
-  fallback.textContent='The map could not load. You can still search, filter and open the City records in the list below.';
+  fallback.textContent='The map could not load, but you can keep exploring. Search, filter and open the source records in the list below.';
   $('map').setAttribute('aria-hidden','true');
   $('fit').hidden=true;
   $('fit').disabled=true;

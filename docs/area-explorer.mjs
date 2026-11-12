@@ -1,3 +1,4 @@
+import {readerDate} from './reader-date.mjs';
 import {areaFor, areaMatches, councillorFor, NEIGHBOURHOODS, WARDS, validateAreaFeatures, BOUNDARY_SOURCES} from './area-selection.mjs';
 import {fitBoundsFromFeatures} from './logic.mjs';
 import {neighbourhoodPagePath} from './neighbourhood-routes.mjs';
@@ -114,10 +115,10 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     if (snapshot?.published_at) {
       const stamp=new Date(snapshot.published_at);
       const published=Number.isFinite(stamp.valueOf())
-        ? new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',dateStyle:'medium',timeStyle:'short'}).format(stamp)
+        ? readerDate(snapshot.published_at)
         : 'unavailable';
-      const catalogue=typeof snapshot.source?.last_refreshed==='string' ? snapshot.source.last_refreshed : 'not supplied';
-      addText(dine,'p','area-disclaimer','Records checked for Scarb.TO: '+published+'; City catalogue date: '+catalogue+' (the City may not specify a time zone).');
+      const catalogue=typeof snapshot.source?.last_refreshed==='string' ? readerDate(snapshot.source.last_refreshed) : 'not supplied';
+      addText(dine,'p','area-disclaimer','Records checked for Scarb.TO: '+published+'; City catalogue date: '+catalogue+'.');
       if (Number.isFinite(stamp.valueOf()) && Date.now()-stamp.valueOf()>48*60*60*1000)
         addText(dine,'p','area-disclaimer','These records may be out of date. Check the City record before relying on them.');
     }
@@ -125,9 +126,9 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     if (area.kind==='ward') {
       const rep=councillorFor(area.code);
       const r=section(content,'City councillor',rep.name+' · '+rep.role);
-      if(rep.transition) addText(r,'p','area-disclaimer',rep.transition+' is councillor-elect; term begins November 15, 2026.');
+      if(rep.transition) addText(r,'p','area-disclaimer',rep.transition+' is councillor-elect; term begins Sunday, November 15, 2026.');
       addLink(r,'City profile and contact details',rep.url);
-      addText(r,'p','area-disclaimer','I checked this officeholder information on October 31, 2026. The City profile is the place to confirm any changes.');
+      addText(r,'p','area-disclaimer','I checked this officeholder information on Saturday, October 31, 2026. The City profile is the place to confirm any changes.');
       content.prepend(r);
     } else {
       const names=area.wards.map(code=>'Ward '+code);
@@ -138,13 +139,13 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
         const rep=councillorFor(code);
         addLink(r,'Ward '+code+': '+rep.name+' · City office',rep.url);
       }
-      addText(r,'p','area-disclaimer','These wards overlap the neighbourhood on the City map. The list does not mean the whole neighbourhood sits in each ward, or show how many residents live in each part.');
+      addText(r,'p','area-disclaimer','Here’s a detail worth exploring: neighbourhood and ward lines can cross. These are the wards that overlap this neighbourhood on the City map, not a count of residents or a claim that the whole neighbourhood sits in each ward.');
       addText(r,'p','area-disclaimer','I include 30 whole City neighbourhoods with most of their land area in Scarborough. The City does not assign them to a Scarborough district in this dataset. DineSafe places follow a separate rule: they must lie within the six Scarborough wards.');
-      const page=section(content,'Neighbourhood page','Find this neighbourhood again, with its City sources in one place.');
+      const page=section(content,'Neighbourhood page','Keep exploring this neighbourhood, with its records and boundary sources together on one page.');
       addLink(page,'Open '+area.name+' neighbourhood page',neighbourhoodPagePath(area.code));
     }
     const ridings=section(content,'Provincial & federal representatives',
-      'Provincial and federal ridings have different boundaries from City wards and neighbourhoods. Use your address to find the right MPP or MP.');
+      'There is another set of boundaries to explore: provincial and federal ridings. They differ from City wards and neighbourhoods, so use your address to find the right MPP or MP.');
     addLink(ridings,'Find your Ontario MPP','https://www.ola.org/en/members/current');
     addLink(ridings,'Find your federal riding','https://www.elections.ca/Scripts/vis/FindED?L=e&PAGEID=20&QID=-1');
     section(content,'Historical crime',area.kind==='ward'

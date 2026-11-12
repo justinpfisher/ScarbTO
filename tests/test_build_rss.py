@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
 
-from scripts.build_rss import FEED_URL, LICENCE_URL, SOURCE_URL, FeedError, build_feed, load_events, write_feed
+from scripts.build_rss import FEED_URL, LICENCE_URL, SOURCE_URL, FeedError, build_feed, load_events, write_feed, reader_date
 
 
 def make_event(event_id="0" * 20, *, month="2026-11", detected_at="2026-11-02T10:00:00+00:00", kind="status_changed", feed="dinesafe", **overrides):
@@ -51,8 +51,8 @@ class BuildRssTests(unittest.TestCase):
             items = channel.findall("item")
             self.assertEqual(root.tag, "rss")
             self.assertEqual(channel.findtext("lastBuildDate"), "Tue, 03 Nov 2026 00:00:00 +0000")
-            self.assertIn("Here are DineSafe changes I found in Scarborough, linked to the City source.", channel.findtext("description"))
-            self.assertIn("first-observed dates show when I recorded each change", channel.findtext("description"))
+            self.assertIn("with the City source so you can dig in too", channel.findtext("description"))
+            self.assertIn("added dates show when I first recorded each change", channel.findtext("description"))
             self.assertIn("The City status may have changed since.", channel.findtext("description"))
             self.assertIn("A place newly added here is not necessarily a new business.", channel.findtext("description"))
             self.assertIn("AI-assisted, not first-hand reporting", channel.findtext("description"))
@@ -65,7 +65,9 @@ class BuildRssTests(unittest.TestCase):
             self.assertEqual(items[0].findtext("guid"), "urn:scarbto:dinesafe:" + "1" * 20)
             self.assertEqual(items[0].findtext("pubDate"), "Mon, 02 Nov 2026 10:00:00 +0000")
             self.assertEqual(items[0].findtext("link"), SOURCE_URL)
-            self.assertIn("Added to Scarb.TO: 2026-11-02T10:00:00+00:00", items[0].findtext("description"))
+            self.assertIn("Added to Scarb.TO: Monday, November 2, 2026", items[0].findtext("description"))
+            self.assertIn("Inspection date: Saturday, October 31, 2026", items[0].findtext("description"))
+            self.assertNotIn("T10:00:00", items[0].findtext("description"))
             self.assertIn("not the inspection date", items[0].findtext("description"))
             self.assertIn("not a current safety assessment", items[0].findtext("description"))
             self.assertIn("Cafe &amp; &lt;Kitchen&gt;", xml)
@@ -73,6 +75,17 @@ class BuildRssTests(unittest.TestCase):
             self.assertNotIn("43.8", xml)
             self.assertNotIn("-79.2", xml)
             self.assertEqual(FEED_URL, "https://scarb.to/feed.xml")
+
+    def test_reader_dates_use_toronto_day_without_changing_rss_timestamp(self):
+        with tempfile.TemporaryDirectory() as temp:
+            history = Path(temp)
+            write_archive(history, "2026-11", [make_event(detected_at="2026-11-02T01:30:00+00:00")])
+            root = ET.fromstring(build_feed(load_events(history), built_at=datetime(2026, 11, 3, tzinfo=timezone.utc)))
+            item = root.find("channel/item")
+            self.assertIn("Added to Scarb.TO: Sunday, November 1, 2026", item.findtext("description"))
+            self.assertEqual(item.findtext("pubDate"), "Mon, 02 Nov 2026 01:30:00 +0000")
+            self.assertEqual(item.findtext("guid"), "urn:scarbto:dinesafe:" + "0" * 20)
+        self.assertEqual(reader_date(datetime(2026, 11, 10).date()), "Tuesday, November 10, 2026")
 
     def test_omits_non_dinesafe_feeds(self):
         with tempfile.TemporaryDirectory() as temp:
