@@ -12,6 +12,7 @@ These rules apply to automated agents, contributors and development workflows. R
 - `typeDesc` in the current DineSafe resource is inspection-detail text, not an establishment category; do not present it as a category. Normalise missing-value placeholders without inventing addresses.
 - Keep validated changes reusable across lists, maps and future neighbourhood briefs. Prefer small file-based history archives over a database while that remains adequate.
 - Keep incremental infrastructure at or below C$25/month (target C$0) and routine maintenance at 2–4 hours/week. Avoid unnecessary servers, credentials, accounts, paid APIs or approval ceremonies.
+- **Owner clarification, 12 November 2026:** no recurring human content curation. Use qualified sources and reusable generators for neighbourhood pages, briefs and newspaper downloads; do not create a manually maintained calendar, routine story-writing duty or moderated publication-submission queue. New sources need automatic freshness/expiry/correction handling, with honest staleness and last-good retention. Prominent neighbourhood maps, multiple saved public areas and the separate branding/newspaper dependencies are recorded in `ARCHITECTURE.md`; use the existing release queue.
 
 ## Mandatory GMKtec-first execution policy
 
@@ -28,7 +29,7 @@ These rules apply to automated agents, contributors and development workflows. R
 ## Autonomy and owner boundaries
 
 - Within the agreed Scarb.TO MVP and its stabilization, independently choose technical approaches, complete necessary in-scope work, troubleshoot, fix and retest, open and update normal pull requests, and carry work through required checks, merge, deployment, live verification, and milestone acceptance against the existing agreed criteria. Do not add routine approval checkpoints.
-- The integrated resident release and its execution are approved in `ARCHITECTURE.md`: complete resident experience, independently qualified planning and permit information, neighbourhood web briefs and RSS; email later. Preserve the separately reserved adoption decision for the finished Lake & Land identity. Keep one owner for shared files and coordinate the active release/UX work rather than creating competing fixes.
+- The integrated resident release and its execution are approved in `ARCHITECTURE.md`: complete resident experience, independently qualified planning and permit information, neighbourhood web briefs and RSS; email later. The owner's separate branding exercise now determines future logo and colours; preserve the deployed identity until replacement assets are owner-selected and qualified. Keep dot as sole release coordinator, with one owner for shared files, and integrate UX work into the existing queue rather than creating competing fixes.
 - Keep the owner informed at meaningful milestones and with concise status updates. Preserve the product goal, evidence integrity, source/privacy/consent boundaries, existing test and release requirements, and mandatory platform or provider confirmations.
 - Bring material changes to product scope or end goal to the owner. Do not contact other people or agencies on the owner's behalf. Forecast likely spending constraints to the owner early and ask for a decision before any limit would be exceeded; keep the existing C$25/month ceiling and C$0 target, and do not add paid services.
 - This autonomy does not authorize credential or access changes, security-setting changes, irreversible deletion, or new product scope. Never run untrusted public pull-request code on a persistent self-hosted runner or bypass Scarb.TO's runner trust and execution constraints.
@@ -40,4 +41,5 @@ These rules apply to automated agents, contributors and development workflows. R
 - Do not modify domain DNS, unrelated mail records, repository visibility or private credentials merely to advance an ordinary feature.
 - Work independently through manageable blockers. If physical GMKtec/provider access is unavailable, complete safe independent changes and record the precise outstanding owner action in CURRENT_STATE.md. Do not repeatedly ask for an approval already granted.
 - Retire superseded branches/PRs after confirming that newer merged work covers them. Keep one primary integration queue; the GitHub repository is the source of truth.
+
 
