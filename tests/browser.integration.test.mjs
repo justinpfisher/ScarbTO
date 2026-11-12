@@ -272,6 +272,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
 
   await page.getByRole('button', {name: 'Beach samples'}).click();
   assert.equal(await page.locator('#food-filters').isVisible(),false,`${name}: irrelevant food controls are not shown on the beach topic`);
+  assert.match(await page.locator('#beach-filter-note').textContent(), /Choose Browse updates or All places to search food inspection records/, `${name}: beach guidance explains how to return to food search`);
   assert.equal(await page.locator('.header-right a[href="/neighbourhoods/"]').isVisible(),true,`${name}: neighbourhood directory is discoverable`);
   assert.match(await page.locator('#map').getAttribute('aria-label'),/beach reference point, not the individual sampling locations/i,`${name}: map label explains the beach marker location`);
   await page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
