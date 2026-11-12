@@ -23,17 +23,38 @@ assert.equal(feature.properties.status, "Beach sample");
 
 const rendered = renderBeachSamplePreview(fakeDocument(), preview);
 assert.equal(rendered.children[0].textContent, "Bluffer's Beach Park");
-assert.match(rendered.children[1].textContent, /not current swimming advice/i);
-assert.match(rendered.children[1].textContent, /out of 10,300 for this beach/);
-assert.equal(rendered.children[2].children.length, 10);
-assert.match(rendered.children[2].children[0].children[0].textContent, /^Wednesday, September 16, 2026$/);
-assert.match(rendered.children[2].children[0].children[2].textContent, /No E\. coli number was recorded/);
-assert.equal(rendered.children[2].children[0].children[0].dateTime, "2026-09-16");
-assert.match(rendered.children[3].textContent, /Tuesday, October 27, 2026/);
-assert.equal(rendered.children[4].href, "https://open.toronto.ca/dataset/toronto-beaches-water-quality/");
-assert.equal(rendered.children[5].href, "https://open.toronto.ca/open-data-licence/");
-assert.equal(rendered.children[6].href, "https://www.toronto.ca/community-people/health-wellness-care/health-inspections-monitoring/swimsafe/beach-water-quality/");
+assert.equal(rendered.children[1].textContent, "These are older water samples, not today’s swimming conditions. Check the City’s latest advice before swimming.");
+assert.equal(rendered.children[2].href, "https://www.toronto.ca/community-people/health-wellness-care/health-inspections-monitoring/swimsafe/beach-water-quality/");
+const dates = rendered.children[3];
+assert.equal(dates.children.length, 2, "Bluffer's ten records are grouped into two useful dates");
+assert.equal(dates.children[0].children[0].textContent, "Wednesday, September 16, 2026");
+assert.equal(dates.children[1].children[0].textContent, "Tuesday, September 8, 2026");
+assert.equal(dates.children[0].children[1].textContent, "5 sample records. None includes an E. coli number. A missing number is not a zero.");
+const details = rendered.children[4];
+assert.equal(details.tag, "details");
+assert.equal(details.open, undefined, "technical/source details start collapsed");
+assert.match(details.children[1].textContent, /out of 10,300 for this beach/);
+const records = details.children[2];
+assert.equal(records.children.length, 10);
+for (let index = 0; index < preview.records.length; index++) {
+  assert.equal(records.children[index].children[0].dateTime, preview.records[index].collectionDate);
+  assert.equal(records.children[index].children[1].textContent, `Site ${preview.records[index].siteName}`);
+  assert.equal(records.children[index].children[2].textContent, "No E. coli number was recorded");
+}
+assert.match(details.children[3].textContent, /Tuesday, October 27, 2026/);
+assert.equal(details.children[4].href, "https://open.toronto.ca/dataset/toronto-beaches-water-quality/");
+assert.equal(details.children[5].href, "https://open.toronto.ca/open-data-licence/");
 assert.ok(rendered.children.every(child => child.innerHTML === undefined));
+
+const mixed = structuredClone(preview);
+mixed.records[0].eColi = 0;
+mixed.records[1].eColi = 7;
+const mixedRendered = renderBeachSamplePreview(fakeDocument(), mixed);
+assert.equal(mixedRendered.children[3].children[0].children[1].textContent,
+  "5 sample records. Recorded E. coli numbers: 0, 7. 3 records have no E. coli number. A missing number is not a zero.");
+assert.equal(mixedRendered.children[4].children[2].children[0].children[2].textContent, "E. coli measurement: 0");
+assert.equal(mixedRendered.children[4].children[2].children[2].children[2].textContent, "No E. coli number was recorded");
+assert.deepEqual(preview.records.map(row => row.eColi), Array(10).fill(null), "rendering does not fill missing source numbers");
 
 for (const mutate of [
   value => { value.resource_id = "other"; },

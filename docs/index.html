@@ -24,11 +24,10 @@
     </header>
     <div class="intro-row">
       <div><p class="intro-tagline">Scarborough. I looked into it.</p><h1>So much to explore in Scarborough.</h1><p>I love following the data trails here. Come explore the places, records and boundaries I’ve brought together.</p></div>
-      <div class="data-status" id="data-status" role="status" aria-live="polite">Getting the saved food inspection records ready to explore.</div>
     </div>
     <div class="app-wrap">
       <aside class="filters" aria-label="Map filters">
-        <div class="filter-topline"><span class="eyebrow">Explore the area</span><span class="data-pill">DineSafe</span><button class="mobile-filter-toggle" id="toggle-filters" type="button" aria-expanded="false" aria-controls="filter-options">Filters</button></div>
+        <div class="filter-topline"><span class="eyebrow">Explore the area</span><button class="mobile-filter-toggle" id="toggle-filters" type="button" aria-expanded="false" aria-controls="filter-options">Filters</button></div>
         <div class="area-boundary-controls" role="group" aria-label="Optional map boundary overlays">
           <span class="area-controls-label">Boundaries</span>
           <div class="area-toggle-list">
@@ -43,7 +42,7 @@
           <button class="tab active" data-mode="recent" type="button" aria-pressed="true">Browse updates</button>
           <button class="tab" data-mode="all" type="button" aria-pressed="false">All places</button>
           <button class="tab" data-mode="beach" type="button" aria-pressed="false">Beach samples</button>
-          <button class="tab" data-mode="selected-calls" type="button" aria-pressed="false">Selected police calls</button>
+          <button class="tab" data-mode="selected-calls" type="button" aria-pressed="false">Police calls by division</button>
         </div>
         <p id="beach-filter-note" class="filter-note" hidden>These are historical beach samples, not today's swimming advice. The search and filters below are for food inspections.</p>
         <p id="selected-calls-filter-note" class="filter-note" hidden>When you open this view, I request totals from Toronto Police Service's Esri service. They stay only in this tab's memory until they expire. I don't request individual calls or their locations.</p>
@@ -87,6 +86,8 @@
         <section class="results" id="results" aria-labelledby="results-title">
           <div class="results-header"><div><p class="eyebrow" id="results-kicker">Food inspection results</p><h2 id="results-title">Places to explore</h2></div><span id="results-count" aria-live="polite"></span></div>
           <p class="results-caption" id="results-caption">Explore the map or browse the list. Your filters work in both.</p>
+          <p class="data-status" id="data-status" role="status" aria-live="polite">Getting the saved food inspection records ready to explore.</p>
+          <details class="source-provenance" id="source-provenance"><summary>About these records</summary><div id="source-provenance-content"></div></details>
           <aside id="area-panel" class="area-panel" aria-labelledby="area-title" hidden>
             <div class="area-panel-header">
               <div class="area-panel-heading"><p class="area-eyebrow">Explore area</p><h3 id="area-title" tabindex="-1"></h3><p id="area-subtitle"></p></div>

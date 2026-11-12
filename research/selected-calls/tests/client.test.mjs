@@ -1,9 +1,50 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { SelectedCallsClient, selectedCallsPolicy } from "../client.mjs";
+import { selectedCallsMessage } from "../../../docs/selected-calls.mjs";
 
 const now0 = Date.parse("2026-10-27T12:00:00.000Z");
 const edit0 = now0 - 5 * 60_000;
+
+test("reader reasons distinguish freshness, consistency and verification failures", async () => {
+  for (const [options, reason, copy] of [
+    [{beforeEdit:now0 - 31 * 60_000}, "source data is stale", /more than 30 minutes old/],
+    [{countAfter:17}, "source changed during request", /changed the records while I was checking/],
+    [{groupedPatch:{exceededTransferLimit:true}}, "source verification failed", /verify the TPS totals against the source checks/],
+    [{beforeEdit:now0 + 120_000}, "source timestamp invalid", /verify the age/],
+  ]) {
+    const {client} = harness(options);
+    const state = await client.load();
+    assert.equal(state.status,"unavailable");
+    assert.equal(state.reason,reason);
+    assert.deepEqual(state.counts,[]);
+    assert.match(selectedCallsMessage(state),copy);
+  }
+});
+
+test("unknown network errors never become fabricated outages or echoed source errors", async () => {
+  const client = new SelectedCallsClient({fetchImpl:async()=>{throw new TypeError("private diagnostic / CORS speculation");}});
+  client.setVisible(true);
+  const state = await client.load();
+  assert.equal(state.reason,"source data unavailable");
+  assert.match(selectedCallsMessage(state),/This browser could not retrieve/);
+  assert.doesNotMatch(selectedCallsMessage(state),/private|CORS|outage/);
+  assert.equal(selectedCallsMessage({reason:"<remote arbitrary text>"}),"I could not verify the TPS totals, so no counts are shown.");
+});
+
+test("reader messages retain distinct expiry, timeout and cooldown explanations",()=>{
+  for (const [reason,copy] of [
+    ["source request timed out",/within 8 seconds/],
+    ["cached counts expired",/more than 10 minutes/],
+    ["source data expired",/more than 30 minutes/],
+    ["refresh cooldown active",/at least 5 minutes apart/],
+    ["request cancelled",/cancelled/],
+    ["clock changed; refresh required",/clock changed/],
+    ["source response unavailable",/did not return a usable response/],
+  ]) assert.match(selectedCallsMessage({status:"unavailable",reason}),copy);
+  assert.match(selectedCallsMessage({status:"available"}),/Divisions 41, 42 and 43/);
+  assert.match(selectedCallsMessage({status:"available"}),/not all calls, crime, police activity or officer presence/);
+});
 
 function metadata(edit = edit0, { dataEdit = edit, schemaEdit = edit } = {}) {
   return { fields: [{ name: "OBJECTID", type: "esriFieldTypeOID" }, { name: "DIVISION", type: "esriFieldTypeString" }], editingInfo: { lastEditDate: edit, dataLastEditDate: dataEdit, schemaLastEditDate: schemaEdit } };

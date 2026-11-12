@@ -325,6 +325,13 @@ def normalise(csv_data: bytes, wards: dict, neighbourhoods: dict, *, minimum: in
         if not name:
             continue
         status = status_string(as_string(row, 'inspectionStatus', 'ESTABLISHMENT_STATUS'))
+        # The approved feed has one row per finding, not one row per inspection.
+        # Preserve its public source fields and row identity; no inspection ID is supplied.
+        finding = {key: row.get(keyify(source)) for key, source in (
+            ('row_id', 'unique_id'), ('wording', 'typeDesc'), ('category', 'deficiencyDesc'),
+            ('severity', 'severity'), ('observation', 'observation'),
+            ('inspection_date', 'inspectionDate'), ('outcome_date', 'OutcomeDate'),
+            ('outcome', 'OutcomeDesc'), ('fine', 'amountFined'))}
         item = {
             'id': ident, 'name': name,
             'address': clean_address(as_string(row, 'address', 'ESTABLISHMENT_ADDRESS')),
@@ -332,6 +339,8 @@ def normalise(csv_data: bytes, wards: dict, neighbourhoods: dict, *, minimum: in
             # establishment categories. Do not publish it as "type".
             'type': optional_text(as_string(row, 'ESTABLISHMENTTYPE', 'ESTABLISHMENT_TYPE')),
             'inspection_detail': optional_text(as_string(row, 'typeDesc')),
+            'inspection_findings': [finding] if any(finding.values()) else [],
+            'findings_coverage': 'All available source rows for this establishment, date and outcome; the source supplies no inspection identifier.',
             'status': status, 'inspection_date': day, 'latitude': lat, 'longitude': lon,
             'ward': ward, 'neighbourhood': matching_shape(lon, lat, neigh_shapes),
         }
@@ -340,9 +349,17 @@ def normalise(csv_data: bytes, wards: dict, neighbourhoods: dict, *, minimum: in
             newest[ident] = item
         elif day == old['inspection_date'] and status != old['status']:
             raise DataError(f'Conflicting outcomes on latest inspection date for establishment {ident}')
+        elif day == old['inspection_date']:
+            for previous_finding in old['inspection_findings']:
+                if finding['row_id'] and previous_finding['row_id'] == finding['row_id'] and previous_finding != finding:
+                    raise DataError(f'Conflicting source finding identity for establishment {ident}')
+            if any(finding.values()) and finding not in old['inspection_findings']:
+                old['inspection_findings'].append(finding)
     if city_rows < minimum:
         raise DataError(f'CSV contained only {city_rows} rows; expected >= {minimum}')
     establishments = sorted(newest.values(), key=lambda r: (r['name'].casefold(), r['id']))
+    for establishment in establishments:
+        establishment['inspection_findings'].sort(key=lambda finding: json.dumps(finding, sort_keys=True))
     if len(establishments) < minimum:
         raise DataError(f'Only {len(establishments)} Scarborough establishments; expected >= {minimum}')
     if geocoded_rows < len(establishments) or scarborough_rows < len(establishments):
@@ -550,13 +567,15 @@ def main() -> None:
     overlay_wards = qualified_area_features(wards, AREA_WARDS)
     overlay_neighbourhoods = qualified_area_features(neighbourhoods, AREA_NEIGHBOURHOODS)
     snapshot['activity'] = reconcile_activity_history(args.output, snapshot['activity'])
-    fields = ['id', 'name', 'address', 'type', 'inspection_detail', 'status', 'inspection_date', 'latitude', 'longitude', 'ward', 'neighbourhood',
+    fields = ['id', 'name', 'address', 'type', 'inspection_detail', 'inspection_findings', 'findings_coverage', 'status', 'inspection_date', 'latitude', 'longitude', 'ward', 'neighbourhood',
               'source_url', 'licence_url', 'collected_at']
     export = io.StringIO()
     writer = csv.DictWriter(export, fieldnames=fields)
     writer.writeheader()
     for entry in snapshot['establishments']:
-        line = {**entry, 'source_url': DATASET, 'licence_url': LICENCE, 'collected_at': snapshot['published_at']}
+        line = {key: entry.get(key) for key in fields}
+        line.update(source_url=DATASET, licence_url=LICENCE, collected_at=snapshot['published_at'])
+        line['inspection_findings'] = json.dumps(entry['inspection_findings'], ensure_ascii=False, sort_keys=True)
         # A downloadable CSV may be opened as a spreadsheet. Treat source-controlled
         # names and addresses as text, not user-executable spreadsheet formulae.
         for field in ('id', 'name', 'address', 'type', 'inspection_detail', 'ward', 'neighbourhood'):

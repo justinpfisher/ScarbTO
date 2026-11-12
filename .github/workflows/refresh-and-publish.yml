@@ -113,7 +113,7 @@ jobs:
             }
           }
       - name: JavaScript logic tests
-        run: node --test tests/logic.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs tests/boundary.test.mjs tests/area-selection.test.mjs tests/neighbourhood-pages.test.mjs
+        run: node --test tests/logic.test.mjs tests/view-state.test.mjs tests/inspection-findings.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs tests/boundary.test.mjs tests/area-selection.test.mjs tests/neighbourhood-pages.test.mjs
       - name: Offline research prototype tests
         run: python .github/scripts/test_research_prototypes.py
       - name: Beach sample view tests

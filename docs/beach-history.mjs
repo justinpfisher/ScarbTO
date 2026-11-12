@@ -58,7 +58,30 @@ export function renderBeachSamplePreview(document, input) {
   const title = document.createElement("h3");
   title.textContent = preview.beach_name;
   const note = document.createElement("p");
-  note.textContent = `These are historical samples, not current swimming advice. I have shown the latest ${preview.rows_included} records available when checked, out of ${preview.total_rows_in_source_filter.toLocaleString("en-CA")} for this beach. The map pin marks the beach, not the sampling spots. Contains information licensed under the Open Government Licence - Toronto.`;
+  note.textContent = "These are older water samples, not today’s swimming conditions. Check the City’s latest advice before swimming.";
+  const grouped = document.createElement("ol");
+  grouped.className = "beach-sample-date-list";
+  const dates = [...new Set(preview.records.map(record => record.collectionDate))].sort().reverse();
+  for (const collectionDate of dates) {
+    const samples = preview.records.filter(record => record.collectionDate === collectionDate);
+    const measured = samples.filter(record => record.eColi !== null);
+    const missing = samples.length - measured.length;
+    const item = document.createElement("li");
+    const date = document.createElement("time");
+    date.dateTime = collectionDate;
+    date.textContent = readerDate(collectionDate);
+    const summary = document.createElement("p");
+    summary.textContent = `${samples.length} sample ${samples.length === 1 ? "record" : "records"}. `
+      + (measured.length ? `Recorded E. coli numbers: ${measured.map(record => record.eColi).join(", ")}. ` : "")
+      + (missing ? `${missing === samples.length ? "None includes an E. coli number" : `${missing} ${missing === 1 ? "record has" : "records have"} no E. coli number`}. A missing number is not a zero.` : "");
+    item.append(date, summary);
+    grouped.append(item);
+  }
+  const details = document.createElement("details");
+  const detailTitle = document.createElement("summary");
+  detailTitle.textContent = "Sample records and sources";
+  const coverage = document.createElement("p");
+  coverage.textContent = `These are the latest ${preview.rows_included} sample records available when checked, out of ${preview.total_rows_in_source_filter.toLocaleString("en-CA")} for this beach, not its complete history. The map pin marks the beach, not the sampling spots. Contains information licensed under the Open Government Licence – Toronto.`;
   const records = document.createElement("ol");
   records.className = "beach-sample-preview-list";
   for (const record of preview.records) {
@@ -93,6 +116,7 @@ export function renderBeachSamplePreview(document, input) {
   currentInfo.target = "_blank";
   currentInfo.rel = "noopener noreferrer";
   currentInfo.textContent = "Check current City swimming advice";
-  section.append(title, note, records, captured, source, licence, currentInfo);
+  details.append(detailTitle, coverage, records, captured, source, licence);
+  section.append(title, note, currentInfo, grouped, details);
   return section;
 }

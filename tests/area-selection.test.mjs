@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {areaFor, areaForName, areaMatches, councillorFor, WARDS, NEIGHBOURHOODS, validateAreaFeatures} from '../docs/area-selection.mjs';
 import {filterEstablishments} from '../docs/logic.mjs';
+import {createAreaExplorer} from '../docs/area-explorer.mjs';
 
 function feature(code,name,lon=-79.25,lat=43.76) {
   return {type:'Feature',properties:{AREA_SHORT_CODE:code,AREA_NAME:name},
@@ -71,4 +72,64 @@ test('Ward 23 councillor transition is effective at term start, not election cer
   assert.equal(after.transition,null);
   assert.match(after.url,/councillor-ward-23/);
   assert.equal(councillorFor('20').name,'Parthi Kandavel');
+});
+
+function explorerHarness(t,initial={}) {
+  const priorDocument=globalThis.document,priorFetch=globalThis.fetch;
+  const node=()=>({hidden:false,textContent:'',value:'',dataset:{},children:[],
+    classList:{toggle(){}},setAttribute(){},addEventListener(){},focus(){},
+    append(...children){this.children.push(...children);},prepend(child){this.children.unshift(child);},
+    replaceChildren(...children){this.children=children;}});
+  const elements=new Map();
+  globalThis.document={getElementById(id){if(!elements.has(id))elements.set(id,node());return elements.get(id);},
+    createElement:node,querySelectorAll:()=>[],addEventListener(){}};
+  globalThis.fetch=async path=>({ok:true,json:async()=>collection(path.includes('wards.geojson')?'ward':'neighbourhood')});
+  t.after(()=>{globalThis.document=priorDocument;globalThis.fetch=priorFetch;});
+  const state={mode:'all',areaKind:'',areaCode:'',neighbourhood:'Oakridge',...initial};
+  const transitions=[],clears=[];
+  const explorer=createAreaExplorer({getState:()=>state,getSnapshot:()=>null,getVisiblePlaces:()=>[],
+    onSelect:area=>{state.areaKind=area.kind;state.areaCode=area.code;},
+    onClear:options=>{clears.push(options);state.areaKind='';state.areaCode='';},
+    onOverlayChange:next=>transitions.push({next,areaKind:state.areaKind,areaCode:state.areaCode})});
+  return {explorer,state,transitions,clears,elements};
+}
+
+test('boundaries Off clears only map-selected geography and closes its panel',async t=>{
+  const {explorer,state,transitions,clears,elements}=explorerHarness(t);
+  await explorer.setOverlay('ward');
+  explorer.select(areaFor('ward','20'));
+  assert.equal(elements.get('area-panel').hidden,false);
+  await explorer.setOverlay('off');
+  assert.equal(explorer.getOverlay(),'off');
+  assert.equal(state.areaKind,'');assert.equal(state.areaCode,'');
+  assert.equal(state.neighbourhood,'Oakridge','independent dropdown selection is preserved');
+  assert.equal(elements.get('area-panel').hidden,true);
+  assert.equal(elements.get('area-selection').hidden,true);
+  assert.deepEqual(clears,[{overlayChange:true}]);
+  assert.deepEqual(transitions.at(-1),{next:'off',areaKind:'',areaCode:''});
+  await explorer.setOverlay('off');
+  assert.equal(transitions.length,2,'an unchanged overlay does not add a history transition');
+});
+
+test('incompatible boundary switch clears map selection, but restoration preserves matching selection without notification',async t=>{
+  const {explorer,state,transitions,clears}=explorerHarness(t);
+  await explorer.setOverlay('ward');explorer.select(areaFor('ward','20'));
+  await explorer.setOverlay('neighbourhood');
+  assert.equal(state.areaKind,'');assert.equal(state.neighbourhood,'Oakridge');
+  assert.deepEqual(clears,[{overlayChange:true}]);
+  state.areaKind='ward';state.areaCode='21';
+  const before=transitions.length;
+  await explorer.setOverlay('ward',{restore:true});
+  assert.equal(explorer.getOverlay(),'ward');assert.equal(state.areaCode,'21');
+  assert.equal(transitions.length,before);assert.equal(clears.length,1);
+});
+
+test('boundary load failure returns to Off without leaving a hidden geographic selection',async t=>{
+  const {explorer,state,transitions}=explorerHarness(t,{areaKind:'ward',areaCode:'20'});
+  globalThis.fetch=async()=>({ok:false,status:503});
+  await explorer.setOverlay('ward');
+  assert.equal(explorer.getOverlay(),'off');
+  assert.equal(state.areaKind,'');assert.equal(state.areaCode,'');
+  assert.equal(state.neighbourhood,'Oakridge');
+  assert.deepEqual(transitions.map(item=>item.next),['ward','off']);
 });

@@ -46,6 +46,32 @@ def item(id, name, status, date, lat=43.74,lon=-79.40):
 
 
 class IngestionTests(unittest.TestCase):
+    def test_verified_namma_source_has_five_latest_findings(self):
+        fixture=json.loads((Path(__file__).parent/'fixtures'/'namma-findings.json').read_text(encoding='utf-8'))
+        rows=fixture['rows'];source=io.StringIO();writer=csv.DictWriter(source,fieldnames=list(rows[0]));writer.writeheader();writer.writerows(rows)
+        # Real source coordinates use the fixture's containing synthetic polygon only for this unit test.
+        test_wards=wards()
+        for feature in test_wards['features']:
+            feature['geometry']=polygon(-79.5,43.6,-79.0,44.0)
+        entries,_,_=normalise(source.getvalue().encode(),test_wards,neighbourhoods(),minimum=1)
+        self.assertEqual(len(entries),1);self.assertEqual(entries[0]['status'],'Conditional Pass')
+        self.assertEqual(entries[0]['inspection_date'],'2026-06-26')
+        findings=entries[0]['inspection_findings'];self.assertEqual(len(findings),5)
+        self.assertEqual({f['row_id'] for f in findings},{r['unique_id'] for r in rows})
+        self.assertEqual(sum(f['severity']=='C - Crucial' for f in findings),3)
+        self.assertEqual(sum(f['severity']=='S - Significant' for f in findings),2)
+
+    def test_latest_date_retains_all_distinct_finding_rows_without_older_findings(self):
+        columns=['unique_id','estId','estName','address','typeDesc','severity','inspectionStatus','inspectionDate','latitude','longitude']
+        source=io.StringIO(); writer=csv.DictWriter(source,fieldnames=columns);writer.writeheader()
+        base=dict(estId='10',estName='Diner',address='123 Main St',severity='C - Crucial',inspectionStatus='Conditional Pass',inspectionDate='2026-06-26',latitude=43.74,longitude=-79.40)
+        for i in range(5):writer.writerow({**base,'unique_id':str(i),'typeDesc':f'Finding {i}'})
+        writer.writerow({**base,'unique_id':'older','typeDesc':'Older finding','inspectionDate':'2025-10-08','inspectionStatus':'Pass'})
+        entries,_,_=normalise(source.getvalue().encode(),wards(),neighbourhoods(),minimum=1)
+        self.assertEqual(len(entries[0]['inspection_findings']),5)
+        self.assertEqual({f['row_id'] for f in entries[0]['inspection_findings']},set(map(str,range(5))))
+        self.assertEqual(entries[0]['inspection_findings'][0]['severity'],'C - Crucial')
+
     def test_download_reports_sanitized_source_stage_without_retry(self):
         failure = HTTPError('https://gis.toronto.ca/query?token=hidden', 503, 'unavailable', {}, None)
         with patch('update_dinesafe.urlopen', side_effect=failure) as request:

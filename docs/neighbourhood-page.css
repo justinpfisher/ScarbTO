@@ -25,3 +25,5 @@ h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.08;margin:.15rem 0 .6rem}h2{fo
 [hidden]{display:none!important}
 @media(max-width:720px){main{padding:1rem .75rem 1.5rem}.content-grid{grid-template-columns:1fr}.explore-panel{align-items:stretch;flex-direction:column}.primary-link{width:100%}.site-header{padding:.75rem}}
 @media print{body{background:#fff;color:#000;font-size:11pt}.site-header,.skip-link,.page-actions,.page-action-status,.primary-link,#show-more{display:none!important}main{max-width:none;padding:0}.content-grid{display:block}.panel{box-shadow:none;border:1px solid #777;border-radius:0;break-inside:avoid}.unavailable-panel{break-inside:auto}a{color:#000}a[target="_blank"]::after{content:" (" attr(href) ")";font-size:9pt;overflow-wrap:anywhere}.page-footer{display:block}.page-footer>*{display:block;margin:.3rem 0}}
+
+.record-item details{margin-top:10px;overflow-wrap:anywhere}.record-item summary{cursor:pointer;min-height:44px;padding:12px 0}.inspection-findings p,.inspection-findings li{line-height:1.5;margin:8px 0}
