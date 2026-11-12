@@ -1,3 +1,4 @@
+import {readerDate, readerDateTime} from '../docs/reader-date.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {dayInWindow, filterEstablishments, filterActivity, isStale, displayAddress, cityCatalogueRefreshText, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from '../docs/logic.mjs';
@@ -39,11 +40,11 @@ test('legacy and new City address placeholders are presentation-only missing val
 });
 test('upstream City catalogue time is distinct from Scarb.TO publication age',()=>{
   assert.equal(cityCatalogueRefreshText('2026-10-27 08:17:32.765401'),
-    'City catalogue date: 2026-10-27 08:17 (time zone not specified)');
+    'City catalogue date: Tuesday, October 27, 2026');
   assert.equal(cityCatalogueRefreshText('2026-10-27T08:17:32Z'),
-    'City catalogue date: 2026-10-27 08:17 UTC');
+    'City catalogue date: Tuesday, October 27, 2026');
   assert.equal(cityCatalogueRefreshText('2026-10-27'),
-    'City catalogue date: 2026-10-27 (date only)');
+    'City catalogue date: Tuesday, October 27, 2026');
   assert.equal(cityCatalogueRefreshText(null), 'The City has not supplied a catalogue refresh time');
   assert.equal(cityCatalogueRefreshText('unparseable'), 'The City has not supplied a catalogue refresh time');
 });
@@ -62,4 +63,19 @@ test('record paging reveals additional matches and keeps a map-selected record v
  assert.equal(pageRecords(records,80).length,80);
  assert.equal(pageRecords(records,81).length,81);
  assert.equal(pageRecords(records,80,'id-80').at(-1).id,'id-80');
+});
+
+
+test('reader dates retain source calendar dates and localize only explicit instants',()=>{
+  assert.equal(readerDate('2026-11-10'),'Tuesday, November 10, 2026');
+  assert.equal(readerDate('2026-11-10 00:15:32.765401'),'Tuesday, November 10, 2026');
+  assert.equal(readerDate('2026-11-10T00:15:00Z'),'Monday, November 9, 2026');
+  assert.equal(readerDate('2026-07-01T02:00:00+00:00'),'Tuesday, June 30, 2026');
+  assert.equal(readerDate('2024-02-29'),'Thursday, February 29, 2024');
+  for(const value of ['2026-02-29','2026-11-10T25:00:00Z','2026-11-10 24:15',null,'not-a-date']) {
+    assert.equal(readerDate(value),'Date unavailable');
+  }
+  assert.equal(readerDateTime('2026-11-10 00:15'),'Tuesday, November 10, 2026');
+  assert.match(readerDateTime('2026-11-10T17:56:54+00:00'),/^Tuesday, November 10, 2026 at 12:56 PM EST$/);
+  assert.equal(cityCatalogueRefreshText('2026-02-30 08:17'),'The City has not supplied a usable catalogue date');
 });

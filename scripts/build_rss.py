@@ -17,6 +17,7 @@ import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone
 from email.utils import format_datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 FEED_URL = "https://scarb.to/feed.xml"
 SITE_URL = "https://scarb.to/"
@@ -29,6 +30,14 @@ EVENT_KINDS = {
     "status_changed": "DineSafe status changed",
     "new_inspection": "New DineSafe inspection",
 }
+
+
+def reader_date(value: date, *, weekday: bool = True) -> str:
+    """English date copy, independent of host locale and without timezone guessing."""
+    months = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December")
+    weekdays = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+    day = f"{months[value.month - 1]} {value.day}, {value.year}"
+    return f"{weekdays[value.weekday()]}, {day}" if weekday else day
 
 
 class FeedError(ValueError):
@@ -170,8 +179,8 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
         "type": "application/rss+xml",
     })
     ET.SubElement(channel, "description").text = (
-        "Here are DineSafe changes I found in Scarborough, linked to the City source. "
-        "Inspection dates come from City records; first-observed dates show when I recorded each change. "
+        "Scarborough's food inspection records have plenty to explore. Here are the DineSafe updates I've gathered, with the City source so you can dig in too. "
+        "Inspection dates come from City records; added dates show when I first recorded each change. "
         "The City status may have changed since. "
         "A place newly added here is not necessarily a new business. Scarb.TO's editorial voice is AI-assisted, not first-hand reporting. "
         "Contains information licensed under the Open Government Licence – Toronto. "
@@ -193,9 +202,8 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
             details.append(f"Previous DineSafe status: {event['previous_status']}.")
         details.extend([
             f"DineSafe result when added: {event['status']}.",
-            f"Inspection date: {event['inspection_date']}.",
-            f"Added to Scarb.TO: {event['detected_at'].isoformat()}. This is when I recorded the update, not the inspection date.",
-            f"DineSafe establishment ID: {event['establishment_id']}.",
+            f"Inspection date: {reader_date(date.fromisoformat(event['inspection_date']))}.",
+            f"Added to Scarb.TO: {reader_date(event['detected_at'].astimezone(ZoneInfo('America/Toronto')).date())}. This is when I first recorded the update, not the inspection date.",
             "This is a dated result, not a current safety assessment. Check the City's DineSafe record for anything newer.",
         ])
         ET.SubElement(item, "description").text = " ".join(details)

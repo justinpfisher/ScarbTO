@@ -2,8 +2,8 @@
   "schema_version": 1,
   "corrections": {
     "dinesafe-weekly-2026-11-02": {
-      "revision": 2,
-      "explanation": "Reworded this brief in Scarb.TO's editorial voice and clarified the dates and source limitations. The reporting period, recorded updates and City results are unchanged."
+      "revision": 3,
+      "explanation": "Updated the editorial voice and made dates easier to read, with exact recording times in optional details. The reporting period, recorded updates, City results and original preparation time are unchanged."
     }
   }
 }

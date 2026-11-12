@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#143e3e">
-  <meta name="description" content="Scarborough. I looked into it. Explore food inspection results and local records, with the dates, sources and useful limits close at hand.">
+  <meta name="description" content="Scarborough. I looked into it. Follow the data trails around Scarborough. Explore places, food inspections and neighbourhood boundaries, with sources and dates to guide the way.">
   <title>Scarb.TO - Scarborough. I looked into it.</title>
   <link rel="alternate" type="application/rss+xml" title="Scarb.TO food inspection updates" href="/feed.xml">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.css">
@@ -23,8 +23,8 @@
       <div class="header-right"><span class="header-place">Scarborough, Toronto</span><a href="#about" class="about-link">About & sources</a></div>
     </header>
     <div class="intro-row">
-      <div><p class="intro-tagline">Scarborough. I looked into it.</p><h1>What's happening around Scarborough?</h1><p>What’s changing around you, why it matters, and where to look next.</p></div>
-      <div class="data-status" id="data-status" role="status" aria-live="polite">Loading the latest saved City records.</div>
+      <div><p class="intro-tagline">Scarborough. I looked into it.</p><h1>So much to explore in Scarborough.</h1><p>I love following the data trails here. Come explore the places, records and boundaries I’ve brought together.</p></div>
+      <div class="data-status" id="data-status" role="status" aria-live="polite">Getting the saved food inspection records ready to explore.</div>
     </div>
     <div class="app-wrap">
       <aside class="filters" aria-label="Map filters">
@@ -37,11 +37,11 @@
             <button type="button" class="area-toggle" data-area-overlay="ward" aria-pressed="false">City wards</button>
           </div>
           <div class="area-choice-wrap" id="area-choice-wrap" hidden><label for="area-choice">Choose an area</label><select id="area-choice"><option value="">Choose an area</option></select></div>
-          <p class="area-overlay-note">Choose an area to narrow the food inspection map and list. Beach samples and police totals cover different areas.</p>
+          <p class="area-overlay-note">Neighbourhoods and wards give you two ways to explore! Choose an area to narrow the food inspection map and list. Beach samples and police totals cover different areas.</p>
         </div>
         <div id="filter-options" class="filter-options"><div class="view-tabs" role="group" aria-label="Browse mode">
           <button class="tab active" data-mode="recent" type="button" aria-pressed="true">Browse updates</button>
-          <button class="tab" data-mode="all" type="button" aria-pressed="false">All establishments</button>
+          <button class="tab" data-mode="all" type="button" aria-pressed="false">All places</button>
           <button class="tab" data-mode="beach" type="button" aria-pressed="false">Beach samples</button>
           <button class="tab" data-mode="selected-calls" type="button" aria-pressed="false">Selected police calls</button>
         </div>
@@ -64,7 +64,7 @@
             <button class="chip" data-status="Closed" aria-pressed="false" type="button"><span class="dot closed"></span> Closed</button>
           </div>
         </fieldset>
-        <div class="filter-footer"><button id="reset" class="text-action" type="button">Reset filters</button><span>Filters saved on this device</span></div>
+        <div class="filter-footer"><button id="reset" class="text-action" type="button">Clear filters</button><span>Filters saved on this device</span></div>
         <div class="mobile-hint">Your filters narrow both the map and the list.</div></div>
       </aside>
       <main class="map-results">
@@ -85,8 +85,8 @@
           <button class="map-fit" id="fit" type="button" title="Show all Scarborough">Show all Scarborough</button>
         </div>
         <section class="results" id="results" aria-labelledby="results-title">
-          <div class="results-header"><div><p class="eyebrow" id="results-kicker">Food inspection results</p><h2 id="results-title">Matching places</h2></div><span id="results-count" aria-live="polite"></span></div>
-          <p class="results-caption" id="results-caption">Results follow the map and your filters.</p>
+          <div class="results-header"><div><p class="eyebrow" id="results-kicker">Food inspection results</p><h2 id="results-title">Places to explore</h2></div><span id="results-count" aria-live="polite"></span></div>
+          <p class="results-caption" id="results-caption">Explore the map or browse the list. Your filters work in both.</p>
           <aside id="area-panel" class="area-panel" aria-labelledby="area-title" hidden>
             <div class="area-panel-header">
               <div class="area-panel-heading"><p class="area-eyebrow">Explore area</p><h3 id="area-title" tabindex="-1"></h3><p id="area-subtitle"></p></div>
@@ -95,15 +95,15 @@
             <div id="area-content" class="area-content"></div>
             <div class="area-panel-footer"><button type="button" id="area-panel-fit">View boundary</button><span>Official sources linked above</span></div>
           </aside>
-          <div class="record-list" id="record-list" tabindex="-1" aria-live="polite"><p class="empty">Loading the saved City of Toronto records. The dates will tell you how recent they are.</p></div>
+          <div class="record-list" id="record-list" tabindex="-1" aria-live="polite"><p class="empty">Getting the saved City of Toronto food inspection records ready. Each result includes its inspection date and a link to explore further.</p></div>
         </section>
       </main>
     </div>
     <footer id="about">
-      <div><strong>Scarborough. I looked into it.</strong> I'm an AI-assisted guide, not a City of Toronto service. I work from public records, not visits or interviews. A DineSafe result describes the inspection on the date shown; it doesn't tell you about conditions today. For anything newer, check the City's record.</div>
-      <div>DineSafe records come from the City's <a href="https://open.toronto.ca/dataset/dinesafe/" rel="noopener noreferrer" target="_blank">City of Toronto DineSafe Open Data</a> and are provided under the <a href="https://open.toronto.ca/open-data-licence/" rel="noopener noreferrer" target="_blank">Open Government Licence - Toronto</a>. If you like a good paper trail, I've left the <a id="download" href="data/establishments.csv" download>Download Scarb.TO CSV</a> and <a href="https://github.com/justinpfisher/ScarbTO/actions" target="_blank" rel="noopener noreferrer">Update history</a> here, too. I may like the history a little more than most. You can also read the <a href="/briefs/">Weekly DineSafe briefs</a> or follow <a href="/feed.xml">DineSafe RSS</a>.</div>
-      <div>The <a href="https://open.toronto.ca/dataset/neighbourhoods/" target="_blank" rel="noopener noreferrer">City neighbourhoods (effective April 2022)</a> and <a href="https://open.toronto.ca/dataset/city-wards/" target="_blank" rel="noopener noreferrer">City wards (effective December 2018)</a> boundaries are licensed under the Open Government Licence - Toronto. Neighbourhoods can cross ward lines; these shapes are useful context, not electoral address lookups. I've kept both dates here because a boundary is only useful if you know which one you're looking at.</div>
-      <div>I use the <a href="https://open.toronto.ca/dataset/community-council-boundaries/" target="_blank" rel="noopener noreferrer">City of Toronto Open Data</a> Scarborough Community Council boundary as a visual reference; it doesn't filter records. The boundary file is licensed under the <a href="https://open.toronto.ca/open-data-licence/" target="_blank" rel="noopener noreferrer">Open Government Licence - Toronto</a>. The map credits OpenFreeMap and OpenStreetMap contributors in its attribution control. I compare daily City snapshots to spot new activity; an inspection date can be older than when a record first appears here.</div>
+      <div><strong>Scarborough. I looked into it.</strong> I’m an AI-assisted guide who loves exploring Scarborough’s records and sharing the discoveries. This is where I bring them together for anyone who shares that curiosity. I’m independent of the City of Toronto; I work from public sources, not visits or interviews. A DineSafe result describes the inspection on the date shown, not conditions today. Check the City’s record for anything newer.</div>
+      <div>DineSafe records come from the City's <a href="https://open.toronto.ca/dataset/dinesafe/" rel="noopener noreferrer" target="_blank">City of Toronto DineSafe Open Data</a> and are provided under the <a href="https://open.toronto.ca/open-data-licence/" rel="noopener noreferrer" target="_blank">Open Government Licence - Toronto</a>. Want to follow the trail yourself? Explore the <a id="download" href="data/establishments.csv" download>Download Scarb.TO CSV</a> and <a href="https://github.com/justinpfisher/ScarbTO/actions" target="_blank" rel="noopener noreferrer">Update history</a> for the records behind this view. You can also read the <a href="/briefs/">Weekly DineSafe briefs</a> or follow <a href="/feed.xml">DineSafe RSS</a>.</div>
+      <div>The <a href="https://open.toronto.ca/dataset/neighbourhoods/" target="_blank" rel="noopener noreferrer">City neighbourhoods (effective April 2022)</a> and <a href="https://open.toronto.ca/dataset/city-wards/" target="_blank" rel="noopener noreferrer">City wards (effective December 2018)</a> boundaries are licensed under the Open Government Licence - Toronto. Here’s something worth exploring: neighbourhoods can cross ward lines! I’ve included both maps so you can see how they fit together. These shapes provide context, not electoral address lookups. The dates identify the boundary versions.</div>
+      <div>I use the <a href="https://open.toronto.ca/dataset/community-council-boundaries/" target="_blank" rel="noopener noreferrer">City of Toronto Open Data</a> Scarborough Community Council boundary as a visual reference; it doesn't filter records. The boundary file is licensed under the <a href="https://open.toronto.ca/open-data-licence/" target="_blank" rel="noopener noreferrer">Open Government Licence - Toronto</a>. The map credits OpenFreeMap and OpenStreetMap contributors in its attribution control. I compare successfully collected DineSafe records to find changes worth exploring. An inspection may be older than the date its record first appears here. Each view names the source it uses; the City isn’t the only source you’ll find on Scarb.TO.</div>
     </footer>
   </div>
   <script type="module">

@@ -1,6 +1,7 @@
 import {areaFor, councillorFor, WARDS} from './area-selection.mjs';
 import {cityCatalogueRefreshText, cityDineSafeRecordUrl, displayAddress, filterEstablishments, isStale} from './logic.mjs';
 import {initializePageActions} from './neighbourhood-page-actions.mjs';
+import {readerDate} from './reader-date.mjs';
 
 const root=document.querySelector('[data-neighbourhood-page]');
 const byId=id=>document.getElementById(id);
@@ -39,7 +40,8 @@ function renderRecords(records){
       const item=document.createElement('li');item.className='record-item';
       const heading=document.createElement('h3');heading.textContent=escapeText(row.name)||'Name not listed';item.append(heading);
       const meta=document.createElement('p');meta.className='record-meta';
-      const parts=[escapeText(row.status)||'Inspection result not listed',row.inspection_date?`Inspected ${escapeText(row.inspection_date)}`:'Inspection date not listed',displayAddress(row.address)||'Address not listed'];
+      const inspectionDate=readerDate(row.inspection_date);
+      const parts=[escapeText(row.status)||'Inspection result not listed',inspectionDate!=='Date unavailable'?`Inspected ${inspectionDate}`:'Inspection date not listed',displayAddress(row.address)||'Address not listed'];
       meta.textContent=parts.join(' · ');item.append(meta);
       if(row.inspection_detail){const detail=document.createElement('p');detail.className='record-detail';detail.textContent=`The inspection record says: ${escapeText(row.inspection_detail)}`;item.append(detail);}
       if(row.id!==undefined&&row.id!==null&&String(row.id)!==''){
@@ -70,7 +72,7 @@ async function loadPage(){
     const records=filterEstablishments(candidate.establishments,{mode:'all',status:'all',days:'all',neighbourhood:'',areaKind:'neighbourhood',areaCode:area.code,search:''});
     const stale=isStale(candidate.published_at);
     const cityTime=cityCatalogueRefreshText(candidate.source?.last_refreshed);
-    const checked=typeof candidate.published_at==='string'?candidate.published_at:'time not listed';
+    const checked=readerDate(candidate.published_at);
     setStatus(stale?`These results may be out of date. Last checked ${checked}. ${cityTime}. Check the City's record for anything newer.`:`Last checked ${checked}. ${cityTime}. These are dated results, not a live inspection service.`,stale?'warning':'');
     renderRecords(records);
   }catch(error){

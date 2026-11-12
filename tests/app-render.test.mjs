@@ -203,9 +203,9 @@ test('resident copy keeps the selected tagline and explains observed-date limits
   const html=await readFile(new URL('../docs/index.html',import.meta.url),'utf8');
   assert.match(html,/Scarborough\. I looked into it\./);
   assert.match(html,/<p class="intro-tagline">Scarborough\. I looked into it\.<\/p>/);
-  assert.match(html,/I'm an AI-assisted guide, not a City of Toronto service\. I work from public records, not visits or interviews/);
-  assert.match(html,/A DineSafe result describes the inspection on the date shown; it doesn't tell you about conditions today/);
-  assert.match(html,/For anything newer, check the City's record/);
+  assert.match(html,/I’m Scarb, an AI-assisted guide[\s\S]*I’m independent of the City of Toronto; I work from public sources, not visits or interviews/);
+  assert.match(html,/A DineSafe result describes the inspection on the date shown, not conditions today/);
+  assert.match(html,/Check the City’s record for anything newer/);
 });
 
 test('homepage uses the connected-contour lockup with a standalone mobile mark', async () => {
@@ -242,8 +242,8 @@ test('Scarb footer keeps source, licence, boundary, attribution, and freshness m
     'City of Toronto DineSafe Open Data','Open Government Licence - Toronto',
     'effective April 2022','effective December 2018','cross ward lines',
     'not electoral address lookups','visual reference; it doesn\'t filter records',
-    'OpenFreeMap and OpenStreetMap contributors in its attribution control','compare daily City snapshots',
-    'an inspection date can be older than when a record first appears here',
+    'OpenFreeMap and OpenStreetMap contributors in its attribution control','compare successfully collected DineSafe records',
+    'An inspection may be older than the date its record first appears here',
   ]) assert.ok(footer.includes(text),`retains meaning: ${text}`);
 });
 
@@ -259,11 +259,11 @@ test('recent DineSafe captions distinguish detected changes from inspection date
   const app=await loadApp(snapshot);
   try {
     assert.equal(app.document.getElementById('results-caption').textContent,
-      'Here’s the latest City inspection record I have for each place.');
+      'Pick a place and explore its latest DineSafe inspection record with me. Each one links back to the City source.');
     app.document.tabs.find(tab=>tab.dataset.mode==='recent').click();
     assert.equal(app.document.getElementById('results-caption').textContent,
-      'Here’s what I found comparing the City records from day to day. The inspection date may be earlier than when a record first appeared here.');
-    assert.match(app.document.getElementById('record-list').textContent,/Inspection: Oct 26, 2026/);
+      'This is where the records get interesting: compare them from day to day and the changes come into view. Here’s what I found in DineSafe. The inspection date may be earlier than when a record first appeared here.');
+    assert.match(app.document.getElementById('record-list').textContent,/Inspection: Monday, October 26, 2026/);
     assert.match(app.document.getElementById('record-list').textContent,/Added to Scarb\.TO:/);
   } finally { await app.cleanup(); }
 });
@@ -274,7 +274,7 @@ test('inspection-only recent view does not imply a newly published record', asyn
   try {
     app.document.tabs.find(tab=>tab.dataset.mode==='recent').click();
     assert.equal(app.document.getElementById('results-caption').textContent,
-      'These places have recent inspection dates. That doesn’t mean their records are new; check the City’s record for current details.');
+      'Here’s another way into the records: places with recent inspection dates. That doesn’t mean their records are new; check the City’s record for current details.');
   } finally { await app.cleanup(); }
 });
 
@@ -449,7 +449,7 @@ test('production DineSafe details clean legacy addresses and label upstream cata
     app.map.load();
     const status=app.document.getElementById('data-status').textContent;
     assert.match(status,/Last checked/);
-    assert.match(status,/City catalogue date: 2026-10-27 08:17 \(time zone not specified\)/);
+    assert.match(status,/City catalogue date: Tuesday, October 27, 2026/);
     const list=app.document.getElementById('record-list');
     const row=list.querySelector('.record-item');
     assert.match(row.textContent,/0 Synthetic Road M1V 1V1/);

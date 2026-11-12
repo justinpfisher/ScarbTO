@@ -80,6 +80,11 @@ class WeeklyBriefTests(unittest.TestCase):
         self.assertNotIn("longitude", page)
         self.assertIn("neighbourhood named in the City record", page)
         self.assertIn("Open Government Licence", page)
+        self.assertIn("Inspection date: <time datetime=\"2026-11-06\">Friday, November 6, 2026</time>", page)
+        self.assertIn('datetime="2026-11-09T01:30:00+00:00">Sunday, November 8, 2026</time>', page)
+        self.assertIn("Exact recording time", page)
+        self.assertIn("not the inspection time", page)
+        self.assertIn("Explore the week's patterns", page)
         manifest = json.loads((self.output / "editions.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["editions"][0]["event_count"], 2)
 
@@ -230,7 +235,7 @@ class WeeklyBriefTests(unittest.TestCase):
         original = json.loads(original_manifest)["editions"][0]
         render = brief_module._render_edition
         def reworded(payload, record):
-            return render(payload, record).replace(b"The updates</h2>", b"This week's updates</h2>")
+            return render(payload, record).replace(b"Explore the updates</h2>", b"This week's updates</h2>")
         with patch.object(brief_module, "_render_edition", side_effect=reworded):
             with self.assertRaisesRegex(BriefError, "explained correction is required"):
                 build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)

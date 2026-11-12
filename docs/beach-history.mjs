@@ -1,3 +1,4 @@
+import {readerDate} from './reader-date.mjs';
 const RESOURCE_ID = "8102bd4c-83cd-4354-9788-eecc0c7a09b4";
 const BEACH_ID = 10;
 const EXPECTED_COORDINATES = [-79.2252, 43.7141];
@@ -64,7 +65,7 @@ export function renderBeachSamplePreview(document, input) {
     const item = document.createElement("li");
     const date = document.createElement("time");
     date.dateTime = record.collectionDate;
-    date.textContent = record.collectionDate;
+    date.textContent = readerDate(record.collectionDate);
     const site = document.createElement("span");
     site.textContent = `Site ${record.siteName}`;
     const measurement = document.createElement("span");
@@ -76,7 +77,7 @@ export function renderBeachSamplePreview(document, input) {
   }
   const captured = document.createElement("p");
   captured.className = "beach-sample-preview-meta";
-  captured.textContent = `City records checked ${preview.retrieved_on}. Latest sample date: ${preview.records.reduce((latest, row) => row.collectionDate > latest ? row.collectionDate : latest, "0000-00-00")}.`;
+  captured.textContent = `City records checked ${readerDate(preview.retrieved_on)}. Latest sample date: ${readerDate(preview.records.reduce((latest, row) => row.collectionDate > latest ? row.collectionDate : latest, "0000-00-00"))}.`;
   const source = document.createElement("a");
   source.href = CATALOGUE_URL;
   source.target = "_blank";
