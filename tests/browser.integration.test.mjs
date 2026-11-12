@@ -15,7 +15,7 @@ const mime = new Map([
   ['.html', 'text/html; charset=utf-8'], ['.mjs', 'text/javascript; charset=utf-8'],
   ['.js', 'text/javascript; charset=utf-8'], ['.css', 'text/css; charset=utf-8'],
   ['.json', 'application/json; charset=utf-8'], ['.csv', 'text/csv; charset=utf-8'],
-  ['.geojson', 'application/geo+json; charset=utf-8'],
+  ['.geojson', 'application/geo+json; charset=utf-8'], ['.svg', 'image/svg+xml'],
 ]);
 
 test('UI source text retains intended separators and badge text', async () => {
@@ -216,6 +216,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await waitForMap(page);
   const mapReadyMs=await page.evaluate(()=>performance.now()-window.__scarbRenderedQaStarted);
   console.log(`QA_METRIC synthetic ${name} map ready: ${mapReadyMs.toFixed(1)} ms (local fixture and local style)`);
+  assert.ok(await page.locator('img.brand-lockup').evaluate(image => image.complete && image.naturalWidth > 0), `${name}: selected brand image decodes`);
   await page.waitForFunction(() => window.__scarbMap.getSource('scarborough-mask') && window.__scarbMap.getSource('scarborough-boundary'));
   assert.match(await page.locator('#map').getAttribute('aria-label'),/marker shape and letter supplement colour/i,`${name}: runtime map label retains the DineSafe marker explanation`);
   const boundaryState=await page.evaluate(()=>{
