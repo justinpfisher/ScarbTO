@@ -165,7 +165,7 @@ Can a first-time visitor understand what this means? Is every first-person actio
 
 ##### Visual relationship
 
-Keep the adopted three-line wave/cliff mark. Develop an integrated Scarb.TO lockup while preserving the standalone mark. The selected voice and tagline do not select a new lockup or approve an unreviewed production deployment.
+Keep the adopted three-line wave/cliff mark. Develop an integrated Scarb.TO lockup while preserving the standalone mark. Keep the three-line wave/cliff mark available on its own, alongside the selected connected-contour lockup. The approved tagline is “Scarborough. I looked into it.” Production use still requires visual qualification.
 
 ### Required complete-release result
 

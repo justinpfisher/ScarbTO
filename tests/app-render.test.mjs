@@ -219,7 +219,7 @@ test('homepage uses the connected-contour lockup with a standalone mobile mark',
   assert.match(html,/<img class="brand-lockup" src="\.\/assets\/brand\/scarbto-connected\.svg" alt="Scarb\.TO, with the three-line wave and cliff mark">/);
   assert.match(css,/\.brand-lockup\{display:block;width:min\(304px,45vw\);height:auto\}/);
   assert.match(css,/@media\(max-width:420px\)\{\.brand-lockup\{width:64px\}\}/);
-  assert.match(lockup,/<title id="title">Scarb\.TO — Lake &amp; Land connected-contour lockup<\/title>/);
+  assert.match(lockup,/<title id="title">Scarb\.TO - Lake &amp; Land connected-contour lockup<\/title>/);
   assert.match(lockup,/<desc id="desc">Selected working direction[\s\S]*visual qualification remains\.<\/desc>/);
   assert.match(mark,/<title id="mark-title">Lake &amp; Land three-line wave and cliff mark<\/title>/);
 });
