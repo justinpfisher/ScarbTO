@@ -1033,7 +1033,7 @@ test('mobile area panel is closeable and the selected-area chip remains usable w
 
 test('static neighbourhood pages use the qualified set and route into the same selected map/list area', {timeout:90_000}, async t=>{
   const pages=buildPageFiles();
-  assert.equal(pages.size,31,'30 qualified canonical pages plus the West Rouge forwarding alias');
+  assert.equal(pages.size,32,'30 qualified canonical pages plus the West Rouge forwarding alias and directory');
   const {server,origin}=await startStaticServer();
   const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
   t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
@@ -1049,6 +1049,13 @@ test('static neighbourhood pages use the qualified set and route into the same s
     Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>window.__clipboardWrites.push(value)}});
   });
   const freshAt=new Date(Date.now()-30_000).toISOString();
+  const directoryPage=await context.newPage();
+  const directoryResponse=await directoryPage.goto(`${origin}/neighbourhoods/`);
+  assert.equal(directoryResponse.status(),200,'homepage directory destination exists');
+  assert.equal(await directoryPage.locator('.neighbourhood-directory a').count(),30);
+  for(const link of await directoryPage.locator('.neighbourhood-directory a').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('href')))){
+    const response=await context.request.get(origin+link);assert.equal(response.status(),200,`directory route ${link}`);
+  }
   const pageSnapshot={...snapshot,published_at:freshAt,source:{last_refreshed:freshAt},establishments:[{
     id:'west-rouge-fixture',establishment_id:'west-rouge-fixture',name:'West Rouge Fixture Cafe',address:'10 Sample Road',status:'Pass',inspection_date:'2026-11-03',inspection_detail:'Food handling room maintained in sanitary condition.',latitude:43.78,longitude:-79.12,neighbourhood:'West Rouge',ward:'Scarborough-Rouge Park'
   }]};

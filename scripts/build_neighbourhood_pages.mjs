@@ -40,6 +40,10 @@ export function buildPageFiles(areas=NEIGHBOURHOODS,template=readFileSync(TEMPLA
     if(slugs.has(alias))throw new Error(`Alias collides with a canonical route: ${alias}`);
     files.set(`docs/${alias}/index.html`,renderAliasPage(alias,slug));
   }
+  const links=Object.values(areas).sort((a,b)=>a.name.localeCompare(b.name,'en-CA')).map(area=>`<li><a href="/${slugForName(area.name)}/">${esc(area.name)}</a></li>`).join('\n');
+  files.set('docs/neighbourhoods/index.html',`<!doctype html>
+<html lang="en-CA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Explore neighbourhoods | Scarb.TO</title><meta name="description" content="Explore Scarborough neighbourhood pages, source-linked food inspection records and area boundaries."><link rel="canonical" href="https://scarb.to/neighbourhoods/"><link rel="stylesheet" href="../neighbourhood-page.css"></head><body><div class="page-shell"><header class="site-header"><a class="brand" href="/">Scarb.TO home</a><a class="header-link" href="/briefs/">Weekly briefs</a></header><main><h1>Explore the neighbourhoods</h1><p>There is so much to explore! Choose one of the ${Object.keys(areas).length} neighbourhoods in this map selection to open its source-linked records and boundary view.</p><ul class="neighbourhood-directory">${links}</ul><p class="source-note">These pages follow the City's neighbourhood boundaries, not association or newspaper coverage. Scarb.TO matches source coordinates to those boundaries; a record's location can be imperfect. Different source IDs stay separate.</p><p><a href="https://open.toronto.ca/dataset/neighbourhoods/">City of Toronto neighbourhood boundaries</a>, under the <a href="https://open.toronto.ca/open-data-licence/">Open Government Licence - Toronto</a>.</p></main><footer><p>Scarb.TO is an independent, AI-assisted guide to public records, not an official City service. Inspection results describe their recorded date, not conditions today.</p></footer></div></body></html>
+`);
   return files;
 }
 
