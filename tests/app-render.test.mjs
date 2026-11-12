@@ -202,9 +202,26 @@ async function loadApp(snapshot,{selectedFetch,neighbourhoodFetch} = {}) {
 test('resident copy keeps the selected tagline and explains observed-date limits', async () => {
   const html=await readFile(new URL('../docs/index.html',import.meta.url),'utf8');
   assert.match(html,/Scarborough\. I looked into it\./);
+  assert.match(html,/<p class="intro-tagline">Scarborough\. I looked into it\.<\/p>/);
   assert.match(html,/I'm an AI-assisted guide, not a City of Toronto service\. I work from public records, not visits or interviews/);
   assert.match(html,/A DineSafe result describes the inspection on the date shown; it doesn't tell you about conditions today/);
   assert.match(html,/For anything newer, check the City's record/);
+});
+
+test('homepage uses the connected-contour lockup with a standalone mobile mark', async () => {
+  const [html,css,lockup,mark] = await Promise.all([
+    readFile(new URL('../docs/index.html',import.meta.url),'utf8'),
+    readFile(new URL('../docs/styles.css',import.meta.url),'utf8'),
+    readFile(new URL('../docs/assets/brand/scarbto-connected.svg',import.meta.url),'utf8'),
+    readFile(new URL('../docs/assets/brand/scarbto-mark.svg',import.meta.url),'utf8'),
+  ]);
+  assert.match(html,/<source media="\(max-width: 420px\)" srcset="\.\/assets\/brand\/scarbto-mark\.svg">/);
+  assert.match(html,/<img class="brand-lockup" src="\.\/assets\/brand\/scarbto-connected\.svg" alt="Scarb\.TO, with the three-line wave and cliff mark">/);
+  assert.match(css,/\.brand-lockup\{display:block;width:min\(304px,45vw\);height:auto\}/);
+  assert.match(css,/@media\(max-width:420px\)\{\.brand-lockup\{width:64px\}\}/);
+  assert.match(lockup,/<title id="title">Scarb\.TO — Lake &amp; Land connected-contour lockup<\/title>/);
+  assert.match(lockup,/<desc id="desc">Selected working direction[\s\S]*visual qualification remains\.<\/desc>/);
+  assert.match(mark,/<title id="mark-title">Lake &amp; Land three-line wave and cliff mark<\/title>/);
 });
 
 test('Scarb footer keeps source, licence, boundary, attribution, and freshness meanings', async () => {
