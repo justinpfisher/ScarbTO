@@ -170,9 +170,9 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
         "type": "application/rss+xml",
     })
     ET.SubElement(channel, "description").text = (
-        "Source-linked DineSafe changes first observed by Scarb.TO in Scarborough. "
-        "Inspection dates are source dates; first-observed dates are Scarb.TO observations. "
-        "A source status may have changed since it was observed. "
+        "Here are DineSafe changes I found in Scarborough, linked to the City source. "
+        "Inspection dates come from City records; first-observed dates show when I recorded each change. "
+        "The City status may have changed since. "
         "Contains information licensed under the Open Government Licence – Toronto. "
         f"Licence: {LICENCE_URL}"
     )

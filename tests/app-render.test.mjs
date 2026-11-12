@@ -199,6 +199,68 @@ async function loadApp(snapshot,{selectedFetch,neighbourhoodFetch} = {}) {
   };
 }
 
+test('resident copy keeps the selected tagline and explains observed-date limits', async () => {
+  const html=await readFile(new URL('../docs/index.html',import.meta.url),'utf8');
+  assert.match(html,/Scarborough\. I looked into it\./);
+  assert.match(html,/I'm an AI-assisted guide, not a City of Toronto service\. I work from public records, not visits or interviews/);
+  assert.match(html,/A DineSafe result describes the inspection on the date shown; it doesn't tell you about conditions today/);
+  assert.match(html,/For anything newer, check the City's record/);
+});
+
+test('Scarb footer keeps source, licence, boundary, attribution, and freshness meanings', async () => {
+  const html=await readFile(new URL('../docs/index.html',import.meta.url),'utf8');
+  const footer=html.match(/<footer id="about">([\s\S]*?)<\/footer>/)?.[1];
+  assert.ok(footer,'about footer remains present');
+  assert.equal((footer.match(/<div>/g)||[]).length,4,'footer keeps its four readable content rows');
+  for (const href of [
+    'https://open.toronto.ca/dataset/dinesafe/',
+    'https://open.toronto.ca/open-data-licence/',
+    'data/establishments.csv',
+    'https://github.com/justinpfisher/ScarbTO/actions',
+    'https://open.toronto.ca/dataset/neighbourhoods/',
+    'https://open.toronto.ca/dataset/city-wards/',
+    'https://open.toronto.ca/dataset/community-council-boundaries/',
+  ]) assert.ok(footer.includes(`href="${href}"`),`retains ${href}`);
+  for (const text of [
+    'City of Toronto DineSafe Open Data','Open Government Licence - Toronto',
+    'effective April 2022','effective December 2018','cross ward lines',
+    'not electoral address lookups','visual reference; it doesn\'t filter records',
+    'OpenFreeMap and OpenStreetMap contributors in its attribution control','compare daily City snapshots',
+    'an inspection date can be older than when a record first appears here',
+  ]) assert.ok(footer.includes(text),`retains meaning: ${text}`);
+});
+
+test('recent DineSafe captions distinguish detected changes from inspection dates', async () => {
+  const snapshot=fixture();
+  const torontoDate=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(part=>[part.type,part.value]));
+  snapshot.activity=[{
+    id:'event-001',kind:'new_inspection',feed:'dinesafe',establishment_id:'entry-000',
+    name:'Place 000',address:'0 Synthetic Road',neighbourhood:'Synthetic Area',
+    inspection_date:'2026-10-26',detected_at:`${torontoDate.year}-${torontoDate.month}-${torontoDate.day}T17:00:00Z`,status:'Pass',
+    previous_status:'Pass',latitude:43.7,longitude:-79.2,
+  }];
+  const app=await loadApp(snapshot);
+  try {
+    assert.equal(app.document.getElementById('results-caption').textContent,
+      'Here’s the latest City inspection record I have for each place.');
+    app.document.tabs.find(tab=>tab.dataset.mode==='recent').click();
+    assert.equal(app.document.getElementById('results-caption').textContent,
+      'Here’s what I found comparing daily City snapshots. The inspection date may be earlier than when a record first appeared here.');
+    assert.match(app.document.getElementById('record-list').textContent,/Inspection: Oct 26, 2026/);
+    assert.match(app.document.getElementById('record-list').textContent,/First observed by Scarb\.TO:/);
+  } finally { await app.cleanup(); }
+});
+
+test('inspection-only recent view does not imply a newly published record', async () => {
+  const snapshot=fixture();
+  const app=await loadApp(snapshot);
+  try {
+    app.document.tabs.find(tab=>tab.dataset.mode==='recent').click();
+    assert.equal(app.document.getElementById('results-caption').textContent,
+      'These places have recent inspection dates. That doesn’t mean their records are new; check the City’s record for current details.');
+  } finally { await app.cleanup(); }
+});
+
 test('DineSafe renders before optional neighbourhood-fit geometry and loads it once on selection', async () => {
   const geometry={type:'FeatureCollection',features:[{
     type:'Feature',properties:{AREA_NAME:'Synthetic Area'},
