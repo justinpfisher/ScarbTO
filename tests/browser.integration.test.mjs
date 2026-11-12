@@ -15,7 +15,7 @@ const mime = new Map([
   ['.html', 'text/html; charset=utf-8'], ['.mjs', 'text/javascript; charset=utf-8'],
   ['.js', 'text/javascript; charset=utf-8'], ['.css', 'text/css; charset=utf-8'],
   ['.json', 'application/json; charset=utf-8'], ['.csv', 'text/csv; charset=utf-8'],
-  ['.geojson', 'application/geo+json; charset=utf-8'],
+  ['.geojson', 'application/geo+json; charset=utf-8'], ['.svg', 'image/svg+xml'],
 ]);
 
 test('UI source text retains intended separators and badge text', async () => {
@@ -25,7 +25,9 @@ test('UI source text retains intended separators and badge text', async () => {
   ]);
   assert.equal((html + String.fromCharCode(10) + app).includes(String.fromCharCode(0xfffd)), false);
   assert.match(html, /class="data-pill">DineSafe<\/span>/);
-  assert.ok(html.includes("DineSafe Open Data</a> " + String.fromCharCode(0x00b7) + " <a"));
+  assert.ok(html.includes('DineSafe Open Data</a> and are provided under the <a'));
+  assert.match(html, /href="https:\/\/open\.toronto\.ca\/dataset\/dinesafe\/"[^>]*>City of Toronto DineSafe Open Data<\/a>/);
+  assert.match(html, /href="https:\/\/open\.toronto\.ca\/open-data-licence\/"[^>]*>Open Government Licence - Toronto<\/a>/);
   assert.ok(app.includes("Toronto Open Data " + String.fromCharCode(0x00b7) + " dated samples"));
 });
 
@@ -214,6 +216,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await waitForMap(page);
   const mapReadyMs=await page.evaluate(()=>performance.now()-window.__scarbRenderedQaStarted);
   console.log(`QA_METRIC synthetic ${name} map ready: ${mapReadyMs.toFixed(1)} ms (local fixture and local style)`);
+  assert.ok(await page.locator('img.brand-lockup').evaluate(image => image.complete && image.naturalWidth > 0), `${name}: selected brand image decodes`);
   await page.waitForFunction(() => window.__scarbMap.getSource('scarborough-mask') && window.__scarbMap.getSource('scarborough-boundary'));
   assert.match(await page.locator('#map').getAttribute('aria-label'),/marker shape and letter supplement colour/i,`${name}: runtime map label retains the DineSafe marker explanation`);
   const boundaryState=await page.evaluate(()=>{

@@ -4,7 +4,7 @@
 
 ## Current release status — 9 November 2026
 
-The integrated resident release remains in progress across approved packages P0-P8. The complete resident experience, planning and building-permit qualification, neighbourhood pages, website briefs and RSS, and stabilization remain in scope. The finished Lake & Land identity adoption decision remains reserved for the owner.
+The integrated resident release remains in progress across approved packages P0-P8. The complete resident experience, planning and building-permit qualification, neighbourhood pages, website briefs and RSS, and stabilization remain in scope. The owner adopted the Lake & Land visual direction, three-line wave/cliff mark and selected tagline. The integrated connected-contour lockup remains unqualified for production.
 
 - **Production:** PR #41 neighbourhood pages merged as `5091b9b58152add42eb7e3eade5244e6354d9bb9`; trusted-main run [42649253851](https://github.com/justinpfisher/ScarbTO/actions/runs/42649253851) passed tests, persistence, Pages deployment and production HTTP/boundary verification. Publisher output reports 30 neighbourhoods, 3,340 establishments, and `published_at=2026-11-09T15:55:15+00:00`; data commit is `db0203617db24254c7c787fc977fb94d79c08197`. A bounded production read of all 31 canonical/alias neighbourhood routes returned HTTP 200, including `/west-rouge/` and `/westrouge/`; the alias declares `/west-rouge/` canonical. The local generator check reports 31 routes.
 - **PR #41:** released and live; its older PR branch is superseded. The public route check is distinct from the publisher's 6-ward/30-neighbourhood boundary verification.
@@ -62,9 +62,9 @@ The older state record described 106,000 of 446,979 cleared rows from an October
 
 Remaining engineering work is specific: planning lacks qualified map locations; reduced OAR lookup/accounting can confuse known outside-Scarborough records with genuinely unlocated records; record-specific planning links and safe public descriptions require qualification; production export/history/retention are not yet established. Preserve all count, generation, hash, overlap, EOF, identity, geography, privacy and licence gates. Full acquisition supports validation, not an obligation to send every historical record to a phone.
 
-## P1 identity preparation — reviewable, not adopted
+## P1 identity and voice — direction adopted; lockup under review
 
-The separate Lake & Land proposal now includes original outlined SVG logos, 16/24/32-pixel optical symbols, light/dark/monochrome variants, free font files/licences, functional tokens, calculated contrasts, a responsive interactive specimen, editorial/share/sponsorship patterns and a completed West Rouge neighbourhood-page specimen. It remains outside the production repository/site pending the explicit finished-identity adoption decision reserved in the original brief.
+The owner adopted the Lake & Land visual direction and original three-line wave/cliff mark, and selected “Scarborough. I looked into it.” The connected-contour treatment is the working lockup direction; the production artwork still needs visual qualification. The approved Scarb editorial voice is prepared on a local branch, including homepage/footer, DineSafe captions, neighbourhood pages and the RSS channel description. It is not deployed.
 
 The eight-record main specimen uses frozen, attributed records from the 1 November 11:51 a.m. snapshot; it is not current public data. Its source/date statements and 27 contrast calculations were independently checked. Prototype browser checks are not production WCAG certification or resident research. Existing approved UX work can continue independently of brand adoption.
 
@@ -83,7 +83,7 @@ The eight-record main specimen uses frozen, attributed records from the 1 Novemb
 2. **PR #42 RSS:** the current source candidate is locally qualified on the current main base. The independent reviewer found no blocking source or test issue and requested only the status corrections in this update. After reviewer verification, follow the ordinary merge, trusted-main CI/publisher, and live RSS verification path. The local 50-item render is not a public feed release.
 3. **Refresh continuity:** trusted-main run 42649253851 recovered the earlier failed publisher and verified one deployment. Continue checking the scheduled refreshes and weekly publication against the original stabilization criteria; do not call one successful run a completed stabilization window.
 4. **P4 planning/permit qualification:** PR #44 only corrected CKAN metadata. Continue source-generation/count, row-identity, complete-capture, licence and geographic qualification using the established resumable controls when the permitted source/runner path is available. Keep all permit exports disabled; the OAR tunnel 403 remains an access boundary.
-5. **Remaining P0-P8 scope:** finish P2 resident journeys, planning and permit qualification, P5/P6 development representation and integrated briefs/change history, and the remaining stabilization checks. Keep each source's gaps visible until qualified; preserve the owner's reserved identity-adoption decision.
+5. **Remaining P0-P8 scope:** finish P2 resident journeys, planning and permit qualification, P5/P6 development representation and integrated briefs/change history, and the remaining stabilization checks. Keep each source's gaps visible until qualified; preserve the adopted direction and standalone mark; do not use an unqualified lockup.
 
 The historical 1 November P4 research above is not a current dispatch or proof that a capture is prepared for immediate execution. This record itself is source-free; no source rows, private staging material or heavy tests were run for this update.
 

@@ -41,8 +41,131 @@ The owner selected **the complete resident experience plus qualified development
 
 - **Primary audience:** Scarborough residents with practical local questions. **Secondary audience:** neighbourhood organisations, tenant/resident groups and community publishers sharing dependable local information. These are product-positioning choices, not measured visitor demographics or claims of resident testing.
 - Core promise: help residents understand recorded changes near them, inspect the evidence and find the next useful step. Keep the service source-linked, mobile-first, approachable and independent of government.
-- **Lake & Land is the selected working identity direction.** Complete the original land/water symbol, Scarb.TO wordmark, micro-icons, functional palette, typography, voice and actual product applications outside production. The original branding assignment reserved explicit adoption of the finished identity. Prepare the complete reviewable package before that one decision; liking the concept or approving this execution plan does not represent approval of unseen final assets. Once adoption is explicitly recorded, do not repeat routine cosmetic approval requests.
-- The working palette is navy `#173F58`, limestone `#F1EDE4` and restrained clay `#D8A58F`, with Source Sans 3 for interface text and Source Serif 4 used selectively for the wordmark/editorial character. These are proposed design ingredients, not permission to skip contrast checks or reuse the earlier Common Ground tokens as Lake & Land.
+- **Lake & Land visual direction:** The owner has adopted the existing Lake & Land visual direction and three-line wave/cliff mark. Keep the mark usable on its own while developing an integrated Scarb.TO lockup. The connected-contour treatment is selected as the working lockup direction. Preserve the standalone mark; complete visual qualification before production use. The working palette is navy `#173F58`, limestone `#F1EDE4` and restrained clay `#D8A58F`, with Source Sans 3 for interface text and Source Serif 4 used selectively for the wordmark/editorial character. Preserve the existing contrast and functional-colour work; do not substitute the earlier Common Ground tokens for Lake & Land.
+
+#### Approved character and editorial guidance (9 November 2026)
+
+**Character direction (approved):** Scarb, an unnamed persona; they/them when referred to, first-person "I" in copy.
+
+**Tagline (approved):** Scarborough. I looked into it.
+
+**Supporting line (working copy):** What’s changing around you, why it matters, and where to look next.
+
+Scarb.TO has a voice, not a separately named character. They sound like a knowledgeable neighbour who does the reading, enjoys the details a little too much, and wants to make them useful. Warm, humane, curious and relaxed. Quietly nerdy; genuinely excited by what they uncover; occasionally self-deprecating; fond of dry humour. Never smug, performatively quirky or institutional. Use they/them when referring to this unnamed persona; first-person "I" remains natural in Scarb.TO copy. Scarb.TO's editorial voice carries throughout the site: Scarb writes its editorial copy.
+
+Scarb is fond of Scarborough's cultures, neighbourhoods, food, water, the Bluffs, apartment buildings and suburbs. Let that affection show through specific, sourced details rather than sweeping claims about residents or neighbourhoods. They take Toronto's paperwork and processes oddly seriously, with gentle irony that never treats an official record as infallible.
+
+The voice is AI-assisted, not a claim of human residency or first-hand reporting. Make that clear in About this site, and wherever needed to avoid a misleading impression.
+
+##### The default shape of an update
+
+1. Lead with the place and the useful fact.
+2. Explain why it could matter, grounded in the source.
+3. Give the relevant event date and a source link.
+4. Explain any consequential limitation in plain language nearby.
+5. Put IDs, record counts and processing detail in expandable source information.
+
+Keep the headline about the place or development, not about the narrator. Start short; explain more when a first-time visitor needs it. Give the answer before the background.
+
+##### First person
+
+Use “I” naturally in introductions, explanations and accounts of actual checking. Do not force it into every card.
+
+Good, when supported by the checking record:
+
+- “I checked the City’s latest DineSafe records. Here’s what I found.”
+- “I went digging. Thursday’s still the latest I could find.”
+- “The City calls this a ‘conditional pass.’ Here’s what that means.”
+- “I couldn’t check for newer records today. This is the last information I could verify.”
+
+Do not claim to have visited, phoned, interviewed, received assurances or monitored continuously unless that actually occurred and is documented. “I went digging” is figurative research language; “I went to the DineSafe office” asserts a physical visit.
+
+Never invent named officials, quotes or assurances beside factual reports. A fictional personality can explain real reporting; it cannot supply fictional evidence. Clearly labelled fictional stories or illustrations, if separately chosen, must stay distinct from factual updates and must not imply official endorsement.
+
+##### Humour
+
+Let humour sit underneath the writing: hinted, dry and never an attempt to make the audience laugh. Scarb's disproportionate excitement is often the joke, and the joke is on Scarb. Be genuinely curious and enthusiastic without becoming obnoxious or turning each update into a performance. Never mock residents, businesses, neighbourhoods, language ability or people affected by a problem.
+
+Appropriate in low-stakes explanatory material:
+
+- “I read the notes, too. There were notes.”
+- “A small detail. Naturally, I checked it.”
+- Tone sketch, not a report: "A form with four date fields? I may have just perked up."
+
+No jokes in safety warnings, closures, illness, serious incidents or corrections. Do not use humour to obscure uncertainty, minimise a problem or undermine credibility. Avoid repeated comic mannerisms.
+
+##### Meaning and uncertainty
+
+Explain evidence, not just records. Label interpretations when they go beyond a direct source statement. Distinguish what happened, what a source says and what Scarb.TO can infer. Do not speculate about motives.
+
+Keep these dates separate:
+
+- Event or inspection date.
+- Date added to Scarb.TO.
+- Date the source was last successfully checked.
+
+A new record is not automatically a new business, new event or current condition. Missing data is not evidence nothing happened. “No updates found in the sources checked” is not “Nothing has changed.”
+
+Keep official inspection outcomes accurate. “Food inspection results” is useful plain language; “All clear” is not a substitute for a dated Pass result. Do not imply a result guarantees current safety.
+
+Example: “This result is from October 27. Check the City’s record for anything newer.” If a limitation could affect a decision, retain it visibly beside the result, even when further methodology is expandable.
+
+##### Editorial perspective
+
+Offer a point of view when current or historical records support it. Keep the source fact and Scarb.TO's interpretation distinct in ordinary prose. For historical comparisons, name the actual period and count checked; do not imply the available history is complete. For example, when supported: "A conditional pass this time. That stands out: the previous four inspections in the records I checked were passes."
+
+Show empathy about closures or disruptions without inventing neighbours' feelings or judging a business beyond the source. Be optimistic and curious about development, then think through likely benefits and trade-offs with evidence, as if talking it over with a friend. Development copy must distinguish a proposal, an approval and construction underway. Curiosity is fine; invented public reaction is not: "I'm curious what neighbours will make of this." Use "breaking news" only for a genuinely recent, verified event, not an older record newly collected by Scarb.TO.
+
+For beaches, attribute the dated official swimming recommendation and link its source; never guarantee that a beach is safe. Mention cold water only when a recent, relevant temperature source supports it. Example with placeholders, not live facts: "The City recommends swimming here in its latest update. The water was [temperature] at [time], though. Encouraging news for your plans; less so for your toes." Keep humour away from serious failures or harm.
+
+The concise, detail-on-demand approach is approved for crime-statistics commentary, especially about violent crime. Historical trends or comparisons across neighbourhoods or cities are welcome when definitions, periods and measures support a like-for-like comparison. Keep essential uncertainty and accurate attribution in the short copy; make fuller source and method detail available on demand. This approves editorial presentation only, not new data integration, public crime claims or source rights. Existing source, privacy and publication criteria still apply.
+
+##### Interface vocabulary
+
+Prefer:
+
+- Browse updates
+- Explore your neighbourhood
+- View details
+- See the City’s record
+- About this information
+- Added to Scarb.TO October 27
+- Last checked November 1
+- Food inspection results
+
+Avoid as resident-facing labels:
+
+- Captured observations
+- Establishment IDs
+- Supplied snapshot
+- Inspect record
+- Source ingestion
+- Observed changes, when a clearer description is available
+
+Do not turn “48 records” into “48 places” unless distinct place identities are verified. Technical counts rarely belong in an introduction.
+
+##### Before and after
+
+- “See captured updates” → “Browse updates.”
+- “3 updates first observed 27–29 October” → “3 updates added October 27–29.”
+- “No observed changes” → “I didn’t find any new updates in the sources checked.”
+- “Source refresh failed” → “I couldn’t check for newer records. This was last checked on [date].”
+- “The supplied snapshot contains 48 source establishment records” → Source details: “This preview uses 48 City records collected on November 1.” Use only for that frozen preview, not as current production copy.
+- “They do not establish current safety” → “These results describe the inspection on the date shown. Check the City’s record for newer information.”
+
+##### Mechanics
+
+Use Canadian spelling, sentence case, natural contractions, concrete nouns, active verbs, short paragraphs and ordinary punctuation. Define unfamiliar terms on first use. Avoid habitual em dashes, bureaucratic phrasing, forced slang and promotional superlatives.
+
+Do not promise daily news, comprehensive coverage, real-time monitoring or future follow-up unless the product actually provides it.
+
+##### Editorial check within normal review
+
+Can a first-time visitor understand what this means? Is every first-person action true? Do the dates and sources support the claim? Is the limitation clear where it matters? Is the humour kind and optional? Can a technical detail move out of the headline without losing important meaning?
+
+##### Visual relationship
+
+Keep the adopted three-line wave/cliff mark. Develop an integrated Scarb.TO lockup while preserving the standalone mark. Keep the three-line wave/cliff mark available on its own, alongside the selected connected-contour lockup. The approved tagline is “Scarborough. I looked into it.” Production use still requires visual qualification.
 
 ### Required complete-release result
 
@@ -51,7 +174,7 @@ The owner selected **the complete resident experience plus qualified development
 3. **Actual planning applications and the approved building-permit companion.** Independently qualify development applications, active permits, cleared-permit collection scope and their locations. A research sample, permit-only layer or links to City tools cannot substitute for the agreed planning coverage. Preserve complete acquisition, identity, geography, public-field, privacy and licence requirements.
 4. Development appears consistently in map, list, details, neighbourhood context and observed history. Distinguish applications, permits, approvals and actual construction. Offer active-record browsing alongside recent changes so older active proposals remain discoverable.
 5. Shareable website briefs and working RSS from the same validated committed change history, with source links, stable identities, correct dates and visible corrections. No email/subscriber system in this release.
-6. Adopted identity integrated consistently after the reserved brand decision, source-safe public operation, tested last-good retention/rollback and verified live journeys.
+6. Integrate the adopted Lake & Land visual direction consistently, preserve the standalone three-line wave/cliff mark and use only a reviewed integrated Scarb.TO lockup. Maintain source-safe public operation, tested last-good retention/rollback and verified live journeys.
 
 Existing approved UX is part of completion: contextual compact Key; an unobstructed phone map; dataset-specific controls; coherent area/filter/reset semantics; desktop area information with results and an accessible mobile sheet; precise record/location/count labels; distinct inspection/event/observation/publication times; stable freshness notices; recoverable empty states; non-colour status/selection cues; and a complete accessible list alternative. Preserve both overlays off by default, mutual exclusivity, visible area state and Clear area changing only geography. The approved 1 November UX follow-up clears an incompatible selected area when changing overlay type and explains that reset; closing the panel or hiding outlines preserves the selected area. An explicitly chosen empty period is not silently reset.
 
