@@ -25,7 +25,9 @@ test('UI source text retains intended separators and badge text', async () => {
   ]);
   assert.equal((html + String.fromCharCode(10) + app).includes(String.fromCharCode(0xfffd)), false);
   assert.match(html, /class="data-pill">DineSafe<\/span>/);
-  assert.ok(html.includes("DineSafe Open Data</a> " + String.fromCharCode(0x00b7) + " <a"));
+  assert.ok(html.includes('DineSafe Open Data</a> and are provided under the <a'));
+  assert.match(html, /href="https:\/\/open\.toronto\.ca\/dataset\/dinesafe\/"[^>]*>City of Toronto DineSafe Open Data<\/a>/);
+  assert.match(html, /href="https:\/\/open\.toronto\.ca\/open-data-licence\/"[^>]*>Open Government Licence - Toronto<\/a>/);
   assert.ok(app.includes("Toronto Open Data " + String.fromCharCode(0x00b7) + " dated samples"));
 });
 
