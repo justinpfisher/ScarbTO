@@ -108,7 +108,7 @@ A new record is not automatically a new business, new event or current condition
 
 Keep official inspection outcomes accurate. “Food inspection results” is useful plain language; “All clear” is not a substitute for a dated Pass result. Do not imply a result guarantees current safety.
 
-Example: “This result is from October 27. Check the City’s record for anything newer.” If a limitation could affect a decision, retain it visibly beside the result, even when further methodology is expandable.
+Example: “This result is from Tuesday, October 27, 2026. Check the City's record for anything newer.” If a limitation could affect a decision, retain it visibly beside the result, even when further methodology is expandable.
 
 ##### Reader-facing dates and technical detail
 
@@ -124,7 +124,7 @@ Offer a point of view when current or historical records support it. Keep the so
 
 Show empathy about closures or disruptions without inventing neighbours' feelings or judging a business beyond the source. Be optimistic and curious about development, then think through likely benefits and trade-offs with evidence, as if talking it over with a friend. Development copy must distinguish a proposal, an approval and construction underway. Curiosity is fine; invented public reaction is not: "I'm curious what neighbours will make of this." Use "breaking news" only for a genuinely recent, verified event, not an older record newly collected by Scarb.TO.
 
-For beaches, attribute the dated official swimming recommendation and link its source; never guarantee that a beach is safe. Mention cold water only when a recent, relevant temperature source supports it. Example with placeholders, not live facts: "The City recommends swimming here in its latest update. The water was [temperature] at [time], though. Encouraging news for your plans; less so for your toes." Keep humour away from serious failures or harm.
+For beaches, never present historical samples as current swimming advice. Attribute the dated official swimming recommendation only when a qualified current-status source supports it and link that source; never guarantee that a beach is safe. Mention water temperature only when a recent, relevant source supports it. Example of a serious limitation (not live advice): “These are historical water samples, not today's swimming conditions. Check the City's current advisory before getting in.” Do not use humour in a safety notice.
 
 The concise, detail-on-demand approach is approved for crime-statistics commentary, especially about violent crime. Historical trends or comparisons across neighbourhoods or cities are welcome when definitions, periods and measures support a like-for-like comparison. Keep essential uncertainty and accurate attribution in the short copy; make fuller source and method detail available on demand. This approves editorial presentation only, not new data integration, public crime claims or source rights. Existing source, privacy and publication criteria still apply.
 
