@@ -3,11 +3,11 @@ import {areaFor, areaMatches, councillorFor, NEIGHBOURHOODS, WARDS, validateArea
 import {fitBoundsFromFeatures} from './logic.mjs';
 import {neighbourhoodPagePath} from './neighbourhood-routes.mjs';
 
-/** One geographic selection, with two optional mutually exclusive map outlines.
- * Area visibility is session-only and always begins off; selected-area filters
- * can persist, but are always accompanied by a visible Clear area chip.
+/** One map-selected area, with two mutually exclusive boundary layers.
+ * Turning boundaries off clears that selection, not independent list filters.
+ * The owner persists overlay/history state through onOverlayChange.
  */
-export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onSelect, onClear}) {
+export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onSelect, onClear, onOverlayChange}) {
   const el = id => document.getElementById(id);
   let map = null, overlay = 'off', token = 0, open = false, expanded = false;
   const cache = new Map();
@@ -248,28 +248,36 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     try { return await promise; }
     finally { pendingGeometry.delete(kind); }
   }
-  async function setOverlay(next) {
+  async function setOverlay(next,{restore=false,notify=!restore}={}) {
     if (!['off','neighbourhood','ward'].includes(next)) return;
-    if (next!=='off' && !LIVE_MODES.has(getState().mode)) {
+    if (!restore && next!=='off' && !LIVE_MODES.has(getState().mode)) {
       showNote('These boundaries and area filters work with DineSafe places only. Police division totals and beach samples cover different areas.');
       return;
     }
+    const previousOverlay=overlay;
     const priorSelection=selected();
-    const selectionCleared=next!=='off' && priorSelection && priorSelection.kind!==next;
-    if(selectionCleared){open=false;expanded=false;onClear();}
+    const selectionCleared=Boolean(!restore && priorSelection && (next==='off' || priorSelection.kind!==next));
+    if(next==='off' || selectionCleared){open=false;expanded=false;panelStamp='';}
+    if(selectionCleared)onClear({overlayChange:true});
     const generation=++token;
-    overlay=next;showNote(selectionCleared?'I cleared the previous area filter when you switched boundary types. Choose a new area for the map and list.':'');sync();
+    overlay=next;
+    showNote(selectionCleared?(next==='off'
+      ? 'Boundaries are off and the map-selected area is cleared. Your other filters stay in place.'
+      : 'I cleared the previous map-selected area when you switched boundary types. Your other filters stay in place. Choose a new area for the map and list.'):'');
+    display();sync();
+    if(notify && previousOverlay!==overlay)onOverlayChange?.(overlay);
     if (next!=='off' && !cache.has(next)) {
       try {
         await loadGeometry(next);
       } catch (error) {
         if (generation!==token) return;
-        overlay='off';
-        showNote(selectionCleared
-          ? 'Official '+(next==='ward'?'ward':'neighbourhood')+' boundaries could not load. The previous area filter was cleared when you switched types. Choose a new area once the boundaries load.'
-          : 'Official '+(next==='ward'?'ward':'neighbourhood')+' boundaries could not load. Your map and filters have not changed.');
+        overlay='off';open=false;expanded=false;panelStamp='';
+        if(selected())onClear({overlayChange:true});
+        showNote('Official '+(next==='ward'?'ward':'neighbourhood')+' boundaries could not load. Boundaries are off and no map-selected area is applied. Your other filters stay in place.');
         console.warn('Area overlay unavailable:',error?.message||error);
-        sync();display();return;
+        sync();display();
+        if(notify)onOverlayChange?.('off');
+        return;
       }
     }
     if (generation!==token) return;
@@ -303,8 +311,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     const area=selected(), attempt=++fitAttempt;
     if (!map || !area) return;
     try {
-      // An area selected through the legacy dropdown or restored from browser
-      // preferences need not have its overlay enabled or loaded.
+      // A restored map selection may arrive before its boundary geometry.
       const collection=await loadGeometry(area.kind);
       const current=selected();
       if(attempt!==fitAttempt || !map || !current || current.kind!==area.kind || current.code!==area.code) return;
@@ -347,5 +354,5 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
       showNote('Boundaries are hidden for this view. Police division totals and historical beach samples do not describe whole neighbourhoods or wards.');
     else if (el('area-note').textContent.startsWith('Boundaries are hidden for this view')) showNote('');
     display();sync();
-  }, setOverlay, select};
+  }, setOverlay, getOverlay:()=>overlay, select};
 }

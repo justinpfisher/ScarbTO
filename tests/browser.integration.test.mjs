@@ -24,7 +24,8 @@ test('UI source text retains intended separators and badge text', async () => {
     readFile(resolve(root, 'app.mjs'), 'utf8'),
   ]);
   assert.equal((html + String.fromCharCode(10) + app).includes(String.fromCharCode(0xfffd)), false);
-  assert.match(html, /class="data-pill">DineSafe<\/span>/);
+  assert.doesNotMatch(html, /class="data-pill">DineSafe<\/span>/);
+  assert.match(html,/About these records/);
   assert.ok(html.includes('DineSafe Open Data</a> and are provided under the <a'));
   assert.match(html, /href="https:\/\/open\.toronto\.ca\/dataset\/dinesafe\/"[^>]*>City of Toronto DineSafe Open Data<\/a>/);
   assert.match(html, /href="https:\/\/open\.toronto\.ca\/open-data-licence\/"[^>]*>Open Government Licence - Toronto<\/a>/);
@@ -272,16 +273,18 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await page.getByRole('button', {name: 'Beach samples'}).click();
   assert.match(await page.locator('#map').getAttribute('aria-label'),/beach reference point, not the individual sampling locations/i,`${name}: map label explains the beach marker location`);
   await page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
-  await page.getByText('latest 10 records available when checked', {exact: false}).waitFor();
+  assert.equal(await page.locator('.beach-sample-date-list>li').count(),2);
+  await page.getByText('Sample records and sources',{exact:true}).click();
+  await page.getByText('latest 10 sample records available when checked', {exact: false}).waitFor();
   assert.equal(await page.locator('#search').isDisabled(), true, `${name}: DineSafe controls are disabled in beach mode`);
   await page.waitForFunction(() => Math.abs(window.__scarbMap.getCenter().lng - -79.2252) < 0.002);
   const beachCenter = await page.evaluate(() => window.__scarbMap.getCenter().toArray());
   assert.ok(Math.abs(beachCenter[0] - selectedCenter[0]) > 0.01, `${name}: beach mode moves the real map camera`);
   assert.equal(await page.locator('.beach-sample-preview-list li').count(), 10);
-  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /not current swimming advice/i);
-  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /map pin marks the beach, not the sampling spots/i);
-  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /Open Government Licence.*Toronto/i);
-  assert.match(await page.locator('#data-status').textContent(), /City sample records checked Tuesday, October 27, 2026; latest sample Wednesday, September 16, 2026\. Not current swimming advice\./);
+  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /not today.s swimming conditions/i);
+  assert.match(await page.locator('.beach-sample-preview').textContent(), /map pin marks the beach, not the sampling spots/i);
+  assert.match(await page.locator('.beach-sample-preview').textContent(), /Open Government Licence.*Toronto/i);
+  assert.match(await page.locator('#data-status').textContent(), /Historical City samples through Wednesday, September 16, 2026\. Not current swimming advice\./);
   assert.equal(await page.locator('.beach-sample-preview a').count(), 3);
   const links = await page.locator('.beach-sample-preview a').evaluateAll(anchors => anchors.map(anchor => ({href: anchor.href, rel: anchor.rel, target: anchor.target})));
   assert.ok(links.every(link => link.target === '_blank' && link.rel.includes('noopener') && link.rel.includes('noreferrer')));
@@ -430,7 +433,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   t.after(() => beachSurvivesDineSafeError.context.close());
   await beachSurvivesDineSafeError.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
   assert.equal(await beachSurvivesDineSafeError.page.locator('.beach-sample-preview-list li').count(), 10);
-  assert.match(await beachSurvivesDineSafeError.page.locator('#data-status').textContent(), /City sample records checked/);
+  assert.match(await beachSurvivesDineSafeError.page.locator('#data-status').textContent(), /Historical City samples through/);
   await beachSurvivesDineSafeError.page.getByRole('button', {name: 'All places'}).click();
   await beachSurvivesDineSafeError.page.getByText(/I could not load the published records \(HTTP 503\)/).waitFor();
   assert.equal(await beachSurvivesDineSafeError.page.locator('#results-title').textContent(), 'Places to explore');
@@ -625,7 +628,7 @@ test('selected calls render only after explicit selection and clear after leavin
     if(viewport.isMobile)await page.getByRole('button',{name:'Filters'}).click();
     assert.equal(requests,0,'the client is idle until the selected-calls view is opened');
     const firstRequest=waitForSelectedCallsRequest(page);
-    await page.getByRole('button',{name:'Selected police calls'}).click();
+    await page.getByRole('button',{name:'Police calls by division'}).click();
     await firstRequest;
     await page.getByText('Division 41',{exact:true}).waitFor();
     assert.equal(requests,5,'the view uses the bounded metadata/count/group/count/metadata sequence');
@@ -636,7 +639,7 @@ test('selected calls render only after explicit selection and clear after leavin
     assert.equal(await page.locator('#selected-calls-map-note').isVisible(),true);
     await page.getByRole('button',{name:'All places'}).click();
     assert.equal(await page.locator('.selected-call-row').count(),0,'leaving the view removes all counts');
-    await page.getByRole('button',{name:'Selected police calls'}).click();
+    await page.getByRole('button',{name:'Police calls by division'}).click();
     assert.equal(await page.locator('.selected-call-row').count(),0,'a cooldown response cannot reveal old counts');
     assert.equal(requests,5);
     assert.deepEqual(errors,[]);
@@ -656,15 +659,15 @@ test('selected-call mode aborts on hidden document and never renders stale count
   await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsDelayMs:3_000,onSelectedCallsRequest:()=>requests++});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
   const firstRequest=waitForSelectedCallsRequest(page);
-  await page.getByRole('button',{name:'Selected police calls'}).click();
+  await page.getByRole('button',{name:'Police calls by division'}).click();
   await firstRequest;
   await page.evaluate(()=>window.__setVisibility('hidden'));
-  await page.getByText(/Counts are removed when you leave this view/i).waitFor();
+  await page.locator('#record-list').getByText(/Counts are removed when you leave this view/i).waitFor();
   assert.equal(await page.locator('.selected-call-row').count(),0);
   await page.waitForTimeout(3_100,'allow the delayed aborted fixture response to settle before checking later request stages');
   assert.equal(requests,1,'abort prevents later request stages');
   await page.evaluate(()=>window.__setVisibility('visible'));
-  await page.locator('#data-status').filter({hasText:/cannot verify fresh selected-call counts/i}).waitFor();
+  await page.locator('#data-status').filter({hasText:/Checks are at least 5 minutes apart/i}).waitFor();
   assert.equal(await page.locator('.selected-call-row').count(),0);
   assert.equal(requests,1,'cooldown prevents immediate retry after cancellation');
   assert.deepEqual(errors,[]);
@@ -680,9 +683,9 @@ test('stale upstream selected-call response never renders aggregate values', {ti
   await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsSourceAgeMs:31*60_000});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
   const firstRequest=waitForSelectedCallsRequest(page);
-  await page.getByRole('button',{name:'Selected police calls'}).click();
+  await page.getByRole('button',{name:'Police calls by division'}).click();
   await firstRequest;
-  await page.locator('#data-status').filter({hasText:/cannot verify fresh selected-call counts/i}).waitFor();
+  await page.locator('#data-status').filter({hasText:/more than 30 minutes old/i}).waitFor();
   assert.equal(await page.locator('.selected-call-row').count(),0);
   assert.deepEqual(errors,[]);
 });
@@ -697,10 +700,10 @@ test('rendered selected-call counts disappear at the upstream freshness deadline
   await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsSourceAgeMs:30*60_000-15_000});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
   const firstRequest=waitForSelectedCallsRequest(page);
-  await page.getByRole('button',{name:'Selected police calls'}).click();
+  await page.getByRole('button',{name:'Police calls by division'}).click();
   await firstRequest;
   await page.getByText('Division 41',{exact:true}).waitFor();
-  await page.locator('#data-status').filter({hasText:/cannot verify fresh selected-call counts/i}).waitFor({timeout:20_000});
+  await page.locator('#data-status').filter({hasText:/more than 30 minutes old/i}).waitFor({timeout:20_000});
   assert.equal(await page.locator('.selected-call-row').count(),0);
   assert.deepEqual(errors,[]);
 });
@@ -714,12 +717,12 @@ test('reselecting the active selected-calls tab does not extend the absolute fre
   await traceSelectedCalls(page);
   await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsSourceAgeMs:30*60_000-4_000});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
-  const tab=page.getByRole('button',{name:'Selected police calls'});
+  const tab=page.getByRole('button',{name:'Police calls by division'});
   const firstRequest=waitForSelectedCallsRequest(page);
   await tab.click();await firstRequest;await page.getByText('Division 41',{exact:true}).waitFor();
   await page.waitForTimeout(1_500);
   await tab.click();
-  await page.locator('#data-status').filter({hasText:/cannot verify fresh selected-call counts/i}).waitFor({timeout:3_200});
+  await page.locator('#data-status').filter({hasText:/more than 30 minutes old|Checks are at least 5 minutes apart/i}).waitFor({timeout:3_200});
   assert.equal(await page.locator('.selected-call-row').count(),0);
   assert.deepEqual(errors,[]);
 });
@@ -735,7 +738,7 @@ test('resetting during a selected-call request aborts it and prevents late rende
   await installLocalRoutes(page,origin,{selectedCalls:true,selectedCallsDelayMs:3_000,onSelectedCallsRequest:()=>requests++});
   await page.goto(origin,{waitUntil:'domcontentloaded'});await waitForMap(page);
   const firstRequest=waitForSelectedCallsRequest(page);
-  await page.getByRole('button',{name:'Selected police calls'}).click();
+  await page.getByRole('button',{name:'Police calls by division'}).click();
   await firstRequest;
   await page.getByRole('button',{name:'Clear filters'}).click();
   await page.waitForTimeout(3_200);
@@ -746,6 +749,29 @@ test('resetting during a selected-call request aborts it and prevents late rende
 });
 
 
+
+test('all five verified Namma findings render with original source details', {timeout:60_000}, async t=>{
+  const fixture=JSON.parse(await readFile(new URL('./fixtures/namma-findings.json',import.meta.url),'utf8'));
+  const first=fixture.rows[0];
+  const entry={id:first.estId,name:first.estName,address:first.address,status:first.inspectionStatus,inspection_date:first.inspectionDate,latitude:Number(first.latitude),longitude:Number(first.longitude),neighbourhood:'Scarborough Village',inspection_findings:fixture.rows.map(r=>({row_id:r.unique_id,wording:r.typeDesc,severity:r.severity,category:r.deficiencyDesc,inspection_date:r.inspectionDate,observation:r.observation,outcome:r.OutcomeDesc}))};
+  const {server,origin}=await startStaticServer();const browser=await chromium.launch();
+  t.after(async()=>{await browser.close();await new Promise(done=>server.close(done));});
+  const view=await openScenario(browser,origin,{snapshotBody:{...snapshot,establishments:[entry]}},{initialMode:'all'});
+  await view.page.locator('#window').selectOption('all');
+  await view.page.getByRole('button',{name:/NAMMA MADURAI/}).click();
+  assert.equal(await view.page.locator('.inspection-findings>ul>li').count(),5);
+  assert.match(await view.page.locator('.inspection-findings').textContent(),/does not establish that contamination/);
+  await view.page.getByText('Original findings and source details',{exact:true}).click();
+  for(const row of fixture.rows)assert.ok((await view.page.locator('.inspection-originals').textContent()).includes(row.typeDesc));
+  assert.equal(await view.page.locator('.status-label').textContent(),'Conditional Pass');
+  await view.page.goto(origin+'/scarborough-village/',{waitUntil:'domcontentloaded'});
+  await view.page.getByRole('heading',{name:'NAMMA MADURAI'}).waitFor();
+  await view.page.getByText('View inspection findings',{exact:true}).click();
+  assert.equal(await view.page.locator('.inspection-findings>ul>li').count(),5);
+  await view.page.getByText('Original findings and source details',{exact:true}).click();
+  for(const row of fixture.rows)assert.ok((await view.page.locator('.inspection-originals').textContent()).includes(row.unique_id));
+  assert.deepEqual(view.pageErrors,[]);await view.context.close();
+});
 
 test('browse-mode tabs stay fully visible at desktop and narrow widths', {timeout:60_000}, async t=>{
   const {server,origin}=await startStaticServer();
@@ -758,7 +784,7 @@ test('browse-mode tabs stay fully visible at desktop and narrow widths', {timeou
   await installLocalRoutes(page,origin,{});
   await page.goto(origin,{waitUntil:'domcontentloaded'});
   await waitForMap(page);
-  for(const width of [1280,1024,960,950,800,390]){
+  for(const width of [1280,1024,960,950,800,390,320]){
     await page.setViewportSize({width,height:900});
     const filterToggle=page.locator('#toggle-filters');
     if(width<=950&&await filterToggle.isVisible()&&await filterToggle.getAttribute('aria-expanded')!=='true')await filterToggle.click();
@@ -788,6 +814,13 @@ test('browse-mode tabs stay fully visible at desktop and narrow widths', {timeou
     });
     assert.ok(metrics.scrollWidth<=metrics.clientWidth+1, `mode tab container overflows at ${width}px: ${JSON.stringify(metrics)}`);
     assert.equal(metrics.buttons.length,4);
+    const boundaries=await page.locator('.area-toggle').evaluateAll(buttons=>buttons.map(button=>{
+      const r=button.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:button.clientWidth,scroll:button.scrollWidth,height:r.height};
+    }));
+    for(let i=0;i<boundaries.length;i++){
+      const a=boundaries[i];assert.ok(a.scroll<=a.width+1&&a.height>=44,`boundary control clips at ${width}`);
+      for(const b of boundaries.slice(i+1))assert.ok(a.right<=b.left||b.right<=a.left||a.bottom<=b.top||b.bottom<=a.top,`boundary controls overlap at ${width}`);
+    }
     for(const button of metrics.buttons){
       assert.ok(button.left>=button.containerLeft-1 && button.right<=button.containerRight+1, `${button.label} clips horizontally at ${width}px`);
       assert.ok(button.scrollWidth<=button.clientWidth+1, `${button.label} text clips at ${width}px`);
@@ -868,27 +901,38 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   assert.equal(await page.locator('#area-note').isVisible(),false,'successful selection clears the obsolete boundary-switch notice');
   assert.match(await page.locator('#area-selection-name').textContent(),/Ionview/);
   assert.match(await page.locator('#area-panel').textContent(),/Ward 20 and Ward 21/);
-  await page.getByRole('button',{name:'Selected police calls'}).click();
+  await page.getByRole('button',{name:'Police calls by division'}).click();
   stage='selected calls with area panel';
   await page.waitForFunction(()=>document.querySelector('#area-selection-name')?.textContent.includes('not applied'));
   assert.match(await page.locator('#area-panel').textContent(),/DineSafe area filter is paused/i);
   await page.getByRole('button',{name:'All places'}).click();
   await page.locator('[data-area-overlay="off"]').click();
   stage='hiding overlay';
-  assert.equal(await page.locator('#record-list .record-item').count(),1,'hiding outlines retains geographic selection');
+  await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===3);
+  assert.equal(await page.locator('#area-selection').isVisible(),false,'Off clears map-selected restriction');
+  assert.equal(new URL(page.url()).searchParams.has('areaCode'),false);
   const hidden=await page.evaluate(()=>window.__scarbMap.getLayoutProperty('area-region-fill','visibility'));
   assert.equal(hidden,'none');
-  await page.reload({waitUntil:'domcontentloaded'});
-  stage='reload with persistent selection';
-  await waitForMap(page);
-  assert.equal(await page.locator('[data-area-overlay="off"]').getAttribute('aria-pressed'),'true','outlines off on every page load');
-  assert.match(await page.locator('#area-selection-name').textContent(),/Ionview/,'persistent area filter has a visible chip');
-  assert.equal(await page.evaluate(()=>Boolean(window.__scarbMap.getSource('area-regions'))),false,'restored selection does not silently enable outlines');
+  await page.goBack();
+  await page.waitForFunction(()=>document.querySelector('#area-selection-name').textContent.includes('Ionview')&&!document.querySelector('#area-selection').hidden);
+  assert.equal(await page.locator('#record-list .record-item').count(),1,'Back restores selected geography');
+  await page.goForward();
+  await page.waitForFunction(()=>document.querySelector('#area-selection').hidden);
+  assert.equal(await page.locator('#record-list .record-item').count(),3,'Forward restores cleared geography');
+  await page.locator('#neighbourhood').selectOption('Ionview');
+  await page.locator('[data-area-overlay="neighbourhood"]').click();
+  await page.locator('#area-choice').selectOption('125');
+  await page.locator('[data-area-overlay="off"]').click();
+  assert.equal(await page.locator('#neighbourhood').inputValue(),'Ionview','Off preserves independent dropdown');
+  assert.equal(await page.locator('#record-list .record-item').count(),1);
+  await page.locator('#neighbourhood').selectOption('');
+  await page.locator('[data-area-overlay="neighbourhood"]').click();
+  await page.locator('#area-choice').selectOption('125');
   await page.locator('#area-reopen').click();
   const zoomBefore=await page.evaluate(()=>window.__scarbMap.getZoom());
   await page.locator('#area-panel-fit').click();
   await page.waitForFunction(before=>window.__scarbMap.getZoom()>before+0.3,zoomBefore,{timeout:5000});
-  assert.equal(await page.locator('[data-area-overlay="off"]').getAttribute('aria-pressed'),'true','fit selected boundary without enabling overlay');
+  assert.equal(await page.locator('[data-area-overlay="neighbourhood"]').getAttribute('aria-pressed'),'true');
   const centerAtClear=await page.evaluate(()=>window.__scarbMap.getCenter().toArray());
   await page.locator('#area-clear').click();
   stage='clearing selection';
@@ -1006,7 +1050,7 @@ test('static neighbourhood pages use the qualified set and route into the same s
   await installLocalRoutes(page,origin,{snapshotBody:pageSnapshot,neighbourhoodGeometry:areaOverlayFixture('neighbourhood')});
   await page.goto(`${origin}/westrouge/?utm_source=fixture#share`,{waitUntil:'domcontentloaded'});
   await page.waitForURL(url=>url.pathname==='/west-rouge/'&&url.searchParams.get('utm_source')==='fixture'&&url.hash==='#share',{timeout:5_000});
-  await page.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.startsWith('Last checked'));
+  await page.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.startsWith('Food inspection records checked'));
   assert.match(await page.getByRole('heading',{level:1}).textContent(),/West Rouge/);
   assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),'https://scarb.to/west-rouge/');
   assert.equal(await page.locator('meta[property="og:url"]').getAttribute('content'),'https://scarb.to/west-rouge/');
@@ -1029,13 +1073,14 @@ test('static neighbourhood pages use the qualified set and route into the same s
   assert.equal(printLayout.hidden,true,'print view hides navigation and interactive controls');
   assert.equal(printLayout.readable,true,'print view retains the title, records, source and reuse guidance');
   await page.emulateMedia({media:'screen'});
-  assert.match(await page.locator('#feed-status').textContent(),/Last checked/);
-  assert.match(await page.locator('#feed-status').textContent(),/City catalogue date:/);
+  assert.match(await page.locator('#feed-status').textContent(),/records checked/);
+  assert.doesNotMatch(await page.locator('#feed-status').textContent(),/City catalogue/);
+    assert.match(await page.locator('#source-provenance').textContent(),/City catalogue timestamp/);
   await page.waitForFunction(()=>document.querySelectorAll('#inspection-list .record-item').length===1);
   assert.equal(await page.locator('#inspection-list .record-item').count(),1);
-  assert.match(await page.locator('#inspection-list').textContent(),/The inspection record says: Food handling room/);
+  assert.match(await page.locator('#inspection-list').textContent(),/Original finding: Food handling room/);
   assert.match(await page.locator('#inspection-list').textContent(), /Inspected Tuesday, November 3, 2026/);
-  assert.doesNotMatch(await page.locator('#inspection-list').textContent(), /2026-11-03/, 'everyday inspection dates use the readable calendar date');
+  assert.doesNotMatch(await page.locator('#inspection-list').innerText(), /2026-11-03/, 'everyday inspection dates use the readable calendar date; raw dates stay in optional source details');
   assert.equal(await page.getByRole('link',{name:'Find an Ontario MPP'}).getAttribute('href'),'https://www.ola.org/en/members/current');
   assert.equal(await page.getByRole('link',{name:'Find a federal MP'}).getAttribute('href'),'https://www.ourcommons.ca/Members/en/search');
   assert.match(await page.locator('#ward-links').textContent(),/Ward 25/);
@@ -1067,7 +1112,7 @@ test('static neighbourhood pages use the qualified set and route into the same s
   const otherAreaSnapshot={...pageSnapshot,establishments:[{...pageSnapshot.establishments[0],neighbourhood:'Agincourt North'}]};
   await installLocalRoutes(zeroAreaPage,origin,{snapshotBody:otherAreaSnapshot});
   await zeroAreaPage.goto(`${origin}/west-rouge/`,{waitUntil:'domcontentloaded'});
-  await zeroAreaPage.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.startsWith('Last checked'));
+  await zeroAreaPage.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.startsWith('Food inspection records checked'));
   await zeroAreaPage.waitForFunction(()=>document.querySelector('#record-summary')?.textContent.includes("I didn't find any places labelled with this neighbourhood"));
   assert.equal(await zeroAreaPage.locator('#inspection-list .record-item').count(),0);
 

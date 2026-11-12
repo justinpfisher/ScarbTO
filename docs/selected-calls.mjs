@@ -19,8 +19,38 @@ const UNAVAILABLE = (reason) => Object.freeze({
   counts: Object.freeze([]),
 });
 
-function fail(message) {
-  throw new Error(message);
+class SelectedCallsFailure extends Error {
+  constructor(message, reason) {
+    super(message);
+    this.reason = reason;
+  }
+}
+
+function fail(message, reason = "source verification failed") {
+  throw new SelectedCallsFailure(message, reason);
+}
+
+/** Only known local reason codes become reader copy. Never echo remote errors. */
+export function selectedCallsMessage(view) {
+  if (view?.status === "available") return "Selected calls published by Toronto Police Service for Divisions 41, 42 and 43. These are not all calls, crime, police activity or officer presence.";
+  const messages = {
+    "loading": "Checking police call totals for Divisions 41, 42 and 43.",
+    "not loaded": "Open this view to check police call totals for Divisions 41, 42 and 43.",
+    "view hidden": "Counts are removed when you leave this view. Open it again to check for fresh totals.",
+    "source data is stale": "The TPS records are more than 30 minutes old, so no counts are shown.",
+    "source data expired": "The TPS records are now more than 30 minutes old. Older counts have been removed.",
+    "cached counts expired": "These counts have been here for more than 10 minutes and have expired. Check again for fresh totals.",
+    "source request timed out": "The request to TPS did not finish within 8 seconds. No counts are shown.",
+    "request cancelled": "The check was cancelled. No counts are shown.",
+    "refresh cooldown active": "Checks are at least 5 minutes apart. Please wait before checking again; no older counts are shown.",
+    "source changed during request": "TPS changed the records while I was checking them, so no totals are shown.",
+    "clock changed; refresh required": "The clock changed while these counts were open. I removed them because I cannot verify their age.",
+    "source timestamp invalid": "I could not verify the age of the TPS records, so no counts are shown.",
+    "source verification failed": "I could not verify the TPS totals against the source checks, so no counts are shown.",
+    "source response unavailable": "The TPS request did not return a usable response. No counts are shown.",
+    "source data unavailable": "This browser could not retrieve the TPS totals. No counts are shown.",
+  };
+  return Object.hasOwn(messages, view?.reason) ? messages[view.reason] : "I could not verify the TPS totals, so no counts are shown.";
 }
 
 function exactKeys(value, expected, label) {
@@ -136,7 +166,7 @@ function makeRequests() {
 }
 
 async function readBoundedJson(response, expectedUrl, maxBytes) {
-  if (!response || !response.ok) fail(`source returned HTTP ${response?.status ?? "unknown"}`);
+  if (!response || !response.ok) fail(`source returned HTTP ${response?.status ?? "unknown"}`, "source response unavailable");
   if (response.redirected) fail("source response redirected");
   if (response.url) {
     const finalUrl = new URL(response.url);
@@ -187,10 +217,10 @@ async function readBoundedJson(response, expectedUrl, maxBytes) {
 }
 
 function freshness(editTime, nowWall, maxAge, futureTolerance) {
-  if (!Number.isFinite(nowWall) || !Number.isFinite(editTime)) fail("clock or source timestamp is invalid");
+  if (!Number.isFinite(nowWall) || !Number.isFinite(editTime)) fail("clock or source timestamp is invalid", "source timestamp invalid");
   const age = nowWall - editTime;
-  if (age < -futureTolerance) fail("source timestamp is in the future");
-  if (age > maxAge) fail("source data is stale");
+  if (age < -futureTolerance) fail("source timestamp is in the future", "source timestamp invalid");
+  if (age > maxAge) fail("source data is stale", "source data is stale");
   return Math.max(0, age);
 }
 
@@ -292,8 +322,8 @@ export class SelectedCallsClient {
         const afterCount = countValue(await call(requests[3]), "final control");
         const afterMetadata = await call(requests[4]);
         const afterRevisions = metadataEditTime(afterMetadata);
-        if (beforeSignature !== metadataSignature(afterMetadata)) fail("source metadata changed during request");
-        if (beforeCount !== afterCount) fail("source count changed during request");
+        if (beforeSignature !== metadataSignature(afterMetadata)) fail("source metadata changed during request", "source changed during request");
+        if (beforeCount !== afterCount) fail("source count changed during request", "source changed during request");
         const completedAt = this.now();
         const finalEditAge = freshness(afterRevisions.dataLastEditDate, completedAt, this.limits.maxUpstreamAgeMs, this.limits.futureClockToleranceMs);
         const counts = groupedCounts(grouped, beforeCount);
@@ -319,7 +349,7 @@ export class SelectedCallsClient {
         return publicState;
       } catch (error) {
         this.current = null;
-        this.invalidReason = timedOut ? "source request timed out" : controller.signal.aborted ? "request cancelled" : "source data unavailable";
+        this.invalidReason = timedOut ? "source request timed out" : controller.signal.aborted ? "request cancelled" : error instanceof SelectedCallsFailure ? error.reason : "source data unavailable";
         return UNAVAILABLE(this.invalidReason);
       } finally {
         clearTimeout(timeout);

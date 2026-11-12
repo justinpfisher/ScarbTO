@@ -448,14 +448,14 @@ test('production DineSafe details clean legacy addresses and label upstream cata
   try {
     app.map.load();
     const status=app.document.getElementById('data-status').textContent;
-    assert.match(status,/Last checked/);
-    assert.match(status,/City catalogue date: Tuesday, October 27, 2026/);
+    assert.match(status,/Food inspection records checked/);
+    assert.doesNotMatch(status,/City catalogue/);
     const list=app.document.getElementById('record-list');
     const row=list.querySelector('.record-item');
     assert.match(row.textContent,/0 Synthetic Road M1V 1V1/);
     assert.doesNotMatch(row.textContent,/ None /);
     row.click();
-    assert.match(list.textContent,/City inspection note: City finding/);
+    assert.match(list.textContent,/Original finding: City finding/);
   } finally { await app.cleanup(); }
 });
 
@@ -476,7 +476,7 @@ test('production detail view suppresses literal None and keeps establishment cat
     app=await loadApp(snapshot);
     app.map.load();app.document.tabs.find(tab=>tab.dataset.mode==='all').click();app.map.emitLayer('click','single',{features:[{properties:{id:snapshot.establishments[0].id}}]});
     const noDetails=app.document.getElementById('record-list').querySelector('.record-details').textContent;
-    assert.match(noDetails,/The City record has no further detail here/);
+    assert.match(noDetails,/No finding text is supplied here/);
     assert.doesNotMatch(noDetails,/None/);
   } finally { await app.cleanup(); }
 });
@@ -604,7 +604,7 @@ test('selected-calls mode fetches only on explicit view selection and clears cou
     app.document.tabs.find(tab=>tab.dataset.mode==='selected-calls').click();
     await new Promise(resolve=>setTimeout(resolve,0));
     assert.equal(list.querySelectorAll('.selected-call-row').length,0);
-    assert.match(list.textContent,/cannot verify fresh selected-call counts/i);
+    assert.match(list.textContent,/Checks are at least 5 minutes apart/i);
     assert.equal(transport.calls,5);
   } finally { await app.cleanup(); }
 });
@@ -617,7 +617,7 @@ test('stale selected-call source response renders unavailable without counts', a
     await new Promise(resolve=>setTimeout(resolve,0));
     const list=app.document.getElementById('record-list');
     assert.equal(list.querySelectorAll('.selected-call-row').length,0);
-    assert.match(list.textContent,/cannot verify fresh selected-call counts/i);
+    assert.match(list.textContent,/more than 30 minutes old/i);
     assert.equal(transport.calls,1);
   } finally { await app.cleanup(); }
 });

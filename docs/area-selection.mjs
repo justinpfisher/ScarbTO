@@ -244,14 +244,15 @@ export function areaForName(kind, name) {
   return null;
 }
 
-/** An area is a single geographic filter, never two hidden intersecting filters. */
+/** Map geography and the explicitly labelled neighbourhood dropdown are independent. */
 export function areaMatches(record, state) {
+  if (state.neighbourhood && record.neighbourhood !== state.neighbourhood) return false;
   if (state.areaKind && state.areaCode) {
     const area = areaFor(state.areaKind,state.areaCode);
     if (!area) return false;
     return (state.areaKind === 'neighbourhood' ? record.neighbourhood : record.ward) === area.name;
   }
-  return !state.neighbourhood || record.neighbourhood === state.neighbourhood;
+  return true;
 }
 
 export function councillorFor(code, at = new Date()) {

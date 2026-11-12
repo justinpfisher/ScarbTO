@@ -1,10 +1,12 @@
 import {readerDate, readerDateTime} from './reader-date.mjs';
+import {viewFromSearch,searchFromView} from './view-state.mjs';
+import {renderInspectionFindings} from './inspection-findings.mjs';
 import {areaFor, areaForName} from './area-selection.mjs';
 import {createAreaExplorer} from './area-explorer.mjs';
 import {DEFAULTS, STATUS, filterActivity, filterEstablishments, isStale, displayAddress, cityCatalogueRefreshText, cityDineSafeRecordUrl, pageRecords, fitBoundsFromFeatures} from './logic.mjs';
 import {beginListRedraw, finishListRedraw, revealSelectedRecord} from './list-focus.mjs';
 import {beachPreviewFeature, renderBeachSamplePreview, validateBeachSamplePreview} from './beach-history.mjs';
-import {SelectedCallsClient, selectedCallsPolicy} from './selected-calls.mjs';
+import {SelectedCallsClient, selectedCallsPolicy, selectedCallsMessage} from './selected-calls.mjs';
 import {cameraBoundsForViewport, COUNCIL_BOUNDARY_BOUNDS, outsideMask, validateCouncilBoundary} from './boundary.mjs';
 
 const $ = id => document.getElementById(id);
@@ -19,7 +21,7 @@ try {
   if (['7','30','90','all'].includes(remembered.days)) state.days = remembered.days;
   if (typeof remembered.neighbourhood === 'string') state.neighbourhood = remembered.neighbourhood;
   if (areaFor(remembered.areaKind, remembered.areaCode)) {
-    state.areaKind=remembered.areaKind;state.areaCode=String(remembered.areaCode);state.neighbourhood='';
+    state.areaKind=remembered.areaKind;state.areaCode=String(remembered.areaCode);
   }
 } catch { /* Private browsing, old preferences or disabled storage must not break the map. */ }
 // Stable neighbourhood pages link into the same filtered map/list experience.
@@ -37,6 +39,15 @@ try {
     if(['7','30','90','all'].includes(requestedDays))state.days=requestedDays;
   }
 } catch { /* An invalid shared link leaves the ordinary saved view intact. */ }
+if(globalThis.location?.search){const view=viewFromSearch(location.search);state=view.state;initialAreaOverlay=view.overlay;}
+else if(state.areaKind)initialAreaOverlay=state.areaKind;
+let historyReady=false, restoringHistory=false, overlayTransition=false, navigationGeneration=0;
+function rememberView({replace=false}={}) {
+  if(!historyReady||restoringHistory||overlayTransition||!globalThis.history?.pushState)return;
+  const search=searchFromView(state,areaExplorer?.getOverlay()||'off');
+  if(search===location.search&&history.state?.scarbSearch===state.search)return;
+  history[replace?'replaceState':'pushState']({scarbSearch:state.search},'',location.pathname+search+location.hash);
+}
 let snapshot = null, beachPreview = null, map = null, selectedId = null, shapes = {type:'FeatureCollection',features:[]};
 let neighbourhoodShapesPromise = null;
 let neighbourhoodFitRequestId = 0;
@@ -112,20 +123,28 @@ function addStatusMarkerImages(mapInstance){
 }
 function syncDataStatus() {
   const status=$('data-status');
+  const provenance=$('source-provenance-content');
+  provenance?.replaceChildren();
+  const sourceDetail=(label,value)=>{if(provenance&&value)provenance.append(els('p','',`${label}: ${value}`));};
   status.classList.remove('error','warning');
   if(state.mode==='selected-calls'){
     if(selectedCallsViewState.status==='available')status.classList.add('warning');else if(selectedCallsViewState.reason!=='loading')status.classList.add('error');
     status.textContent=selectedCallsViewState.status==='available'
       ? `TPS last changed these records ${readerDateTime(selectedCallsViewState.sourceEditedAt)}; checked ${readerDateTime(selectedCallsViewState.fetchedAt)}. Older counts are removed.`
       : selectedCallsViewState.reason==='loading'?'Loading selected TPS call counts for Divisions 41, 42 and 43.'
-      : 'I cannot verify fresh selected-call counts right now, so none are shown.';
+      : selectedCallsMessage(selectedCallsViewState);
+    sourceDetail('Source', 'Toronto Police Service selected calls, Divisions 41, 42 and 43. These are not all calls, confirmed crimes or neighbourhood incidents.');
+    sourceDetail('Source last changed',selectedCallsViewState.sourceEditedAt);
+    sourceDetail('Successfully checked',selectedCallsViewState.fetchedAt);
     return;
   }
   if(state.mode==='beach'){
     if(beachPreviewState==='loading')status.textContent='Loading the historical beach samples.';
     else if(beachPreview){
       const latest=beachPreview.records.reduce((value,row)=>row.collectionDate>value?row.collectionDate:value,'0000-00-00');
-      status.textContent=`City sample records checked ${readerDate(beachPreview.retrieved_on)}; latest sample ${readerDate(latest)}. Not current swimming advice.`;
+      status.textContent=`Historical City samples through ${readerDate(latest)}. Not current swimming advice.`;
+      sourceDetail('City sample records checked',beachPreview.retrieved_on);
+      sourceDetail('Latest sample date',latest);
       status.classList.add('warning');
     }else{
       status.textContent='I could not load the historical beach samples. They are not current swimming advice.';
@@ -135,6 +154,10 @@ function syncDataStatus() {
   }
   if(dineSafeStatus.className)status.classList.add(dineSafeStatus.className);
   status.textContent=dineSafeStatus.text;
+  sourceDetail('Source','City of Toronto DineSafe Open Data');
+  sourceDetail('Scarb.TO successful check',snapshot?.published_at);
+  sourceDetail('City catalogue timestamp (source timezone unspecified)',snapshot?.source?.last_refreshed);
+  sourceDetail('Meaning','The check time is not the inspection time or evidence of a new City update. Results describe the dated inspection, not current conditions.');
 }
 function setDineSafeStatus(text,className='') {
   dineSafeStatus={text,className};
@@ -153,7 +176,7 @@ function syncMapAccessibilityLabel(){
 }
 function syncControls() {
   $('window').value=state.days;
-  $('neighbourhood').value=state.areaKind==='neighbourhood'?(areaFor('neighbourhood',state.areaCode)?.name||''):state.neighbourhood;
+  $('neighbourhood').value=state.neighbourhood;
   $('search').value=state.search;
   document.querySelectorAll('.tab').forEach(b=>{let hit=b.dataset.mode===state.mode;b.classList.toggle('active',hit);b.setAttribute('aria-pressed',String(hit));});
   document.querySelectorAll('.chip').forEach(b=>{let hit=b.dataset.status===state.status;b.classList.toggle('selected',hit);b.setAttribute('aria-pressed',String(hit));});
@@ -198,11 +221,12 @@ function updateSource() {
   map.getSource('places').setData({type:'FeatureCollection',features});
 }
 function performFilters() {
+  rememberView();
   listLimit=80;
   if(state.mode==='selected-calls'){
     usingBeach=false;visiblePlaces=[];visibleActivity=[];usingActivity=false;
     $('results-kicker').textContent='Toronto Police Service · counts when you open this view';
-    $('results-title').textContent='Selected calls — Divisions 41, 42 and 43';
+    $('results-title').textContent='Police calls by division';
     $('results-caption').textContent='These are selected calls published by TPS, not all crime, police activity, or officer presence. Opening this view asks TPS/Esri for division totals only. I do not request or map individual calls or locations.';
     updateSource();renderList();areaExplorer?.sync();return;
   }
@@ -252,7 +276,7 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
       list.append(els('p','selected-calls-attribution','Contains information licensed under the Open Government Licence – Ontario.'));
     }else{
       $('results-count').textContent=view.reason==='loading'?'Loading':'Unavailable';
-      const message=view.reason==='loading'?'Loading the selected call counts from Toronto Police Service.':view.reason==='view hidden'?'Counts are removed when you leave this view. Open it again to check for fresh counts.':'I cannot verify fresh selected-call counts right now. Older counts have been removed.';
+      const message=selectedCallsMessage(view);
       list.append(els('p','empty',message));list.append(els('p','selected-calls-attribution','Contains information licensed under the Open Government Licence – Ontario.'));
     }
     const source=els('a','record-source-link','See the TPS selected-calls map');source.href='https://experience.arcgis.com/experience/a22f5295933e48a5b0a4c90cd3c4cae1';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
@@ -315,13 +339,7 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
       button.setAttribute('aria-controls',detailId);
       const detail=els('div','record-details');
       detail.id=detailId;
-      const meaningfulText=value=>typeof value==='string'&&!/^(?:none|null|undefined|n\/a)$/i.test(value.trim())?value.trim():'';
-      const inspectionDetail=meaningfulText(entry.inspection_detail);
-      const establishmentType=meaningfulText(entry.type);
-      const detailNote=inspectionDetail
-        ? `City inspection note: ${inspectionDetail}`
-        : establishmentType?`City category: ${establishmentType}`:'The City record has no further detail here.';
-      detail.append(els('p','record-detail-note',detailNote));
+      detail.append(renderInspectionFindings(document,entry));
       const source=els('a','record-source-link','See the City DineSafe record');
       source.dataset.id=entry.id;source.href=cityDineSafeRecordUrl(entry.id);source.target='_blank';source.rel='noopener noreferrer';
       detail.append(source);card.append(detail);
@@ -488,9 +506,7 @@ function bindControls(){
   document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{state.status=b.dataset.status;save();syncControls();performFilters();}));
   $('window').addEventListener('change',e=>{state.days=e.target.value;save();performFilters();});
   $('neighbourhood').addEventListener('change',e=>{
-    const area=areaForName('neighbourhood',e.target.value);
-    if(area){areaExplorer?.select(area);return;}
-    // Preserve the existing adjacent-neighbourhood DineSafe dropdown entries.
+    // This is an independent place filter, not a selected map polygon.
     state.areaKind='';state.areaCode='';state.neighbourhood=e.target.value;
     save();selectNeighbourhood();performFilters();areaExplorer?.sync();
   });
@@ -550,10 +566,9 @@ async function loadDineSafeSnapshot() {
     if(!candidate.ready){setDineSafeStatus('Waiting for the first checked City records','warning');performFilters();return;}
     populateNeighbourhoods();
     const stale=isStale(candidate.published_at);
-    const cityReported=cityCatalogueRefreshText(candidate.source?.last_refreshed);
     setDineSafeStatus(stale
-      ? `These records may be out of date (last checked ${publishedAt(candidate.published_at)}) · ${cityReported} · check update history`
-      : `Last checked ${publishedAt(candidate.published_at)} · ${cityReported} · not live`,
+      ? `These food inspection records may be out of date. Last checked ${publishedAt(candidate.published_at)}. Check the City's record for anything newer.`
+      : `Food inspection records checked ${publishedAt(candidate.published_at)}. These aren't live results.`,
       stale?'warning':'');
     performFilters();
   }catch(error){
@@ -567,16 +582,33 @@ function boot() {
   areaExplorer=createAreaExplorer({
     getState:()=>state, getSnapshot:()=>snapshot, getVisiblePlaces:()=>visiblePlaces,
     onSelect:area=>{
-      state.areaKind=area.kind;state.areaCode=area.code;state.neighbourhood='';
+      state.areaKind=area.kind;state.areaCode=area.code;
       selectedId=null;save();syncControls();performFilters();
     },
-    onClear:()=>{
-      state.areaKind='';state.areaCode='';state.neighbourhood='';
-      selectedId=null;save();syncControls();performFilters();
-    }
+    onClear:({overlayChange=false}={})=>{
+      overlayTransition=overlayChange;
+      state.areaKind='';state.areaCode='';
+      selectedId=null;save();syncControls();if(overlayChange)fitAll();performFilters();
+    },
+    onOverlayChange:()=>{overlayTransition=false;rememberView();}
   });
   syncControls();void initMap();
-  if(initialAreaOverlay)void areaExplorer.setOverlay(initialAreaOverlay);
+  const initialize=initialAreaOverlay?areaExplorer.setOverlay(initialAreaOverlay,{restore:true}):Promise.resolve();
+  void initialize.finally(()=>{overlayTransition=false;historyReady=true;rememberView({replace:true});});
+  globalThis.addEventListener?.('popstate',async event=>{
+    const generation=++navigationGeneration;
+    restoringHistory=true;
+    try{
+      if(state.mode==='selected-calls')deactivateSelectedCalls();
+      const view=viewFromSearch(location.search);state=view.state;selectedId=null;
+      state.search=typeof event.state?.scarbSearch==='string'?event.state.scarbSearch:'';
+      const requestedState=JSON.stringify(state);
+      await areaExplorer.setOverlay(view.overlay,{restore:true});
+      if(generation!==navigationGeneration||JSON.stringify(state)!==requestedState)return;
+      save();syncControls();performFilters();fitAll();
+      if(state.mode==='selected-calls')void loadSelectedCalls();
+    }finally{if(generation===navigationGeneration){restoringHistory=false;overlayTransition=false;rememberView({replace:true});}}
+  });
   // Each feed loads independently so an optional beach request never holds DineSafe hostage.
   void loadBeachPreview();
   void loadDineSafeSnapshot();
