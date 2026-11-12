@@ -1,5 +1,6 @@
 import {areaFor, councillorFor, WARDS} from './area-selection.mjs';
 import {cityCatalogueRefreshText, cityDineSafeRecordUrl, displayAddress, filterEstablishments, isStale} from './logic.mjs';
+import {initializePageActions} from './neighbourhood-page-actions.mjs';
 
 const root=document.querySelector('[data-neighbourhood-page]');
 const byId=id=>document.getElementById(id);
@@ -81,3 +82,4 @@ async function loadPage(){
 }
 
 void loadPage();
+initializePageActions();

@@ -167,6 +167,25 @@ class WeeklyBriefTests(unittest.TestCase):
         with self.assertRaisesRegex(BriefError, "differs from its registry hash"):
             build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
 
+    def test_older_edition_is_verified_without_a_correction_entry(self):
+        for missing in (False, True):
+            with self.subTest(missing=missing):
+                write_archive(self.history, [event("a", "2026-11-03T10:00:00+00:00")])
+                build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
+                page = self.output / "2026-11-02" / "index.html"
+                original = page.read_bytes()
+                manifest_path = self.output / "editions.json"
+                manifest = manifest_path.read_bytes()
+                if missing:
+                    page.unlink()
+                else:
+                    page.write_bytes(original + b"<!-- changed archived status -->")
+                later = datetime(2026, 11, 16, 15, tzinfo=timezone.utc)
+                with self.assertRaisesRegex(BriefError, "differs from its registry hash"):
+                    build_weekly_brief(self.history, self.output, self.corrections, as_of=later)
+                self.assertEqual(manifest_path.read_bytes(), manifest)
+                self.assertFalse((self.output / "2026-11-09" / "index.html").exists())
+                page.write_bytes(original)
     def test_old_edition_can_be_corrected_with_explanation_and_original_date_retained(self):
         write_archive(self.history, [event("a", "2026-11-03T10:00:00+00:00")])
         build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)

@@ -307,6 +307,12 @@ def build_weekly_brief(
     manifest = _read_json(manifest_path, {"schema_version": SCHEMA_VERSION, "editions": []})
     _validate_manifest(manifest)
     editions = list(manifest["editions"])
+    # Every registered page is published, including older unchanged editions.
+    # Verify all archived bytes before any correction or edition is written.
+    for prior in editions:
+        prior_output = output_dir / prior["period_start"] / "index.html"
+        if not prior_output.is_file() or _sha256(prior_output.read_bytes()) != prior["html_sha256"]:
+            raise BriefError(f"Published weekly-brief page for {prior['id']} differs from its registry hash")
     available_months = {path.stem for path in history_dir.glob("*.json")}
     edition_id = f"dinesafe-weekly-{start.isoformat()}"
     path_rel = f"briefs/{start.isoformat()}/"

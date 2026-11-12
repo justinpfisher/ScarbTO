@@ -16,6 +16,7 @@ h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.08;margin:.15rem 0 .6rem}h2{fo
 .explore-panel{display:flex;align-items:center;justify-content:space-between;gap:1.25rem;margin-bottom:1rem}
 .primary-link,.secondary-button{display:inline-flex;justify-content:center;align-items:center;min-height:44px;padding:.65rem .95rem;border:2px solid var(--green);border-radius:8px;background:var(--green);color:#fff;font:inherit;font-weight:700;text-align:center;text-decoration:none;cursor:pointer}
 .secondary-button{background:#fff;color:var(--green)}
+.page-actions{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.8rem}.page-action-status{min-height:1.55em;color:var(--muted);font-size:.92rem}.reuse-note{flex-basis:100%}
 .content-grid{display:grid;grid-template-columns:minmax(250px,.8fr) minmax(0,1.6fr);gap:1rem;align-items:start}
 .section-note,.source-note{color:var(--muted);font-size:.92rem}.link-list{padding-left:1.25rem;margin:.65rem 0}.link-list li{margin:.45rem 0}
 .feed-status{padding:.55rem .7rem;border-left:4px solid #647773;background:#f1f5f2}.feed-status[data-state="warning"],.feed-status[data-state="error"]{border-color:#a64b34;background:#fff5f0}
@@ -23,3 +24,4 @@ h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.08;margin:.15rem 0 .6rem}h2{fo
 .unavailable-panel{margin-top:1rem;border-left:5px solid #bb7953}.page-footer{display:flex;flex-wrap:wrap;gap:.6rem 1.2rem;align-items:center;margin-top:1.1rem;padding:.8rem 0;color:var(--muted);font-size:.88rem}
 [hidden]{display:none!important}
 @media(max-width:720px){main{padding:1rem .75rem 1.5rem}.content-grid{grid-template-columns:1fr}.explore-panel{align-items:stretch;flex-direction:column}.primary-link{width:100%}.site-header{padding:.75rem}}
+@media print{body{background:#fff;color:#000;font-size:11pt}.site-header,.skip-link,.page-actions,.page-action-status,.primary-link,#show-more{display:none!important}main{max-width:none;padding:0}.content-grid{display:block}.panel{box-shadow:none;border:1px solid #777;border-radius:0;break-inside:avoid}.unavailable-panel{break-inside:auto}a{color:#000}a[target="_blank"]::after{content:" (" attr(href) ")";font-size:9pt;overflow-wrap:anywhere}.page-footer{display:block}.page-footer>*{display:block;margin:.3rem 0}}

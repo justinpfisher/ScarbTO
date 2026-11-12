@@ -239,9 +239,9 @@ function performFilters() {
   visiblePlaces=usingActivity ? eligible.filter(e=>activeIds.has(e.id)) : filterEstablishments(snapshot.establishments||[],state);
   $('results-kicker').textContent=state.mode==='recent'?(usingActivity?'Changes first observed by Scarb.TO':'Latest City inspection records'):'DineSafe establishments';
   $('results-title').textContent=state.mode==='recent'?(usingActivity?'Recent changes':'Recently inspected'):'Matching places';
-  $('results-caption').textContent=usingActivity?'Changes detected on successive daily imports; inspection dates may be older.':
-    state.mode==='recent'?'Showing establishments with a recent recorded inspection date; not necessarily newly published.':
-    'Showing the latest inspection record available for each establishment.';
+  $('results-caption').textContent=usingActivity?'Here’s what I found comparing daily City snapshots. The inspection date may be earlier than when a record first appeared here.':
+    state.mode==='recent'?'These places have recent inspection dates. That doesn’t mean their records are new; check the City’s record for current details.':
+    'Here’s the latest City inspection record I have for each place.';
   updateSource();renderList();areaExplorer?.sync();
 }
 function renderList({focusMore = false, revealSelection = false} = {}) {

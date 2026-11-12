@@ -15,7 +15,7 @@ const mime = new Map([
   ['.html', 'text/html; charset=utf-8'], ['.mjs', 'text/javascript; charset=utf-8'],
   ['.js', 'text/javascript; charset=utf-8'], ['.css', 'text/css; charset=utf-8'],
   ['.json', 'application/json; charset=utf-8'], ['.csv', 'text/csv; charset=utf-8'],
-  ['.geojson', 'application/geo+json; charset=utf-8'],
+  ['.geojson', 'application/geo+json; charset=utf-8'], ['.svg', 'image/svg+xml'],
 ]);
 
 test('UI source text retains intended separators and badge text', async () => {
@@ -25,7 +25,9 @@ test('UI source text retains intended separators and badge text', async () => {
   ]);
   assert.equal((html + String.fromCharCode(10) + app).includes(String.fromCharCode(0xfffd)), false);
   assert.match(html, /class="data-pill">DineSafe<\/span>/);
-  assert.ok(html.includes("DineSafe Open Data</a> " + String.fromCharCode(0x00b7) + " <a"));
+  assert.ok(html.includes('DineSafe Open Data</a> and are provided under the <a'));
+  assert.match(html, /href="https:\/\/open\.toronto\.ca\/dataset\/dinesafe\/"[^>]*>City of Toronto DineSafe Open Data<\/a>/);
+  assert.match(html, /href="https:\/\/open\.toronto\.ca\/open-data-licence\/"[^>]*>Open Government Licence - Toronto<\/a>/);
   assert.ok(app.includes("Toronto Open Data " + String.fromCharCode(0x00b7) + " dated samples"));
 });
 
@@ -214,6 +216,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await waitForMap(page);
   const mapReadyMs=await page.evaluate(()=>performance.now()-window.__scarbRenderedQaStarted);
   console.log(`QA_METRIC synthetic ${name} map ready: ${mapReadyMs.toFixed(1)} ms (local fixture and local style)`);
+  assert.ok(await page.locator('img.brand-lockup').evaluate(image => image.complete && image.naturalWidth > 0), `${name}: selected brand image decodes`);
   await page.waitForFunction(() => window.__scarbMap.getSource('scarborough-mask') && window.__scarbMap.getSource('scarborough-boundary'));
   assert.match(await page.locator('#map').getAttribute('aria-label'),/marker shape and letter supplement colour/i,`${name}: runtime map label retains the DineSafe marker explanation`);
   const boundaryState=await page.evaluate(()=>{
@@ -985,15 +988,43 @@ test('static neighbourhood pages use the qualified set and route into the same s
   t.after(()=>context.close());
   const page=await context.newPage(),errors=[];
   page.on('pageerror',err=>errors.push(err.stack||err.message));
+  await page.addInitScript(()=>{
+    window.__shareCalls=[];window.__clipboardWrites=[];
+    Object.defineProperty(navigator,'share',{configurable:true,value:async payload=>{
+      window.__shareCalls.push(payload);const error=new Error('Share cancelled');error.name='AbortError';throw error;
+    }});
+    Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>window.__clipboardWrites.push(value)}});
+  });
   const freshAt=new Date(Date.now()-30_000).toISOString();
   const pageSnapshot={...snapshot,published_at:freshAt,source:{last_refreshed:freshAt},establishments:[{
     id:'west-rouge-fixture',establishment_id:'west-rouge-fixture',name:'West Rouge Fixture Cafe',address:'10 Sample Road',status:'Pass',inspection_date:'2026-11-03',inspection_detail:'Food handling room maintained in sanitary condition.',latitude:43.78,longitude:-79.12,neighbourhood:'West Rouge',ward:'Scarborough-Rouge Park'
   }]};
   await installLocalRoutes(page,origin,{snapshotBody:pageSnapshot,neighbourhoodGeometry:areaOverlayFixture('neighbourhood')});
-  await page.goto(`${origin}/westrouge/`,{waitUntil:'domcontentloaded'});
-  await page.waitForURL(url=>url.pathname==='/west-rouge/',{timeout:5_000});
+  await page.goto(`${origin}/westrouge/?utm_source=fixture#share`,{waitUntil:'domcontentloaded'});
+  await page.waitForURL(url=>url.pathname==='/west-rouge/'&&url.searchParams.get('utm_source')==='fixture'&&url.hash==='#share',{timeout:5_000});
   await page.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.startsWith('Scarb.TO checked'));
   assert.match(await page.getByRole('heading',{level:1}).textContent(),/West Rouge/);
+  assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),'https://scarb.to/west-rouge/');
+  assert.equal(await page.locator('meta[property="og:url"]').getAttribute('content'),'https://scarb.to/west-rouge/');
+  await page.getByRole('button',{name:'Share this neighbourhood'}).click();
+  await page.waitForFunction(()=>window.__shareCalls.length===1);
+  assert.equal(await page.evaluate(()=>window.__shareCalls[0].url),'https://scarb.to/west-rouge/');
+  assert.deepEqual(await page.evaluate(()=>window.__clipboardWrites),[],'cancelling native share must not copy');
+  await page.evaluate(()=>Object.defineProperty(navigator,'share',{configurable:true,value:undefined}));
+  await page.getByRole('button',{name:'Share this neighbourhood'}).click();
+  await page.waitForFunction(()=>window.__clipboardWrites.length===1);
+  assert.equal(await page.evaluate(()=>window.__clipboardWrites[0]),'https://scarb.to/west-rouge/');
+  assert.equal(await page.locator('#page-action-status').textContent(),'Neighbourhood link copied.');
+  await page.emulateMedia({media:'print'});
+  const printLayout=await page.evaluate(()=>({
+    hidden:['.site-header','.page-actions','.page-action-status','.primary-link','#show-more'].every(selector=>getComputedStyle(document.querySelector(selector)).display==='none'),
+    readable:['#page-title','#inspection-list .record-item','.source-note','.reuse-note'].every(selector=>{
+      const node=document.querySelector(selector);return Boolean(node&&getComputedStyle(node).display!=='none'&&node.getClientRects().length);
+    }),
+  }));
+  assert.equal(printLayout.hidden,true,'print view hides navigation and interactive controls');
+  assert.equal(printLayout.readable,true,'print view retains the title, records, source and reuse guidance');
+  await page.emulateMedia({media:'screen'});
   assert.match(await page.locator('#feed-status').textContent(),/Scarb\.TO checked/);
   assert.match(await page.locator('#feed-status').textContent(),/City catalogue timestamp/);
   await page.waitForFunction(()=>document.querySelectorAll('#inspection-list .record-item').length===1);
@@ -1057,6 +1088,11 @@ test('neighbourhood page remains readable on a narrow phone viewport', {timeout:
   await page.getByRole('heading',{name:'West Rouge'}).waitFor();
   await page.waitForFunction(()=>document.querySelectorAll('#inspection-list .record-item').length===1);
   assert.equal(await page.locator('#map-link').isVisible(),true);
+  for(const name of ['Share this neighbourhood','Print this page']){
+    const button=page.getByRole('button',{name});
+    assert.equal(await button.isVisible(),true);
+    assert.ok((await button.boundingBox()).height>=44,`${name} must retain a 44px touch target`);
+  }
   const dimensions=await page.evaluate(()=>({width:document.documentElement.scrollWidth,viewport:window.innerWidth}));
   assert.ok(dimensions.width<=dimensions.viewport,`page has horizontal overflow: ${JSON.stringify(dimensions)}`);
   assert.equal(await page.locator('#inspection-list .record-item').count(),1);

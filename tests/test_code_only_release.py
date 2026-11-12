@@ -16,6 +16,7 @@ from scripts.snapshot_integrity import (
     validate_snapshot_integrity,
 )
 from scripts.verify_code_only_release import (
+    PINNED_BASELINE,
     ReleaseError,
     validate_dispatch_environment,
     validate_publisher_tree,
@@ -25,6 +26,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CodeOnlyReleaseTests(unittest.TestCase):
+    def test_pinned_baseline_matches_latest_verified_publisher(self) -> None:
+        self.assertEqual(
+            PINNED_BASELINE,
+            {
+                "commit": "3117a556e3d0b2c065883a89dd61c06dc43e1c6d",
+                "tree": "ed44710f95ed6c653356bdfb78db67e1868c7ea6",
+                "run_id": 42869825091,
+            },
+        )
+
     def test_code_only_keeps_the_real_last_good_timestamps(self) -> None:
         with (ROOT / "docs/data/snapshot.json").open(encoding="utf-8") as stream:
             before = json.load(stream)

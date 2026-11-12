@@ -14,14 +14,16 @@
   <a class="skip-link" href="#results">Skip to results</a>
   <div class="site-shell">
     <header class="site-header">
-      <div class="identity"><span class="brand-mark" aria-hidden="true">S<span>.</span></span><div>
-        <div class="brand-name">Scarb<span>.</span>TO</div>
-        <div class="brand-subtitle">A living local atlas</div>
-      </div></div>
+      <a class="identity" href="/" aria-label="Scarb.TO home">
+        <picture>
+          <source media="(max-width: 420px)" srcset="./assets/brand/scarbto-mark.svg">
+          <img class="brand-lockup" src="./assets/brand/scarbto-connected.svg" alt="Scarb.TO, with the three-line wave and cliff mark">
+        </picture>
+      </a>
       <div class="header-right"><span class="header-place">Scarborough, Toronto</span><a href="#about" class="about-link">About & sources</a></div>
     </header>
     <div class="intro-row">
-      <div><h1>What's happening around Scarborough?</h1><p>See recent local changes, on the map and in one connected list.</p></div>
+      <div><p class="intro-tagline">Scarborough. I looked into it.</p><h1>What's happening around Scarborough?</h1><p>What’s changing around you, why it matters, and where to look next.</p></div>
       <div class="data-status" id="data-status" role="status" aria-live="polite">Checking official data.</div>
     </div>
     <div class="app-wrap">
@@ -98,11 +100,11 @@
       </main>
     </div>
     <footer id="about">
-      <div><a href="/briefs/">Weekly DineSafe briefs</a> · <a href="/feed.xml">DineSafe RSS</a></div>
-      <div><strong>Built for Scarborough.</strong> Not a City of Toronto service. DineSafe outcomes are the last outcomes recorded in the source data, not real-time guarantees.</div>
-      <div>Source: <a href="https://open.toronto.ca/dataset/dinesafe/" rel="noopener noreferrer" target="_blank">City of Toronto DineSafe Open Data</a> · <a href="https://open.toronto.ca/open-data-licence/" rel="noopener noreferrer" target="_blank">Open Government Licence - Toronto</a> · <a id="download" href="data/establishments.csv" download>Download Scarb.TO CSV</a> · <a href="https://github.com/justinpfisher/ScarbTO/actions" target="_blank" rel="noopener noreferrer">Update history</a></div>
-      <div>Neighbourhood and City ward boundaries: <a href="https://open.toronto.ca/dataset/neighbourhoods/" target="_blank" rel="noopener noreferrer">City neighbourhoods (effective April 2022)</a> and <a href="https://open.toronto.ca/dataset/city-wards/" target="_blank" rel="noopener noreferrer">City wards (effective December 2018)</a>, licensed under the Open Government Licence – Toronto. Neighbourhoods can span wards; boundaries are not electoral address lookups.</div>
-      <div>Scarborough Community Council boundary: <a href="https://open.toronto.ca/dataset/community-council-boundaries/" target="_blank" rel="noopener noreferrer">City of Toronto Open Data</a>, licensed under the <a href="https://open.toronto.ca/open-data-licence/" target="_blank" rel="noopener noreferrer">Open Government Licence - Toronto</a>. The boundary is a visual reference; it does not filter records. Maps by OpenFreeMap and OpenStreetMap contributors, attributed on the map. New activity is identified from daily snapshots; inspection dates can be older than when records are published.</div>
+      <div><a href="/briefs/">Weekly DineSafe briefs</a> &middot; <a href="/feed.xml">DineSafe RSS</a></div>
+      <div><strong>Scarborough. I looked into it.</strong> I'm an AI-assisted guide, not a City of Toronto service. I work from public records, not visits or interviews. A DineSafe result describes the inspection on the date shown; it doesn't tell you about conditions today. For anything newer, check the City's record.</div>
+      <div>DineSafe records come from the City's <a href="https://open.toronto.ca/dataset/dinesafe/" rel="noopener noreferrer" target="_blank">City of Toronto DineSafe Open Data</a> and are provided under the <a href="https://open.toronto.ca/open-data-licence/" rel="noopener noreferrer" target="_blank">Open Government Licence - Toronto</a>. If you like a good paper trail, I've left the <a id="download" href="data/establishments.csv" download>Download Scarb.TO CSV</a> and <a href="https://github.com/justinpfisher/ScarbTO/actions" target="_blank" rel="noopener noreferrer">Update history</a> here, too. I may like the history a little more than most.</div>
+      <div>The <a href="https://open.toronto.ca/dataset/neighbourhoods/" target="_blank" rel="noopener noreferrer">City neighbourhoods (effective April 2022)</a> and <a href="https://open.toronto.ca/dataset/city-wards/" target="_blank" rel="noopener noreferrer">City wards (effective December 2018)</a> boundaries are licensed under the Open Government Licence - Toronto. Neighbourhoods can cross ward lines; these shapes are useful context, not electoral address lookups. I've kept both dates here because a boundary is only useful if you know which one you're looking at.</div>
+      <div>I use the <a href="https://open.toronto.ca/dataset/community-council-boundaries/" target="_blank" rel="noopener noreferrer">City of Toronto Open Data</a> Scarborough Community Council boundary as a visual reference; it doesn't filter records. The boundary file is licensed under the <a href="https://open.toronto.ca/open-data-licence/" target="_blank" rel="noopener noreferrer">Open Government Licence - Toronto</a>. The map credits OpenFreeMap and OpenStreetMap contributors in its attribution control. I compare daily City snapshots to spot new activity; an inspection date can be older than when a record first appears here.</div>
     </footer>
   </div>
   <script type="module">
