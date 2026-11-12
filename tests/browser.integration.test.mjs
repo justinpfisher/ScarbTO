@@ -218,7 +218,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   console.log(`QA_METRIC synthetic ${name} map ready: ${mapReadyMs.toFixed(1)} ms (local fixture and local style)`);
   assert.ok(await page.locator('img.brand-lockup').evaluate(image => image.complete && image.naturalWidth > 0), `${name}: selected brand image decodes`);
   await page.waitForFunction(() => window.__scarbMap.getSource('scarborough-mask') && window.__scarbMap.getSource('scarborough-boundary'));
-  assert.match(await page.locator('#map').getAttribute('aria-label'),/marker shape and letter supplement colour/i,`${name}: runtime map label retains the DineSafe marker explanation`);
+  assert.match(await page.locator('#map').getAttribute('aria-label'),/shapes and letters identify inspection outcomes alongside colour/i,`${name}: runtime map label retains the DineSafe marker explanation`);
   const boundaryState=await page.evaluate(()=>{
     const map=window.__scarbMap;
     const layers=map.getStyle().layers.map(layer=>layer.id);
@@ -267,18 +267,18 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await page.screenshot({path:resolve(outputDir,`${name}-dinesafe-markers.png`),fullPage:true});
 
   await page.getByRole('button', {name: 'Beach samples'}).click();
-  assert.match(await page.locator('#map').getAttribute('aria-label'),/reference point; it is not a sample-site coordinate/i,`${name}: map label explains the beach marker location`);
+  assert.match(await page.locator('#map').getAttribute('aria-label'),/beach reference point, not the individual sampling locations/i,`${name}: map label explains the beach marker location`);
   await page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
-  await page.getByText('Latest 10 catalogue rows shown', {exact: false}).waitFor();
+  await page.getByText('latest 10 records available when checked', {exact: false}).waitFor();
   assert.equal(await page.locator('#search').isDisabled(), true, `${name}: DineSafe controls are disabled in beach mode`);
   await page.waitForFunction(() => Math.abs(window.__scarbMap.getCenter().lng - -79.2252) < 0.002);
   const beachCenter = await page.evaluate(() => window.__scarbMap.getCenter().toArray());
   assert.ok(Math.abs(beachCenter[0] - selectedCenter[0]) > 0.01, `${name}: beach mode moves the real map camera`);
   assert.equal(await page.locator('.beach-sample-preview-list li').count(), 10);
   assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /not current swimming advice/i);
-  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /reference point, not sample-site coordinates/i);
+  assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /map pin marks the beach, not the sampling spots/i);
   assert.match(await page.locator('.beach-sample-preview>p').first().textContent(), /Open Government Licence.*Toronto/i);
-  assert.match(await page.locator('#data-status').textContent(), /Toronto sample rows checked 2026-10-27; latest sample 2026-09-16\. Not current swimming status\./);
+  assert.match(await page.locator('#data-status').textContent(), /City sample records checked 2026-10-27; latest sample 2026-09-16\. Not current swimming advice\./);
   assert.equal(await page.locator('.beach-sample-preview a').count(), 3);
   const links = await page.locator('.beach-sample-preview a').evaluateAll(anchors => anchors.map(anchor => ({href: anchor.href, rel: anchor.rel, target: anchor.target})));
   assert.ok(links.every(link => link.target === '_blank' && link.rel.includes('noopener') && link.rel.includes('noreferrer')));
@@ -287,7 +287,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   assert.ok(links.some(link => link.href.includes('/swimsafe/beach-water-quality/')));
 
   // Verify real keyboard navigation and activation across the production tab controls.
-  const recent = page.getByRole('button', {name: 'Recent activity'});
+  const recent = page.getByRole('button', {name: 'Browse updates'});
   await recent.focus();
   await page.keyboard.press('Enter');
   assert.equal(await recent.getAttribute('aria-pressed'), 'true', `${name}: browse tabs work with keyboard activation`);
@@ -427,9 +427,9 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   t.after(() => beachSurvivesDineSafeError.context.close());
   await beachSurvivesDineSafeError.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
   assert.equal(await beachSurvivesDineSafeError.page.locator('.beach-sample-preview-list li').count(), 10);
-  assert.match(await beachSurvivesDineSafeError.page.locator('#data-status').textContent(), /Toronto sample rows checked/);
+  assert.match(await beachSurvivesDineSafeError.page.locator('#data-status').textContent(), /City sample records checked/);
   await beachSurvivesDineSafeError.page.getByRole('button', {name: 'All establishments'}).click();
-  await beachSurvivesDineSafeError.page.getByText(/Could not load the published dataset \(HTTP 503\)/).waitFor();
+  await beachSurvivesDineSafeError.page.getByText(/I could not load the published records \(HTTP 503\)/).waitFor();
   assert.equal(await beachSurvivesDineSafeError.page.locator('#results-title').textContent(), 'Matching places');
   assert.equal(await beachSurvivesDineSafeError.page.locator('#results-kicker').textContent(), 'Official inspections');
   assert.equal(await beachSurvivesDineSafeError.page.locator('#results-caption').textContent(), 'Results follow the map and your filters.');
@@ -449,7 +449,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   await switchingView.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
   await switchingView.page.waitForFunction(() => window.__scarbMap.querySourceFeatures('places').some(feature => feature.properties.id === 'beach:10'));
   await switchingView.page.getByRole('button', {name: 'All establishments'}).click();
-  await switchingView.page.getByText(/No validated DineSafe snapshot has been published/).waitFor();
+  await switchingView.page.getByText(/There are no checked DineSafe records here yet/).waitFor();
   assert.equal(await switchingView.page.locator('#results-title').textContent(), 'Matching places');
   assert.equal(await switchingView.page.locator('#results-kicker').textContent(), 'Official inspections');
   assert.equal(await switchingView.page.locator('#results-caption').textContent(), 'Results follow the map and your filters.');
@@ -462,7 +462,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   t.after(() => rejectedView.context.close());
   await rejectedView.page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
   await rejectedView.page.getByRole('button', {name: 'All establishments'}).click();
-  await rejectedView.page.getByText(/Could not load the published dataset \(Unsupported schema\)/).waitFor();
+  await rejectedView.page.getByText(/I could not load the published records \(Unsupported schema\)/).waitFor();
   assert.equal(await rejectedView.page.locator('#results-title').textContent(), 'Matching places');
   assert.equal(await rejectedView.page.locator('#results-caption').textContent(), 'Results follow the map and your filters.');
   assert.equal(await rejectedView.page.locator('.record-item[data-id="should-not-render"]').count(), 0);
@@ -517,7 +517,7 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
     await page.goto(origin, {waitUntil: 'domcontentloaded'});
     await page.locator('#map-fallback:not([hidden])').waitFor();
     if(expectRecords)await page.locator('.record-item').first().waitFor();
-    assert.match(await page.locator('#map-fallback').textContent(), /map unavailable.*searchable results list/i);
+    assert.match(await page.locator('#map-fallback').textContent(), /map could not load.*search, filter.*list/i);
     assert.equal(await page.locator('#map-fallback').getAttribute('aria-live'), 'polite');
     assert.equal(await page.locator('#map').getAttribute('aria-hidden'), 'true');
     assert.equal(await page.locator('#fit').isVisible(), false, 'map-only fit control is hidden');
@@ -572,12 +572,12 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
   const rejected = {...snapshot, schema_version: 2, establishments: [{...snapshot.establishments[0], id: 'must-not-render'}]};
   const invalid = await openWithoutMap({snapshotBody: rejected}, 'all', false);
   t.after(() => invalid.context.close());
-  await invalid.page.getByText(/Could not load the published dataset \(Unsupported schema\)/).waitFor();
+  await invalid.page.getByText(/I could not load the published records \(Unsupported schema\)/).waitFor();
   assert.equal(await invalid.page.locator('.record-item').count(), 0, 'unsupported payload records are not rendered');
   await invalid.page.getByRole('button', {name: 'Beach samples'}).click();
   assert.equal(await invalid.page.locator('.beach-sample-preview-list li').count(), 10);
   await invalid.page.getByRole('button', {name: 'All establishments'}).click();
-  await invalid.page.getByText(/Could not load the published dataset \(Unsupported schema\)/).waitFor();
+  await invalid.page.getByText(/I could not load the published records \(Unsupported schema\)/).waitFor();
   assert.equal(await invalid.page.locator('.record-item').count(), 0, 'mode switching cannot reveal rejected data');
   assert.equal(await invalid.page.locator('[data-id="must-not-render"]').count(), 0);
   assert.deepEqual(invalid.pageErrors, []);
@@ -599,7 +599,7 @@ test('MapLibre module failure still boots accessible DineSafe and beach views', 
   await page.goto(origin, {waitUntil: 'domcontentloaded'});
   await page.locator('#map-fallback:not([hidden])').waitFor();
   await page.getByRole('button', {name: 'Fixture Cafe'}).waitFor();
-  assert.match(await page.locator('#map-fallback').textContent(), /map unavailable.*searchable results list/i);
+  assert.match(await page.locator('#map-fallback').textContent(), /map could not load.*search, filter.*list/i);
   await page.getByRole('button', {name: 'Beach samples'}).click();
   await page.locator('#results-title').filter({hasText: "Bluffer's Beach Park"}).waitFor();
   assert.equal(await page.locator('.beach-sample-preview-list li').count(), 10);
@@ -656,12 +656,12 @@ test('selected-call mode aborts on hidden document and never renders stale count
   await page.getByRole('button',{name:'Selected police calls'}).click();
   await firstRequest;
   await page.evaluate(()=>window.__setVisibility('hidden'));
-  await page.getByText(/counts are cleared while this view is hidden/i).waitFor();
+  await page.getByText(/Counts are removed when you leave this view/i).waitFor();
   assert.equal(await page.locator('.selected-call-row').count(),0);
   await page.waitForTimeout(3_100,'allow the delayed aborted fixture response to settle before checking later request stages');
   assert.equal(requests,1,'abort prevents later request stages');
   await page.evaluate(()=>window.__setVisibility('visible'));
-  await page.getByText(/selected-call counts unavailable or stale/i).waitFor();
+  await page.locator('#data-status').filter({hasText:/cannot verify fresh selected-call counts/i}).waitFor();
   assert.equal(await page.locator('.selected-call-row').count(),0);
   assert.equal(requests,1,'cooldown prevents immediate retry after cancellation');
   assert.deepEqual(errors,[]);
@@ -679,7 +679,7 @@ test('stale upstream selected-call response never renders aggregate values', {ti
   const firstRequest=waitForSelectedCallsRequest(page);
   await page.getByRole('button',{name:'Selected police calls'}).click();
   await firstRequest;
-  await page.getByText(/selected-call counts unavailable or stale/i).waitFor();
+  await page.locator('#data-status').filter({hasText:/cannot verify fresh selected-call counts/i}).waitFor();
   assert.equal(await page.locator('.selected-call-row').count(),0);
   assert.deepEqual(errors,[]);
 });
@@ -697,7 +697,7 @@ test('rendered selected-call counts disappear at the upstream freshness deadline
   await page.getByRole('button',{name:'Selected police calls'}).click();
   await firstRequest;
   await page.getByText('Division 41',{exact:true}).waitFor();
-  await page.getByText(/selected-call counts unavailable or stale/i).waitFor({timeout:20_000});
+  await page.locator('#data-status').filter({hasText:/cannot verify fresh selected-call counts/i}).waitFor({timeout:20_000});
   assert.equal(await page.locator('.selected-call-row').count(),0);
   assert.deepEqual(errors,[]);
 });
@@ -716,7 +716,7 @@ test('reselecting the active selected-calls tab does not extend the absolute fre
   await tab.click();await firstRequest;await page.getByText('Division 41',{exact:true}).waitFor();
   await page.waitForTimeout(1_500);
   await tab.click();
-  await page.getByText(/selected-call counts unavailable or stale/i).waitFor({timeout:3_200});
+  await page.locator('#data-status').filter({hasText:/cannot verify fresh selected-call counts/i}).waitFor({timeout:3_200});
   assert.equal(await page.locator('.selected-call-row').count(),0);
   assert.deepEqual(errors,[]);
 });
@@ -868,7 +868,7 @@ test('optional ward and neighbourhood overlays share one area filter and preserv
   await page.getByRole('button',{name:'Selected police calls'}).click();
   stage='selected calls with area panel';
   await page.waitForFunction(()=>document.querySelector('#area-selection-name')?.textContent.includes('not applied'));
-  assert.match(await page.locator('#area-panel').textContent(),/geographic filtering is paused/i);
+  assert.match(await page.locator('#area-panel').textContent(),/DineSafe area filter is paused/i);
   await page.getByRole('button',{name:'All establishments'}).click();
   await page.locator('[data-area-overlay="off"]').click();
   stage='hiding overlay';
@@ -935,7 +935,7 @@ test('recent cards distinguish City inspection date from Scarb.TO first-observed
   await waitForMap(page);
   const row=page.locator('.record-item').first();
   assert.match(await row.textContent(),/Inspection: Oct 26, 2026/);
-  assert.match(await row.textContent(),/First observed by Scarb\.TO: Oct 31, 2026/);
+  assert.match(await row.textContent(),/Added to Scarb.TO: Oct 31, 2026/);
 });
 
 test('mobile area panel is closeable and the selected-area chip remains usable without the panel', {timeout:90_000}, async t=>{
@@ -1002,7 +1002,7 @@ test('static neighbourhood pages use the qualified set and route into the same s
   await installLocalRoutes(page,origin,{snapshotBody:pageSnapshot,neighbourhoodGeometry:areaOverlayFixture('neighbourhood')});
   await page.goto(`${origin}/westrouge/?utm_source=fixture#share`,{waitUntil:'domcontentloaded'});
   await page.waitForURL(url=>url.pathname==='/west-rouge/'&&url.searchParams.get('utm_source')==='fixture'&&url.hash==='#share',{timeout:5_000});
-  await page.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.startsWith('Scarb.TO checked'));
+  await page.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.startsWith('Last checked'));
   assert.match(await page.getByRole('heading',{level:1}).textContent(),/West Rouge/);
   assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),'https://scarb.to/west-rouge/');
   assert.equal(await page.locator('meta[property="og:url"]').getAttribute('content'),'https://scarb.to/west-rouge/');
@@ -1025,11 +1025,11 @@ test('static neighbourhood pages use the qualified set and route into the same s
   assert.equal(printLayout.hidden,true,'print view hides navigation and interactive controls');
   assert.equal(printLayout.readable,true,'print view retains the title, records, source and reuse guidance');
   await page.emulateMedia({media:'screen'});
-  assert.match(await page.locator('#feed-status').textContent(),/Scarb\.TO checked/);
-  assert.match(await page.locator('#feed-status').textContent(),/City catalogue timestamp/);
+  assert.match(await page.locator('#feed-status').textContent(),/Last checked/);
+  assert.match(await page.locator('#feed-status').textContent(),/City catalogue date:/);
   await page.waitForFunction(()=>document.querySelectorAll('#inspection-list .record-item').length===1);
   assert.equal(await page.locator('#inspection-list .record-item').count(),1);
-  assert.match(await page.locator('#inspection-list').textContent(),/Inspection detail: Food handling room/);
+  assert.match(await page.locator('#inspection-list').textContent(),/The inspection record says: Food handling room/);
   assert.equal(await page.getByRole('link',{name:'Find an Ontario MPP'}).getAttribute('href'),'https://www.ola.org/en/members/current');
   assert.equal(await page.getByRole('link',{name:'Find a federal MP'}).getAttribute('href'),'https://www.ourcommons.ca/Members/en/search');
   assert.match(await page.locator('#ward-links').textContent(),/Ward 25/);
@@ -1052,24 +1052,24 @@ test('static neighbourhood pages use the qualified set and route into the same s
   const staleSnapshot={...pageSnapshot,published_at:'2020-01-01T00:00:00.000Z',source:{last_refreshed:'2020-01-01T00:00:00.000Z'}};
   await installLocalRoutes(stalePage,origin,{snapshotBody:staleSnapshot});
   await stalePage.goto(`${origin}/west-rouge/`,{waitUntil:'domcontentloaded'});
-  await stalePage.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.includes('may be stale'));
+  await stalePage.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.includes('may be out of date'));
   await stalePage.waitForFunction(()=>document.querySelectorAll('#inspection-list .record-item').length===1);
-  assert.match(await stalePage.locator('#feed-status').textContent(),/may be stale/);
+  assert.match(await stalePage.locator('#feed-status').textContent(),/may be out of date/);
   assert.equal(await stalePage.locator('#inspection-list .record-item').count(),1);
 
   const zeroAreaPage=await context.newPage();
   const otherAreaSnapshot={...pageSnapshot,establishments:[{...pageSnapshot.establishments[0],neighbourhood:'Agincourt North'}]};
   await installLocalRoutes(zeroAreaPage,origin,{snapshotBody:otherAreaSnapshot});
   await zeroAreaPage.goto(`${origin}/west-rouge/`,{waitUntil:'domcontentloaded'});
-  await zeroAreaPage.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.startsWith('Scarb.TO checked'));
-  await zeroAreaPage.waitForFunction(()=>document.querySelector('#record-summary')?.textContent.includes('Showing 0 of 0'));
+  await zeroAreaPage.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.startsWith('Last checked'));
+  await zeroAreaPage.waitForFunction(()=>document.querySelector('#record-summary')?.textContent.includes("I didn't find any places labelled with this neighbourhood"));
   assert.equal(await zeroAreaPage.locator('#inspection-list .record-item').count(),0);
 
   const emptyGlobalPage=await context.newPage();
   const emptyGlobalSnapshot={...pageSnapshot,establishments:[]};
   await installLocalRoutes(emptyGlobalPage,origin,{snapshotBody:emptyGlobalSnapshot});
   await emptyGlobalPage.goto(`${origin}/west-rouge/`,{waitUntil:'domcontentloaded'});
-  await emptyGlobalPage.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.includes('unavailable'));
+  await emptyGlobalPage.waitForFunction(()=>document.querySelector('#feed-status')?.textContent.includes("I couldn't load the food inspection results"));
   assert.equal(await emptyGlobalPage.locator('#inspection-list .record-item').count(),0);
   assert.equal(await emptyGlobalPage.locator('#record-summary').textContent(),'');
   assert.deepEqual(errors,[],errors.join('\n\n'));

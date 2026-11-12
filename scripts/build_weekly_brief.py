@@ -142,16 +142,16 @@ def _render_edition(payload: dict, record: dict) -> bytes:
     events = payload["events"]
     kind_counts = Counter(event["kind"] for event in events)
     area_counts = Counter(event["neighbourhood"] for event in events)
-    title = f"DineSafe changes observed {start:%b %d}–{end:%b %d, %Y}"
+    title = f"Food inspection updates {start:%b %d}–{end:%b %d, %Y}"
     esc = html.escape
     rows = [
         f'<li id="event-{esc(event["id"])}">'
-        f'<strong>{esc(EVENT_KINDS[event["kind"]])}: {esc(event["name"])}</strong> '
-        f'<span>({esc(event["neighbourhood"])}; assigned neighbourhood label)</span> '
-        f'<span>DineSafe status at observation: {esc(event["status"])}.</span> '
+        f'<strong>{esc(event["name"])}: {esc(EVENT_KINDS[event["kind"]])}</strong> '
+        f'<span>({esc(event["neighbourhood"])}; neighbourhood named in the City record)</span> '
+        f'<span>DineSafe result when added: {esc(event["status"])}.</span> '
         + (f'<span>Previous status: {esc(event["previous_status"])}.</span> ' if event["kind"] == "status_changed" and event["previous_status"] else "")
         + f'<span>Inspection date: {esc(event["inspection_date"])}.</span> '
-        + f'<span>First observed by Scarb.TO: {esc(datetime.fromisoformat(event["detected_at"]).astimezone(ZoneInfo(TORONTO)).strftime("%b %d, %Y %H:%M %Z"))}.</span>'
+        + f'<span>Added to Scarb.TO: {esc(datetime.fromisoformat(event["detected_at"]).astimezone(ZoneInfo(TORONTO)).strftime("%b %d, %Y %H:%M %Z"))}.</span>'
         + "</li>"
         for event in events
     ]
@@ -176,9 +176,9 @@ def _render_edition(payload: dict, record: dict) -> bytes:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A source-linked summary of DineSafe changes first observed by Scarb.TO during this completed week.">
+  <meta name="description" content="Food inspection updates added to Scarb.TO during the week shown, with the City records and dates behind them.">
   <link rel="canonical" href="{BRIEFS_URL}{start.isoformat()}/">
-  <link rel="alternate" type="application/rss+xml" title="Scarb.TO observed DineSafe changes" href="/feed.xml">
+  <link rel="alternate" type="application/rss+xml" title="Scarb.TO food inspection updates" href="/feed.xml">
   <title>{esc(title)} | Scarb.TO</title>
   <style>body{{font:1rem/1.55 system-ui,sans-serif;max-width:70rem;margin:auto;padding:1rem;color:#163c3c}}h1,h2{{line-height:1.2}}li{{margin:.65rem 0}}a{{color:#075c73}}.summary{{display:flex;gap:2rem;flex-wrap:wrap}}aside{{border-left:.25rem solid #a43;padding:.75rem;margin:1rem 0}}small{{color:#333}}</style>
 </head>
@@ -186,15 +186,15 @@ def _render_edition(payload: dict, record: dict) -> bytes:
   <nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/briefs/">All weekly briefs</a> · <a href="/feed.xml">DineSafe RSS</a></nav>
   <main>
     <h1>{esc(title)}</h1>
-    <p>This brief summarizes DineSafe records first observed by Scarb.TO from {_fmt_date(start)} through {_fmt_date(end)} (America/Toronto). It describes observations in the validated City dataset, not every City action or a real-time status service.</p>
-    <p><strong>{len(events)} observations</strong> across {len(area_counts)} assigned neighbourhood labels.</p>
-    <div class="summary"><section><h2>By change type</h2><ul>{kinds}</ul></section><section><h2>By assigned neighbourhood label</h2><ul>{areas}</ul></section></div>
-    <p>Neighbourhood names are the labels assigned in DineSafe records; they are not a claim that every labelled neighbourhood lies wholly within Scarborough's six-ward inclusion boundary. Inspection date and first-observed time describe different events. DineSafe status may change after the source observation.</p>
+    <p>Here are the food inspection updates I added from {_fmt_date(start)} through {_fmt_date(end)}, using Toronto time. They come from City DineSafe records, not visits to these places. This is not a complete account of City activity, and results may have changed since.</p>
+    <details><summary>About these updates</summary><p><strong>{len(events)} recorded updates</strong> across {len(area_counts)} neighbourhood names in the City records. One place can have more than one update.</p>
+    <div class="summary"><section><h2>What was added</h2><ul>{kinds}</ul></section><section><h2>By neighbourhood in the City records</h2><ul>{areas}</ul></section></div>
+    <p>I use the neighbourhood names in DineSafe records. Some of those neighbourhoods extend beyond the six Scarborough wards used to select these places. The inspection date tells you when the inspection happened; “Added to Scarb.TO” tells you when I first recorded the update, not when this page went live. A place newly added here is not necessarily a new business.</p></details><p>These are dated results, not a current safety assessment. Check the City's record before relying on an older result.</p>
     {correction}
-    <h2>Observed records</h2>
+    <h2>The updates</h2>
     <ol>{''.join(rows)}</ol>
-    <p>Source: <a href="{SOURCE_URL}">City of Toronto DineSafe Open Data</a>. Licensed under the <a href="{LICENCE_URL}">Open Government Licence – Toronto</a>.</p>
-    <p><small>Edition ID: {esc(record["id"])}. Revision: {record["revision"]}. Edition first generated: {first_generated} (UTC); the Pages deployment time is separate. Individual addresses and coordinates are intentionally omitted.</small></p>
+    <p>See the source: <a href="{SOURCE_URL}">City of Toronto DineSafe Open Data</a>. This brief uses information licensed under the <a href="{LICENCE_URL}">Open Government Licence – Toronto</a>.</p>
+    <details><summary>Edition details</summary><p><small>Edition ID: {esc(record["id"])}. Revision: {record["revision"]}. First prepared: {first_generated} (UTC). That is when this edition was made, not when it went live. I leave individual addresses and map coordinates out of these briefs.</small></p></details><p>Scarb.TO's editorial voice is AI-assisted, not first-hand reporting.</p>
   </main>
 </body>
 </html>
@@ -205,17 +205,17 @@ def _render_edition(payload: dict, record: dict) -> bytes:
 def _render_index(manifest: dict, current_start: date, current_end: date, has_current: bool) -> bytes:
     entries = sorted(manifest["editions"], key=lambda item: item["period_start"], reverse=True)
     links = "".join(
-        f'<li><a href="/{esc_path(item["path"])}">DineSafe changes observed {_fmt_date(date.fromisoformat(item["period_start"]))}–{_fmt_date(date.fromisoformat(item["period_end"]))}</a>'
-        f' <span>({item["event_count"]} observations; revision {item["revision"]})</span></li>'
+        f'<li><a href="/{esc_path(item["path"])}">Food inspection updates {_fmt_date(date.fromisoformat(item["period_start"]))}–{_fmt_date(date.fromisoformat(item["period_end"]))}</a>'
+        f' <span>({item["event_count"]} recorded updates; revision {item["revision"]})</span></li>'
         for item in entries
     )
     if not has_current:
-        quiet = f'<p>No Scarb.TO-observed DineSafe changes are available for {_fmt_date(current_start)}–{_fmt_date(current_end)}.</p>'
+        quiet = f'<p>I have no DineSafe updates to share for {_fmt_date(current_start)}–{_fmt_date(current_end)}.</p>'
     else:
         quiet = ""
     page = f'''<!doctype html>
 <html lang="en-CA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Weekly briefs | Scarb.TO</title><style>body{{font:1rem/1.55 system-ui,sans-serif;max-width:60rem;margin:auto;padding:1rem;color:#163c3c}}a{{color:#075c73}}li{{margin:.75rem 0}}</style></head>
-<body><nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/feed.xml">DineSafe RSS</a></nav><main><h1>Weekly DineSafe briefs</h1><p>Source-linked summaries of changes first observed by Scarb.TO in validated committed Toronto DineSafe history. A quiet week does not produce an artificial edition.</p>{quiet}<h2>Published editions</h2><ul>{links}</ul></main></body></html>
+<body><nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/feed.xml">DineSafe RSS</a></nav><main><h1>Weekly food inspection briefs</h1><p>A week at a time: the food inspection updates I added from City DineSafe records, with dates and sources so you can look closer. A week without new records here does not mean nothing happened. I only make a brief when there are updates to share.</p>{quiet}<h2>Published editions</h2><ul>{links}</ul></main></body></html>
 '''
     return page.encode("utf-8")
 
@@ -266,7 +266,7 @@ def _is_sha256(value: object) -> bool:
 
 def _correction_record(existing: dict, correction: object, *, generated_at: str, content_hash: str, event_count: int) -> dict:
     if not isinstance(correction, dict):
-        raise BriefError("Committed history changed a published edition; an explained correction is required")
+        raise BriefError("Published edition content or wording changed; an explained correction is required")
     if type(correction.get("revision")) is not int or correction["revision"] != existing["revision"] + 1:
         raise BriefError("Correction revision must increment the published edition by exactly one")
     explanation = correction.get("explanation")
@@ -281,6 +281,27 @@ def _correction_record(existing: dict, correction: object, *, generated_at: str,
         "content_sha256": content_hash,
     })
     return record
+
+
+def _reviewed_render(existing: dict, payload: dict, correction: object, generated_at: str) -> tuple[dict, bytes]:
+    """Never silently replace published bytes, including copy-only changes."""
+    content_hash = _sha256(_canonical_bytes(payload))
+    unchanged_bytes = _render_edition(payload, existing)
+    if content_hash == existing["content_sha256"] and _sha256(unchanged_bytes) == existing["html_sha256"]:
+        if correction is not None and (
+            not isinstance(correction, dict)
+            or correction.get("revision") != existing["revision"]
+            or " ".join(str(correction.get("explanation", "")).split()) != existing["correction_explanation"]
+        ):
+            raise BriefError("Correction does not change the published edition content or wording")
+        return dict(existing), unchanged_bytes
+    record = _correction_record(
+        existing, correction, generated_at=generated_at,
+        content_hash=content_hash, event_count=len(payload["events"]),
+    )
+    rendered = _render_edition(payload, record)
+    record["html_sha256"] = _sha256(rendered)
+    return record, rendered
 
 
 def build_weekly_brief(
@@ -319,6 +340,7 @@ def build_weekly_brief(
     output_path = output_dir / start.isoformat() / "index.html"
     existing = next((item for item in editions if item["id"] == edition_id), None)
     generated_at = as_of.astimezone(timezone.utc).isoformat()
+    pending_pages: list[tuple[Path, bytes]] = []
 
     # Explicit corrections can target older editions while their complete
     # source-month archives remain in the validated history window.
@@ -332,28 +354,13 @@ def build_weekly_brief(
             raise BriefError(f"Cannot correct {prior_id}: complete source-month archives are no longer available")
         prior_events = _week_events(events, prior_start, prior_end)
         prior_payload = _content_payload(prior_start, prior_end, prior_events)
-        prior_hash = _sha256(_canonical_bytes(prior_payload))
         prior_correction = corrections["corrections"][prior_id]
-        if prior_hash == prior["content_sha256"]:
-            if isinstance(prior_correction, dict) and prior_correction.get("revision") == prior["revision"]:
-                continue
-            raise BriefError(f"Correction for {prior_id} does not change the committed edition content")
         prior_output = output_dir / prior_start.isoformat() / "index.html"
         if not prior_output.is_file() or _sha256(prior_output.read_bytes()) != prior["html_sha256"]:
             raise BriefError(f"Published weekly-brief page for {prior_id} differs from its registry hash")
-        revised = _correction_record(
-            prior,
-            prior_correction,
-            generated_at=generated_at,
-            content_hash=prior_hash,
-            event_count=len(prior_events),
-        )
-        revised_bytes = _render_edition(prior_payload, revised)
-        revised["html_sha256"] = _sha256(revised_bytes)
-        _write_atomic(prior_output, revised_bytes)
+        revised, revised_bytes = _reviewed_render(prior, prior_payload, prior_correction, generated_at)
+        pending_pages.append((prior_output, revised_bytes))
         editions = [revised if item["id"] == prior_id else item for item in editions]
-        if prior_id == edition_id:
-            existing = revised
     if current_events:
         if existing is None:
             if output_path.exists():
@@ -381,29 +388,11 @@ def build_weekly_brief(
             old_page = output_path.read_bytes()
             if _sha256(old_page) != existing["html_sha256"]:
                 raise BriefError("Published weekly-brief page differs from its registry hash")
-            if existing["content_sha256"] == content_hash:
-                record = dict(existing)
-            else:
-                record = _correction_record(
-                    existing,
-                    corrections["corrections"].get(edition_id),
-                    generated_at=generated_at,
-                    content_hash=content_hash,
-                    event_count=len(current_events),
-                )
+            record, _ = _reviewed_render(existing, payload, corrections["corrections"].get(edition_id), generated_at)
     elif existing is not None:
         if not output_path.is_file() or _sha256(output_path.read_bytes()) != existing["html_sha256"]:
             raise BriefError("Published weekly-brief page differs from its registry hash")
-        if existing["content_sha256"] == content_hash:
-            record = dict(existing)
-        else:
-            record = _correction_record(
-                existing,
-                corrections["corrections"].get(edition_id),
-                generated_at=generated_at,
-                content_hash=content_hash,
-                event_count=0,
-            )
+        record, _ = _reviewed_render(existing, payload, corrections["corrections"].get(edition_id), generated_at)
     else:
         record = None
 
@@ -414,10 +403,13 @@ def build_weekly_brief(
             editions.append(record)
         else:
             editions = [record if item["id"] == edition_id else item for item in editions]
-        _write_atomic(output_path, page_bytes)
+        pending_pages.append((output_path, page_bytes))
 
     next_manifest = {"schema_version": SCHEMA_VERSION, "editions": sorted(editions, key=lambda item: item["period_start"])}
     _validate_manifest(next_manifest)
+    # Finish every semantic/integrity check before changing any published file.
+    for pending_path, pending_bytes in pending_pages:
+        _write_atomic(pending_path, pending_bytes)
     _write_atomic(manifest_path, json.dumps(next_manifest, ensure_ascii=False, indent=2).encode("utf-8") + b"\n")
     _write_atomic(output_dir / "index.html", _render_index(next_manifest, start, end, bool(current_events)))
     return len(current_events)
@@ -438,7 +430,7 @@ def main(argv: list[str] | None = None) -> int:
     if count:
         print(f"Weekly DineSafe brief includes {count} validated observations for the last complete Toronto week.")
     else:
-        print("No Scarb.TO-observed DineSafe changes are available for the last complete Toronto week; no edition created.")
+        print("I have no DineSafe updates to share for the last complete Toronto week; no edition created.")
     return 0
 
 

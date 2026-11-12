@@ -1,12 +1,14 @@
 import json
 import tempfile
 import unittest
+from unittest.mock import patch
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from scripts.build_rss import SOURCE_URL
 from scripts.build_weekly_brief import BriefError, build_weekly_brief, complete_week
+from scripts import build_weekly_brief as brief_module
 
 
 def event(event_id, detected_at, *, name="Cafe <Kitchen>", status="Pass", kind="status_changed", neighbourhood="West Rouge"):
@@ -76,7 +78,7 @@ class WeeklyBriefTests(unittest.TestCase):
         self.assertNotIn("PRIVATE ADDRESS", page)
         self.assertNotIn("latitude", page)
         self.assertNotIn("longitude", page)
-        self.assertIn("assigned neighbourhood label", page)
+        self.assertIn("neighbourhood named in the City record", page)
         self.assertIn("Open Government Licence", page)
         manifest = json.loads((self.output / "editions.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["editions"][0]["event_count"], 2)
@@ -88,7 +90,7 @@ class WeeklyBriefTests(unittest.TestCase):
         manifest = json.loads((self.output / "editions.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["editions"], [])
         self.assertFalse((self.output / "2026-11-02" / "index.html").exists())
-        self.assertIn("No Scarb.TO-observed DineSafe changes", (self.output / "index.html").read_text(encoding="utf-8"))
+        self.assertIn("I have no DineSafe updates to share", (self.output / "index.html").read_text(encoding="utf-8"))
 
     def test_rebuild_preserves_original_publication_time_and_page_hash(self):
         write_archive(self.history, [event("a", "2026-11-03T10:00:00+00:00")])
@@ -217,6 +219,62 @@ class WeeklyBriefTests(unittest.TestCase):
     def test_as_of_must_be_timezone_aware(self):
         with self.assertRaisesRegex(BriefError, "must include a timezone"):
             complete_week(datetime(2026, 11, 9))
+
+    def test_copy_only_revision_current_and_older_preserves_evidence_and_is_idempotent(self):
+        write_archive(self.history, [event("a", "2026-11-03T10:00:00+00:00")])
+        build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
+        manifest_path = self.output / "editions.json"
+        page_path = self.output / "2026-11-02" / "index.html"
+        original_manifest = manifest_path.read_bytes()
+        original_page = page_path.read_bytes()
+        original = json.loads(original_manifest)["editions"][0]
+        render = brief_module._render_edition
+        def reworded(payload, record):
+            return render(payload, record).replace(b"The updates</h2>", b"This week's updates</h2>")
+        with patch.object(brief_module, "_render_edition", side_effect=reworded):
+            with self.assertRaisesRegex(BriefError, "explained correction is required"):
+                build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
+            self.assertEqual(page_path.read_bytes(), original_page)
+            self.assertEqual(manifest_path.read_bytes(), original_manifest)
+            # An older edition without an explicit correction remains byte-for-byte archived.
+            later = datetime(2026, 11, 16, 15, tzinfo=timezone.utc)
+            build_weekly_brief(self.history, self.output, self.corrections, as_of=later)
+            self.assertEqual(page_path.read_bytes(), original_page)
+            for reference_time in (self.as_of, later):
+                with self.subTest(reference_time=reference_time):
+                    manifest_path.write_bytes(original_manifest)
+                    page_path.write_bytes(original_page)
+                    self.corrections.write_text(json.dumps({"schema_version": 1, "corrections": {
+                        original["id"]: {"revision": 2, "explanation": "Clarified the wording; source results are unchanged."}
+                    }}), encoding="utf-8")
+                    build_weekly_brief(self.history, self.output, self.corrections, as_of=reference_time)
+                    revised = json.loads(manifest_path.read_bytes())["editions"][0]
+                    self.assertEqual(revised["revision"], 2)
+                    for field in ("id", "period_start", "period_end", "generated_at", "event_count", "content_sha256"):
+                        self.assertEqual(revised[field], original[field], field)
+                    self.assertNotEqual(revised["html_sha256"], original["html_sha256"])
+                    revised_page = page_path.read_bytes()
+                    self.assertIn(b'event-aaaaaaaaaaaaaaaaaaaa', revised_page)
+                    self.assertIn(b'2026-11-06', revised_page)
+                    self.assertIn(b'Correction, revision 2', revised_page)
+                    build_weekly_brief(self.history, self.output, self.corrections, as_of=reference_time)
+                    self.assertEqual(page_path.read_bytes(), revised_page)
+                    self.assertEqual(json.loads(manifest_path.read_bytes())["editions"][0], revised)
+
+    def test_copy_change_cannot_reuse_applied_revision_or_omit_explanation(self):
+        write_archive(self.history, [event("a", "2026-11-03T10:00:00+00:00")])
+        build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
+        page_path = self.output / "2026-11-02" / "index.html"
+        original = page_path.read_bytes()
+        render = brief_module._render_edition
+        with patch.object(brief_module, "_render_edition", side_effect=lambda payload, record: render(payload, record) + b"<!-- editorial revision -->"):
+            for correction in ({"revision": 1, "explanation": "Reused revision"}, {"revision": 2, "explanation": " "}):
+                self.corrections.write_text(json.dumps({"schema_version": 1, "corrections": {
+                    "dinesafe-weekly-2026-11-02": correction
+                }}), encoding="utf-8")
+                with self.assertRaises(BriefError):
+                    build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
+                self.assertEqual(page_path.read_bytes(), original)
 
 
 if __name__ == "__main__":

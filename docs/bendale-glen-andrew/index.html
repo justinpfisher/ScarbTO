@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#143e3e">
-  <meta name="description" content="Current, source-linked DineSafe information for Bendale-Glen Andrew in Scarborough, Toronto.">
+  <meta name="description" content="Food inspection results for Bendale-Glen Andrew, with dates, City sources and the details worth knowing.">
   <link rel="canonical" href="https://scarb.to/bendale-glen-andrew/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Scarb.TO">
   <meta property="og:title" content="Bendale-Glen Andrew | Scarb.TO">
-  <meta property="og:description" content="Current, source-linked DineSafe information for Bendale-Glen Andrew in Scarborough, Toronto.">
+  <meta property="og:description" content="Food inspection results for Bendale-Glen Andrew, with dates, City sources and the details worth knowing.">
   <meta property="og:url" content="https://scarb.to/bendale-glen-andrew/">
   <meta name="twitter:card" content="summary">
   <link rel="stylesheet" href="../neighbourhood-page.css">
@@ -17,7 +17,7 @@
   <script type="module" src="../neighbourhood-page.mjs"></script>
 </head>
 <body>
-  <a class="skip-link" href="#inspections">Skip to DineSafe records</a>
+  <a class="skip-link" href="#inspections">Skip to food inspection results</a>
   <header class="site-header">
     <a class="brand" href="/" aria-label="Scarb.TO home">Scarb<span>.</span>TO</a>
     <a class="header-link" href="/">Explore Scarborough</a>
@@ -26,7 +26,7 @@
     <section class="page-intro" aria-labelledby="page-title">
       <p class="eyebrow">Scarborough neighbourhood</p>
       <h1 id="page-title">Bendale-Glen Andrew</h1>
-      <p>DineSafe records the City assigns to this neighbourhood, with dates and source limits in view.</p>
+      <p>Here's what the City's DineSafe records say about Bendale-Glen Andrew. I keep the dates and source links close by, so you can check the details.</p>
       <div class="page-actions" role="group" aria-label="Page actions">
         <button class="secondary-button" id="share-page" type="button">Share this neighbourhood</button>
         <button class="secondary-button" id="print-page" type="button">Print this page</button>
@@ -37,17 +37,17 @@
     <section class="panel explore-panel" aria-labelledby="explore-title">
       <div>
         <h2 id="explore-title">Explore this area</h2>
-        <p>Open the Scarb.TO map and results list with this neighbourhood selected.</p>
+        <p>See this neighbourhood on the map, with the same places in an easy-to-browse list.</p>
       </div>
       <a class="primary-link" id="map-link" href="/?areaKind=neighbourhood&amp;areaCode=156&amp;mode=all&amp;days=all">Open Bendale-Glen Andrew in the map and list</a>
     </section>
 
     <div class="content-grid">
       <section class="panel" aria-labelledby="ward-title">
-        <h2 id="ward-title">Municipal ward context</h2>
-        <p class="section-note">Neighbourhood and ward boundaries do not always align. These are the City wards that intersect this neighbourhood, not an address-level representative lookup.</p>
+        <h2 id="ward-title">Your City wards</h2>
+        <p class="section-note">Neighbourhoods and wards don't line up neatly. These wards overlap this neighbourhood; check your address with the City to find which councillor represents you.</p>
         <ul id="ward-links" class="link-list"></ul>
-        <p class="section-note">Provincial and federal electoral boundaries are different. For an exact address lookup, use the official tools; Scarb.TO does not collect your address.</p>
+        <p class="section-note">Provincial and federal boundaries are different again. The official tools below can help you find your representative. You enter your address there, not here.</p>
         <ul class="link-list">
           <li><a href="https://www.ola.org/en/members/current" target="_blank" rel="noopener noreferrer">Find an Ontario MPP</a></li>
           <li><a href="https://www.ourcommons.ca/Members/en/search" target="_blank" rel="noopener noreferrer">Find a federal MP</a></li>
@@ -55,26 +55,27 @@
       </section>
 
       <section class="panel records-panel" id="inspections" aria-labelledby="inspection-title">
-        <h2 id="inspection-title">DineSafe establishments</h2>
-        <p class="section-note">I follow the neighbourhood listed in each City record, just like Explore. That doesn't mean every address sits fully inside the boundary.</p>
-        <p id="feed-status" class="feed-status" role="status" aria-live="polite">Loading the published City snapshot.</p>
+        <h2 id="inspection-title">Food inspection results</h2>
+        <p class="section-note">I use the neighbourhood listed in each City record, just like the map. That label doesn't mean every address falls inside the neighbourhood boundary. Results describe the inspection on the date shown, not current safety. Check the City's record for anything newer.</p>
+        <p id="feed-status" class="feed-status" role="status" aria-live="polite">Getting the food inspection results.</p>
         <p id="record-summary" class="record-summary"></p>
         <ol id="inspection-list" class="record-list"></ol>
-        <button id="show-more" class="secondary-button" type="button" hidden>Show more establishments</button>
-        <p class="source-note"><a href="https://open.toronto.ca/dataset/dinesafe/" target="_blank" rel="noopener noreferrer">DineSafe dataset and source information</a> · <a href="https://open.toronto.ca/open-data-licence/" target="_blank" rel="noopener noreferrer">Open Government Licence – Toronto</a></p>
+        <button id="show-more" class="secondary-button" type="button" hidden>Show more places</button>
+        <p class="source-note"><a href="https://open.toronto.ca/dataset/dinesafe/" target="_blank" rel="noopener noreferrer">About the City's DineSafe data</a> · <a href="https://open.toronto.ca/open-data-licence/" target="_blank" rel="noopener noreferrer">Open Government Licence – Toronto</a></p>
       </section>
     </div>
 
     <section class="panel unavailable-panel" aria-labelledby="other-data-title">
       <h2 id="other-data-title">Other local information</h2>
-      <p>Neighbourhood historical police totals and planning or permit records are not published here yet. Unavailable data is not zero.</p>
-      <p>Beach measurements are dated samples and are not current swimming advice.</p>
+      <p>I haven't published neighbourhood police history, planning applications or building permits here yet. That gap doesn't mean nothing has happened.</p>
+      <p>Beach results on Scarb.TO describe past samples. Don't use them to decide whether to swim today.</p>
     </section>
 
     <footer class="page-footer">
       <a href="https://open.toronto.ca/dataset/neighbourhoods/" target="_blank" rel="noopener noreferrer">City neighbourhood boundaries</a>
       <span>Contains information licensed under the Open Government Licence – Toronto.</span>
-      <span class="reuse-note">Before reusing data, review the linked City source and licence terms; retain attribution and source dates.</span>
+      <span class="reuse-note">Sharing the data? Check the City's source and licence terms first, and keep the attribution and dates with it.</span>
+      <span>I'm an AI-assisted guide to public records, not an official City service or a first-hand reporter.</span>
       <a href="/">Scarb.TO home</a>
     </footer>
   </main>

@@ -161,6 +161,8 @@ Do not promise daily news, comprehensive coverage, real-time monitoring or futur
 
 ##### Editorial check within normal review
 
+**Site-wide scope clarified by the owner, 12 November 2026:** This applies to every Scarb-authored sentence, not just prominent branding. Include legal and licensing explanations, attribution and source notes, disclaimers, metadata and accessibility text, all UI states, neighbourhood pages, weekly editions and RSS. Preserve official names, quoted source terminology, factual meaning and consequential limitations. Use the existing review and relevant test workflow; no separate editorial approval gate. Keep generators and shared copy in step so the next publication retains this voice. Explain copy-only changes to an archived weekly edition through its explicit revision mechanism, without changing the original factual period or provenance.
+
 Can a first-time visitor understand what this means? Is every first-person action true? Do the dates and sources support the claim? Is the limitation clear where it matters? Is the humour kind and optional? Can a technical detail move out of the headline without losing important meaning?
 
 ##### Visual relationship

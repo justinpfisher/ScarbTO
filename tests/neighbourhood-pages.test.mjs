@@ -31,8 +31,8 @@ test('the generated West Rouge route and alias match their reusable source templ
   const template=readFileSync(new URL('../docs/neighbourhood-page.template.html',import.meta.url),'utf8');
   const pages=buildPageFiles(NEIGHBOURHOODS,template);
   assert.equal(pages.get('docs/west-rouge/index.html').includes('<h1 id="page-title">West Rouge</h1>'),true);
-  assert.match(pages.get('docs/west-rouge/index.html'),/DineSafe records the City assigns to this neighbourhood/);
-  assert.match(pages.get('docs/west-rouge/index.html'),/I follow the neighbourhood listed in each City record, just like Explore/);
+  assert.match(pages.get('docs/west-rouge/index.html'),/Here's what the City's DineSafe records say about West Rouge/);
+  assert.match(pages.get('docs/west-rouge/index.html'),/I use the neighbourhood listed in each City record, just like the map/);
   assert.match(renderAliasPage('westrouge','west-rouge'),/location\.replace\("\/west-rouge\/"\+location\.search\+location\.hash\)/);
 });
 
@@ -43,7 +43,12 @@ test('generated pages expose canonical share metadata, print actions, and reuse 
   assert.match(page,/<meta property="og:url" content="https:\/\/scarb\.to\/west-rouge\/">/);
   assert.match(page,/<button class="secondary-button" id="share-page" type="button">Share this neighbourhood<\/button>/);
   assert.match(page,/<button class="secondary-button" id="print-page" type="button">Print this page<\/button>/);
-  assert.match(page,/Before reusing data, review the linked City source and licence terms/);
+  assert.match(page,/Sharing the data\? Check the City's source and licence terms first/);
+  assert.match(page,/Results describe the inspection on the date shown, not current safety/);
+  assert.match(page,/That gap doesn't mean nothing has happened/);
+  assert.match(page,/Don't use them to decide whether to swim today/);
+  assert.match(page,/AI-assisted guide to public records, not an official City service or a first-hand reporter/);
+  assert.match(page,/https:\/\/open.toronto.ca\/open-data-licence\//);
   const css=readFileSync(new URL('../docs/neighbourhood-page.css',import.meta.url),'utf8');
   assert.match(css,/@media print\{/);
   assert.match(css,/\.page-actions,\.page-action-status,\.primary-link,#show-more\{display:none!important\}/);

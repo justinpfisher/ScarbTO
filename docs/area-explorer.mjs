@@ -105,56 +105,56 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     const isDineSafe=LIVE_MODES.has(getState().mode);
     const matching=isDineSafe
       ? getVisiblePlaces().filter(place=>areaMatches(place,{areaKind:area.kind,areaCode:area.code})).length : null;
-    const dine=section(content,'Restaurants & DineSafe',places
-      ? places.length.toLocaleString('en-CA')+' establishments in the latest validated snapshot; '+(isDineSafe
+    const dine=section(content,'Food inspection results',places
+      ? places.length.toLocaleString('en-CA')+' places in the City records I have; '+(isDineSafe
         ? matching.toLocaleString('en-CA')+' currently match your DineSafe filters.'
-        : 'DineSafe geographic filtering is paused while this other source is displayed.')
-      : 'A validated DineSafe snapshot is unavailable. No restaurant count is shown.');
-    addText(dine,'p','area-disclaimer','Latest recorded inspections, not a complete real-time restaurant inventory.');
+        : 'the DineSafe area filter is paused while you view another source.')
+      : 'I could not load checked DineSafe records, so no place count is shown.');
+    addText(dine,'p','area-disclaimer','These are the latest inspections in the records I have, not a live list of every restaurant.');
     if (snapshot?.published_at) {
       const stamp=new Date(snapshot.published_at);
       const published=Number.isFinite(stamp.valueOf())
         ? new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto',dateStyle:'medium',timeStyle:'short'}).format(stamp)
         : 'unavailable';
       const catalogue=typeof snapshot.source?.last_refreshed==='string' ? snapshot.source.last_refreshed : 'not supplied';
-      addText(dine,'p','area-disclaimer','Scarb.TO publication: '+published+'; City catalogue timestamp: '+catalogue+' (source time zone may be unspecified).');
+      addText(dine,'p','area-disclaimer','Records checked for Scarb.TO: '+published+'; City catalogue date: '+catalogue+' (the City may not specify a time zone).');
       if (Number.isFinite(stamp.valueOf()) && Date.now()-stamp.valueOf()>48*60*60*1000)
-        addText(dine,'p','area-disclaimer','The published snapshot may be stale; verify against the City source.');
+        addText(dine,'p','area-disclaimer','These records may be out of date. Check the City record before relying on them.');
     }
-    if (!LIVE_MODES.has(getState().mode)) addText(dine,'p','area-disclaimer','This area filter applies to DineSafe views, not to police division totals or historical beach samples.');
+    if (!LIVE_MODES.has(getState().mode)) addText(dine,'p','area-disclaimer','This area filters DineSafe places only. Police division totals and historical beach samples cover different areas.');
     if (area.kind==='ward') {
       const rep=councillorFor(area.code);
       const r=section(content,'City councillor',rep.name+' · '+rep.role);
       if(rep.transition) addText(r,'p','area-disclaimer',rep.transition+' is councillor-elect; term begins November 15, 2026.');
-      addLink(r,'Official City profile and office contacts',rep.url);
-      addText(r,'p','area-disclaimer','Officeholder information checked October 31, 2026; confirm changes with the City.');
+      addLink(r,'City profile and contact details',rep.url);
+      addText(r,'p','area-disclaimer','I checked this officeholder information on October 31, 2026. The City profile is the place to confirm any changes.');
       content.prepend(r);
     } else {
       const names=area.wards.map(code=>'Ward '+code);
-      const r=section(content,'Municipal representation',names.length>1
+      const r=section(content,'Your City councillor',names.length>1
         ? 'This neighbourhood spans '+names.join(' and ')+'. Your councillor depends on your exact address.'
-        : 'This neighbourhood lies predominantly in '+names.join(', ')+'. Confirm your exact address.');
+        : 'Most of this neighbourhood lies in '+names.join(', ')+'. Check your address to find your councillor.');
       for (const code of area.wards) {
         const rep=councillorFor(code);
         addLink(r,'Ward '+code+': '+rep.name+' · City office',rep.url);
       }
-      addText(r,'p','area-disclaimer','The listed wards represent meaningful source-measured overlaps, not whole-neighbourhood containment or population shares.');
-      addText(r,'p','area-disclaimer','Scarborough membership is a source-verified majority-area selection of 30 whole City neighbourhoods, not a publisher-assigned district. The DineSafe site retains establishments included by the six municipal wards.');
-      const page=section(content,'Neighbourhood page','Open the permanent source-linked page for this selected neighbourhood.');
+      addText(r,'p','area-disclaimer','These wards overlap the neighbourhood on the City map. The list does not mean the whole neighbourhood sits in each ward, or show how many residents live in each part.');
+      addText(r,'p','area-disclaimer','I include 30 whole City neighbourhoods with most of their land area in Scarborough. The City does not assign them to a Scarborough district in this dataset. DineSafe places follow a separate rule: they must lie within the six Scarborough wards.');
+      const page=section(content,'Neighbourhood page','Find this neighbourhood again, with its City sources in one place.');
       addLink(page,'Open '+area.name+' neighbourhood page',neighbourhoodPagePath(area.code));
     }
     const ridings=section(content,'Provincial & federal representatives',
-      'Their electoral boundaries differ from City wards and neighbourhoods. An area name alone cannot determine your exact MPP or MP.');
+      'Provincial and federal ridings have different boundaries from City wards and neighbourhoods. Use your address to find the right MPP or MP.');
     addLink(ridings,'Find your Ontario MPP','https://www.ola.org/en/members/current');
     addLink(ridings,'Find your federal riding','https://www.elections.ca/Scripts/vis/FindED?L=e&PAGEID=20&QID=-1');
     section(content,'Historical crime',area.kind==='ward'
-      ? 'No ward crime total: whole-neighbourhood TPS quarterly summaries cannot be prorated into municipal wards.'
-      : 'Quarterly TPS neighbourhood summaries are not yet approved for publication. No incident locations or current crime counts are displayed.');
+      ? 'There is no ward crime total here. TPS reports whole-neighbourhood quarterly summaries; dividing those up between wards would give a misleading number.'
+      : 'The quarterly TPS neighbourhood summaries are not ready to publish here. I do not show incident locations or current crime counts.');
     const development=section(content,'Development & permits',
-      'Planning applications and issued permits are separate City records. Their public Scarb.TO feed is not yet qualified; no construction claims are shown.');
+      'Planning applications and issued permits tell you different things. I have not finished checking these sources for Scarb.TO, so I am not showing them or making claims about construction. You can still look up applications with the City.');
     addLink(development,'City planning application information','https://www.toronto.ca/city-government/planning-development/application-information-centre/');
-    const boundary=section(content,'Boundary source','Official City of Toronto geography; attribution: Open Government Licence – Toronto.');
-    addLink(boundary,'Official boundary dataset',BOUNDARY_SOURCES[area.kind]);
+    const boundary=section(content,'Boundary source','These boundaries come from the City of Toronto, under the Open Government Licence – Toronto.');
+    addLink(boundary,'See the City boundary records',BOUNDARY_SOURCES[area.kind]);
     addLink(boundary,'Confirm your City ward by address','https://www.toronto.ca/city-government/council/members-of-council/');
   }
   function syncOutline() {
@@ -250,14 +250,14 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
   async function setOverlay(next) {
     if (!['off','neighbourhood','ward'].includes(next)) return;
     if (next!=='off' && !LIVE_MODES.has(getState().mode)) {
-      showNote('Boundary overlays and area filters apply only to DineSafe; division totals and beach samples use different geographies.');
+      showNote('These boundaries and area filters work with DineSafe places only. Police division totals and beach samples cover different areas.');
       return;
     }
     const priorSelection=selected();
     const selectionCleared=next!=='off' && priorSelection && priorSelection.kind!==next;
     if(selectionCleared){open=false;expanded=false;onClear();}
     const generation=++token;
-    overlay=next;showNote(selectionCleared?'The area filter was cleared because it belongs to a different boundary type. Choose a new area to filter the map and list.':'');sync();
+    overlay=next;showNote(selectionCleared?'I cleared the previous area filter when you switched boundary types. Choose a new area for the map and list.':'');sync();
     if (next!=='off' && !cache.has(next)) {
       try {
         await loadGeometry(next);
@@ -265,8 +265,8 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
         if (generation!==token) return;
         overlay='off';
         showNote(selectionCleared
-          ? 'Official '+(next==='ward'?'ward':'neighbourhood')+' boundaries are unavailable. The incompatible area filter was cleared; choose another area when the boundary is available.'
-          : 'Official '+(next==='ward'?'ward':'neighbourhood')+' boundaries are unavailable. Existing map and filters are unchanged.');
+          ? 'Official '+(next==='ward'?'ward':'neighbourhood')+' boundaries could not load. The previous area filter was cleared when you switched types. Choose a new area once the boundaries load.'
+          : 'Official '+(next==='ward'?'ward':'neighbourhood')+' boundaries could not load. Your map and filters have not changed.');
         console.warn('Area overlay unavailable:',error?.message||error);
         sync();display();return;
       }
@@ -310,10 +310,10 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
       const matching=collection.features.filter(f=>f.properties.AREA_SHORT_CODE===area.code);
       const bounds=fitBoundsFromFeatures(matching);
       if(bounds) map.fitBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]],{padding:42,maxZoom:13,duration:350});
-      else showNote('The selected official area has no usable mapped boundary.');
+      else showNote('I could not find a usable boundary for this area.');
     } catch(error) {
       if(attempt!==fitAttempt) return;
-      showNote('The official boundary could not be loaded. Your area filter remains in place.');
+      showNote('The City boundary could not load. Your area filter is still in place.');
       console.warn('Selected area boundary unavailable:',error?.message||error);
     }
   }
@@ -343,7 +343,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
   sync();
   return {sync, attachMap, detachMap, updateMode:()=>{
     if (!LIVE_MODES.has(getState().mode) && overlay!=='off')
-      showNote('Boundaries are hidden for this view. Police division totals and historical beach samples are not neighbourhood or ward figures.');
+      showNote('Boundaries are hidden for this view. Police division totals and historical beach samples do not describe whole neighbourhoods or wards.');
     else if (el('area-note').textContent.startsWith('Boundaries are hidden for this view')) showNote('');
     display();sync();
   }, setOverlay, select};

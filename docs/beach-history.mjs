@@ -57,7 +57,7 @@ export function renderBeachSamplePreview(document, input) {
   const title = document.createElement("h3");
   title.textContent = preview.beach_name;
   const note = document.createElement("p");
-  note.textContent = `Latest ${preview.rows_included} catalogue rows shown, selected from ${preview.total_rows_in_source_filter.toLocaleString("en-CA")} rows for this beach. Samples are dated measurements, not current swimming advice. The map pin marks the beach reference point, not sample-site coordinates. Contains information licensed under the Open Government Licence - Toronto.`;
+  note.textContent = `These are historical samples, not current swimming advice. I have shown the latest ${preview.rows_included} records available when checked, out of ${preview.total_rows_in_source_filter.toLocaleString("en-CA")} for this beach. The map pin marks the beach, not the sampling spots. Contains information licensed under the Open Government Licence - Toronto.`;
   const records = document.createElement("ol");
   records.className = "beach-sample-preview-list";
   for (const record of preview.records) {
@@ -69,29 +69,29 @@ export function renderBeachSamplePreview(document, input) {
     site.textContent = `Site ${record.siteName}`;
     const measurement = document.createElement("span");
     measurement.textContent = record.eColi === null
-      ? "No numeric E. coli measurement recorded"
+      ? "No E. coli number was recorded"
       : `E. coli measurement: ${record.eColi}`;
     item.append(date, site, measurement);
     records.append(item);
   }
   const captured = document.createElement("p");
   captured.className = "beach-sample-preview-meta";
-  captured.textContent = `Source rows checked ${preview.retrieved_on}. Latest sample date: ${preview.records.reduce((latest, row) => row.collectionDate > latest ? row.collectionDate : latest, "0000-00-00")}.`;
+  captured.textContent = `City records checked ${preview.retrieved_on}. Latest sample date: ${preview.records.reduce((latest, row) => row.collectionDate > latest ? row.collectionDate : latest, "0000-00-00")}.`;
   const source = document.createElement("a");
   source.href = CATALOGUE_URL;
   source.target = "_blank";
   source.rel = "noopener noreferrer";
-  source.textContent = "Toronto Open Data source";
+  source.textContent = "See the City beach records";
   const licence = document.createElement("a");
   licence.href = LICENCE_URL;
   licence.target = "_blank";
   licence.rel = "noopener noreferrer";
-  licence.textContent = "Toronto Open Data Licence";
+  licence.textContent = "Open Government Licence - Toronto";
   const currentInfo = document.createElement("a");
   currentInfo.href = CURRENT_INFO_URL;
   currentInfo.target = "_blank";
   currentInfo.rel = "noopener noreferrer";
-  currentInfo.textContent = "Official current beach information";
+  currentInfo.textContent = "Check current City swimming advice";
   section.append(title, note, records, captured, source, licence, currentInfo);
   return section;
 }

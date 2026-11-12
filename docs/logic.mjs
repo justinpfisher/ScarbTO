@@ -48,12 +48,12 @@ export function displayAddress(value) {
 
 /** The CKAN catalogue timestamp may not specify a time zone; never infer one. */
 export function cityCatalogueRefreshText(value) {
-  if (typeof value !== 'string') return 'City catalogue refresh time not supplied';
+  if (typeof value !== 'string') return 'The City has not supplied a catalogue refresh time';
   const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$/);
-  if (!match) return 'City catalogue refresh time not supplied';
+  if (!match) return 'The City has not supplied a catalogue refresh time';
   const [, date, clock, zone] = match;
   const suffix = zone ? (zone === 'Z' ? ' UTC' : ' ' + zone) : (clock ? ' (time zone not specified)' : ' (date only)');
-  return 'City catalogue timestamp ' + date + (clock ? ' ' + clock : '') + suffix;
+  return 'City catalogue date: ' + date + (clock ? ' ' + clock : '') + suffix;
 }
 
 export function fitBoundsFromFeatures(features) {

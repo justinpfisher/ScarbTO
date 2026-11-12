@@ -39,13 +39,13 @@ test('legacy and new City address placeholders are presentation-only missing val
 });
 test('upstream City catalogue time is distinct from Scarb.TO publication age',()=>{
   assert.equal(cityCatalogueRefreshText('2026-10-27 08:17:32.765401'),
-    'City catalogue timestamp 2026-10-27 08:17 (time zone not specified)');
+    'City catalogue date: 2026-10-27 08:17 (time zone not specified)');
   assert.equal(cityCatalogueRefreshText('2026-10-27T08:17:32Z'),
-    'City catalogue timestamp 2026-10-27 08:17 UTC');
+    'City catalogue date: 2026-10-27 08:17 UTC');
   assert.equal(cityCatalogueRefreshText('2026-10-27'),
-    'City catalogue timestamp 2026-10-27 (date only)');
-  assert.equal(cityCatalogueRefreshText(null), 'City catalogue refresh time not supplied');
-  assert.equal(cityCatalogueRefreshText('unparseable'), 'City catalogue refresh time not supplied');
+    'City catalogue date: 2026-10-27 (date only)');
+  assert.equal(cityCatalogueRefreshText(null), 'The City has not supplied a catalogue refresh time');
+  assert.equal(cityCatalogueRefreshText('unparseable'), 'The City has not supplied a catalogue refresh time');
 });
 
 test('geometry bounds are deterministic',()=>{

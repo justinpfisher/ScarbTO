@@ -219,8 +219,8 @@ test('homepage uses the connected-contour lockup with a standalone mobile mark',
   assert.match(html,/<img class="brand-lockup" src="\.\/assets\/brand\/scarbto-connected\.svg" alt="Scarb\.TO, with the three-line wave and cliff mark">/);
   assert.match(css,/\.brand-lockup\{display:block;width:min\(304px,45vw\);height:auto\}/);
   assert.match(css,/@media\(max-width:420px\)\{\.brand-lockup\{width:64px\}\}/);
-  assert.match(lockup,/<title id="title">Scarb\.TO - Lake &amp; Land connected-contour lockup<\/title>/);
-  assert.match(lockup,/<desc id="desc">Selected working direction[\s\S]*visual qualification remains\.<\/desc>/);
+  assert.match(lockup,/<title id="title">Scarb\.TO, with a three-line wave and cliff mark<\/title>/);
+  assert.match(lockup,/<desc id="desc">Three rising lines[\s\S]*not an official City mark or a map of the coastline\.<\/desc>/);
   assert.match(mark,/<title id="mark-title">Lake &amp; Land three-line wave and cliff mark<\/title>/);
 });
 
@@ -262,9 +262,9 @@ test('recent DineSafe captions distinguish detected changes from inspection date
       'Here’s the latest City inspection record I have for each place.');
     app.document.tabs.find(tab=>tab.dataset.mode==='recent').click();
     assert.equal(app.document.getElementById('results-caption').textContent,
-      'Here’s what I found comparing daily City snapshots. The inspection date may be earlier than when a record first appeared here.');
+      'Here’s what I found comparing the City records from day to day. The inspection date may be earlier than when a record first appeared here.');
     assert.match(app.document.getElementById('record-list').textContent,/Inspection: Oct 26, 2026/);
-    assert.match(app.document.getElementById('record-list').textContent,/First observed by Scarb\.TO:/);
+    assert.match(app.document.getElementById('record-list').textContent,/Added to Scarb\.TO:/);
   } finally { await app.cleanup(); }
 });
 
@@ -418,9 +418,9 @@ test('neighbourhood geometry failure leaves DineSafe selection usable without re
 test('production render path handles an initial not-ready snapshot', async () => {
   const app = await loadApp(fixture(0,false));
   try {
-    assert.match(app.document.getElementById('data-status').textContent,/Awaiting first validated City data import/);
+    assert.match(app.document.getElementById('data-status').textContent,/Waiting for the first checked City records/);
     assert.equal(app.document.getElementById('data-status').classList.contains('error'),false);
-    assert.match(app.document.getElementById('record-list').textContent,/No validated DineSafe snapshot/);
+    assert.match(app.document.getElementById('record-list').textContent,/There are no checked DineSafe records here yet/);
   } finally { await app.cleanup(); }
 });
 
@@ -429,7 +429,7 @@ test('production render path handles zero matching records without turning into 
   try {
     app.document.getElementById('search').value='no matching place';
     app.document.getElementById('search').dispatch('input');
-    assert.match(app.document.getElementById('record-list').textContent,/No matching places in the current map view/);
+    assert.match(app.document.getElementById('record-list').textContent,/No places match this view/);
     assert.ok(app.document.getElementById('record-list').querySelector('.empty-actions'));
     app.document.getElementById('record-list').querySelector('.empty-action').click();
     assert.equal(app.document.getElementById('record-list').querySelectorAll('.record-item').length,1,'empty-state action clears filters and recovers results');
@@ -448,14 +448,14 @@ test('production DineSafe details clean legacy addresses and label upstream cata
   try {
     app.map.load();
     const status=app.document.getElementById('data-status').textContent;
-    assert.match(status,/Scarb.TO checked/);
-    assert.match(status,/City catalogue timestamp 2026-10-27 08:17 \(time zone not specified\)/);
+    assert.match(status,/Last checked/);
+    assert.match(status,/City catalogue date: 2026-10-27 08:17 \(time zone not specified\)/);
     const list=app.document.getElementById('record-list');
     const row=list.querySelector('.record-item');
     assert.match(row.textContent,/0 Synthetic Road M1V 1V1/);
     assert.doesNotMatch(row.textContent,/ None /);
     row.click();
-    assert.match(list.textContent,/Recorded inspection detail: City finding/);
+    assert.match(list.textContent,/City inspection note: City finding/);
   } finally { await app.cleanup(); }
 });
 
@@ -469,14 +469,14 @@ test('production detail view suppresses literal None and keeps establishment cat
     app.document.tabs.find(tab=>tab.dataset.mode==='all').click();
     app.map.emitLayer('click','single',{features:[{properties:{id:snapshot.establishments[0].id}}]});
     const details=app.document.getElementById('record-list').querySelector('.record-details').textContent;
-    assert.match(details,/Establishment category: Cafe/);
+    assert.match(details,/City category: Cafe/);
     assert.doesNotMatch(details,/None/);
     await app.cleanup();
     snapshot.establishments[0].type='None';
     app=await loadApp(snapshot);
     app.map.load();app.document.tabs.find(tab=>tab.dataset.mode==='all').click();app.map.emitLayer('click','single',{features:[{properties:{id:snapshot.establishments[0].id}}]});
     const noDetails=app.document.getElementById('record-list').querySelector('.record-details').textContent;
-    assert.match(noDetails,/No additional detail in this source row/);
+    assert.match(noDetails,/The City record has no further detail here/);
     assert.doesNotMatch(noDetails,/None/);
   } finally { await app.cleanup(); }
 });
@@ -501,8 +501,8 @@ test('DineSafe map markers encode outcomes by shape and letter while retaining m
 
     const html=await readFile(new URL('../docs/index.html',import.meta.url),'utf8');
     const css=await readFile(new URL('../docs/styles.css',import.meta.url),'utf8');
-    assert.match(app.document.getElementById('map').attributes['aria-label'],/marker shape and letter supplement colour/i,'runtime control updates retain the accessible marker description');
-    assert.match(html,/Marker shape and letter supplement colour/);
+    assert.match(app.document.getElementById('map').attributes['aria-label'],/Shapes and letters identify inspection outcomes alongside colour/i,'runtime control updates retain the accessible marker description');
+    assert.match(html,/Marker shapes and letters show the outcome as well as colour/);
     assert.ok(css.includes(".dot.pass::after{content:'P'}"));
     assert.ok(css.includes(".dot.conditional::after{content:'C'}"));
     assert.ok(css.includes(".dot.closed::after{content:'X'}"));
@@ -520,7 +520,7 @@ test('marker image fallback keeps letter-coded circles and describes their actua
     assert.equal(app.map.layers['single-letter'].type,'symbol');
     assert.deepEqual(app.map.layers['single-letter'].layout['text-field'],['match',['get','status'],'Pass','P','Conditional Pass','C','Closed','X','Beach sample','B','?']);
     assert.equal(app.document.getElementById('map-legend').classList.contains('marker-shape-fallback'),true);
-    assert.match(app.document.getElementById('map').attributes['aria-label'],/Marker letters identify outcomes/);
+    assert.match(app.document.getElementById('map').attributes['aria-label'],/Letters identify inspection outcomes alongside colour/);
     const css=await readFile(new URL('../docs/styles.css',import.meta.url),'utf8');
     assert.match(css,/marker-shape-fallback \.dot\.conditional\{background:#e2a03d\}/,'fallback legend matches the fallback map colour');
     assert.match(css,/marker-shape-fallback \.dot\.closed\{background:#c4534c\}/,'fallback Closed legend matches the fallback map colour');
@@ -604,7 +604,7 @@ test('selected-calls mode fetches only on explicit view selection and clears cou
     app.document.tabs.find(tab=>tab.dataset.mode==='selected-calls').click();
     await new Promise(resolve=>setTimeout(resolve,0));
     assert.equal(list.querySelectorAll('.selected-call-row').length,0);
-    assert.match(list.textContent,/unavailable or stale/i);
+    assert.match(list.textContent,/cannot verify fresh selected-call counts/i);
     assert.equal(transport.calls,5);
   } finally { await app.cleanup(); }
 });
@@ -617,7 +617,7 @@ test('stale selected-call source response renders unavailable without counts', a
     await new Promise(resolve=>setTimeout(resolve,0));
     const list=app.document.getElementById('record-list');
     assert.equal(list.querySelectorAll('.selected-call-row').length,0);
-    assert.match(list.textContent,/unavailable or stale/i);
+    assert.match(list.textContent,/cannot verify fresh selected-call counts/i);
     assert.equal(transport.calls,1);
   } finally { await app.cleanup(); }
 });
