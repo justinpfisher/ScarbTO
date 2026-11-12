@@ -491,7 +491,7 @@ async function initMap() {
         map.on('click','single',e=>{const id=String(e.features?.[0]?.properties?.id||'');if(id)selectPlace(id,false,true);});
         for(const layer of ['clusters','single']){map.on('mouseenter',layer,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',layer,()=>map.getCanvas().style.cursor='');}
         areaExplorer?.attachMap(map);
-        map.on('moveend',()=>{listLimit=80;renderList();});
+        map.on('moveend',()=>{if(state.mode==='recent'||state.mode==='all'){listLimit=80;renderList();}});
         updateSource();renderList();
         if(['recent','all'].includes(state.mode)&&state.neighbourhood)void selectNeighbourhood();
       }catch(error){setMapUnavailable(error);}

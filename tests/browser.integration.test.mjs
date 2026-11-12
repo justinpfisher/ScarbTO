@@ -278,6 +278,9 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   assert.equal(await page.locator('.beach-sample-date-list>li').count(),2);
   await page.getByText('Sample records and sources',{exact:true}).click();
   await page.getByText('latest 10 sample records available when checked', {exact: false}).waitFor();
+  await page.evaluate(()=>window.__scarbMap.easeTo({center:[-79.2252,43.7069],zoom:13,duration:0}));
+  await page.waitForFunction(()=>!window.__scarbMap.isMoving());
+  assert.equal(await page.getByText('latest 10 sample records available when checked',{exact:false}).isVisible(),true,'map movement does not collapse opened beach evidence');
   assert.equal(await page.locator('#search').isDisabled(), true, `${name}: DineSafe controls are disabled in beach mode`);
   await page.waitForFunction(() => Math.abs(window.__scarbMap.getCenter().lng - -79.2252) < 0.002);
   const beachCenter = await page.evaluate(() => window.__scarbMap.getCenter().toArray());
