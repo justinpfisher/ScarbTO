@@ -90,10 +90,12 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Install Chromium for rendered regression tests
         run: npx playwright install chromium
+      - name: Install pinned Python test timezone data
+        run: python -m pip install --disable-pip-version-check --no-deps --require-hashes -r .github/requirements-test.txt
       - name: Unit tests (network-independent)
         run: python -m unittest discover -s tests -v
       - name: Check production smoke-check script syntax
-        run: python -m py_compile scripts/verify_live_overlay.py
+        run: python -m py_compile scripts/verify_live_overlay.py scripts/build_rss.py scripts/build_weekly_brief.py
       - name: Check JavaScript syntax
         run: |
           $files = @(
@@ -112,8 +114,6 @@ jobs:
           }
       - name: JavaScript logic tests
         run: node --test tests/logic.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs tests/boundary.test.mjs tests/area-selection.test.mjs tests/neighbourhood-pages.test.mjs
-      - name: Install pinned Python test timezone data
-        run: python -m pip install --disable-pip-version-check --no-deps --require-hashes -r .github/requirements-test.txt
       - name: Offline research prototype tests
         run: python .github/scripts/test_research_prototypes.py
       - name: Beach sample view tests
@@ -159,14 +159,22 @@ jobs:
         run: python scripts/verify_code_only_release.py
       - name: Generate source-linked DineSafe RSS
         run: python scripts/build_rss.py
+      - name: Generate weekly source-linked DineSafe brief
+        run: python scripts/build_weekly_brief.py
       - name: Persist only validated data and recoverable release baseline
-        if: inputs.release_mode != 'code_only'
         run: |
           git config user.name "Scarb.TO data publisher"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/data/
+          git add docs/briefs/
+          if [ "${{ inputs.release_mode }}" != "code_only" ]; then
+            git add docs/data/
+          fi
           if ! git diff --cached --quiet; then
-            git commit -m "data: refresh validated Scarborough DineSafe snapshot"
+            if [ "${{ inputs.release_mode }}" = "code_only" ]; then
+              git commit -m "publish weekly DineSafe brief"
+            else
+              git commit -m "data: refresh validated Scarborough DineSafe snapshot"
+            fi
             git push origin HEAD:main
           fi
       - uses: actions/configure-pages@v5
