@@ -110,6 +110,14 @@ Keep official inspection outcomes accurate. “Food inspection results” is use
 
 Example: “This result is from October 27. Check the City’s record for anything newer.” If a limitation could affect a decision, retain it visibly beside the result, even when further methodology is expandable.
 
+##### Reader-facing dates and technical detail
+
+For an individual date that matters to a reader, use the verified weekday and long date, such as “Tuesday, November 10, 2026.” Generate and check weekdays, never guess. For weekly briefs or a span of dates, use an equally readable period such as “November 2–8, 2026”; don't force a weekday into every element of a date range.
+
+Do not display raw ISO strings, hour/minute timestamps, fractional seconds or time-zone cautions in ordinary page text unless a time is consequential to the reader (an appointment, deadline, closure or other time-sensitive event). Keep the original precision, zone information and uncertainty in structured records and optional source/method information. Never conflate the event/inspection date, the source catalogue/publication date, Scarb.TO's successful check date, the date first observed or public publication date. A repeated successful download is not a new source update.
+
+Example only when supported by the underlying dates: “I checked the records on Tuesday, November 10, 2026. The source catalogue is dated Tuesday, November 10, 2026, too.” An unknown source time zone may require retaining a source's *date as stated* rather than deriving a different local date. Show detailed timestamps on demand if useful for auditing, not as the default explanation.
+
 ##### Editorial perspective
 
 Offer a point of view when current or historical records support it. Keep the source fact and Scarb.TO's interpretation distinct in ordinary prose. For historical comparisons, name the actual period and count checked; do not imply the available history is complete. For example, when supported: "A conditional pass this time. That stands out: the previous four inspections in the records I checked were passes."
@@ -120,50 +128,53 @@ For beaches, attribute the dated official swimming recommendation and link its s
 
 The concise, detail-on-demand approach is approved for crime-statistics commentary, especially about violent crime. Historical trends or comparisons across neighbourhoods or cities are welcome when definitions, periods and measures support a like-for-like comparison. Keep essential uncertainty and accurate attribution in the short copy; make fuller source and method detail available on demand. This approves editorial presentation only, not new data integration, public crime claims or source rights. Existing source, privacy and publication criteria still apply.
 
-##### Interface vocabulary
+##### Interface vocabulary, headings, buttons and other authored surfaces
 
-Prefer:
+Every Scarb-authored reader-visible string is covered: titles/headings, navigation, buttons, tabs, filters, counts, map legends and panels, tooltips, source explanations, credits, footers, licence/legal/fine print, disclaimers, loading/error/stale/empty/offline states, accessibility names and image descriptions, metadata and social summaries, neighbourhood pages, share/print/redirect, and generated weekly briefs and RSS.
 
-- Browse updates
-- Explore your neighbourhood
-- View details
-- See the City’s record
-- About this information
-- Added to Scarb.TO October 27
-- Last checked November 1
-- Food inspection results
+Headings should offer a useful destination or discovery in Scarb's energetic voice, not obscure what the section is about. Short controls must stay clear and predictable: “Explore this neighbourhood,” “View inspection details,” “Clear filters,” “See the source,” “Show all places.” Don't force catchphrases, inside jokes or long enthusiastic sentences onto buttons. Keep the same control consistent across pages. ARIA text and alt text should describe purpose or visible content literally; a screen reader shouldn't have to decode a joke.
 
-Avoid as resident-facing labels:
+Legal and small print are **not** exempt. Their explanations should be recognizably Scarb without altering exact required official/legal terms, licences, source attributions, rights, links or meaningful warnings. Safety notices should be calm and prominent even next to more spirited editorial copy. City data must not be described as Scarb.TO's only possible source.
 
-- Captured observations
-- Establishment IDs
-- Supplied snapshot
-- Inspect record
-- Source ingestion
-- Observed changes, when a clearer description is available
+Use conversational, useful wording such as “Browse updates,” “Explore your neighbourhood,” “View details,” “See the official record,” “About this information,” “Added to Scarb.TO Tuesday, October 27, 2026,” and “Food inspection results.” Put “ingestion,” “captured observation,” “establishment ID,” “snapshot” and similar internal vocabulary in technical source details unless needed to explain a real limitation.
 
-Do not turn “48 records” into “48 places” unless distinct place identities are verified. Technical counts rarely belong in an introduction.
+For changing counts and filters, describe what the UI actually shows. Example (not production data): “Ooh, 112 places to explore! All 112 match your filters.” Only say “places” for verified distinct places; only claim all match when the filter counts confirm it. For no matches, use a helpful invitation: “I couldn't find a match for those filters. Try clearing one.” Don't force excitement into error states.
 
-##### Before and after
+
+
+##### Before and after (examples of style, not new source facts)
 
 - “See captured updates” → “Browse updates.”
-- “3 updates first observed 27–29 October” → “3 updates added October 27–29.”
-- “No observed changes” → “I didn’t find any new updates in the sources checked.”
-- “Source refresh failed” → “I couldn’t check for newer records. This was last checked on [date].”
-- “The supplied snapshot contains 48 source establishment records” → Source details: “This preview uses 48 City records collected on November 1.” Use only for that frozen preview, not as current production copy.
-- “They do not establish current safety” → “These results describe the inspection on the date shown. Check the City’s record for newer information.”
+- “Explore establishment records” → “Explore places and inspections.”
+- “3 updates first observed 27–29 October” → “3 updates added October 27–29.” Keep exact first-observed dates in optional details.
+- “No observed changes” → “I didn't find any new updates in the sources checked.” This does not mean nothing happened.
+- “Source refresh failed” → “I couldn't check for anything newer. These were last checked on [verified weekday and full date].”
+- “The supplied snapshot contains 48 source establishment records” → In source details: “This preview uses 48 source records collected on [verified date].” Don't turn 48 records into 48 different places without verifying identities.
+- “They do not establish current safety” → “These results describe the inspection on the date shown, not conditions today. Check the official record for anything newer.”
+- “City boundaries do not align” → When supported: “Oh, this is a good one. Neighbourhoods can cross ward lines! I've put both maps here so you can explore how they fit together.”
+- “Records checked Nov 10, 2026, 12:56 p.m.; catalogue 2026-11-10 08:17:15.620381” → “I checked the records on Tuesday, November 10, 2026. The source catalogue is dated Tuesday, November 10, 2026, too.” Retain precise timestamps elsewhere.
+
+Every “I checked,” number, source, date and location in published copy must be verified. These examples establish voice, not facts.
+
+
 
 ##### Mechanics
 
-Use Canadian spelling, sentence case, natural contractions, concrete nouns, active verbs, short paragraphs and ordinary punctuation. Define unfamiliar terms on first use. Avoid habitual em dashes, bureaucratic phrasing, forced slang and promotional superlatives.
+Use Canadian English, sentence case, natural contractions, concrete nouns, active verbs, short paragraphs and ordinary punctuation. Define unfamiliar terms on first use. Lead with the useful answer; let curiosity shine through the specific finding and the next useful step. A clear, genuinely delighted observation does more than repeated hype. Avoid habitual em dashes, gratuitous bold, all caps, bureaucratic phrasing, apology-for-enthusiasm jokes, sarcasm, forced slang and promotional superlatives.
 
-Do not promise daily news, comprehensive coverage, real-time monitoring or future follow-up unless the product actually provides it.
+Do not promise daily news, complete coverage, real-time monitoring or future follow-up unless the service actually provides it. A new record is not necessarily a newly opened place, and a recent successful check is not necessarily a new source publication.
+
+
 
 ##### Editorial check within normal review
 
-**Site-wide scope clarified by the owner, 12 November 2026:** This applies to every Scarb-authored sentence, not just prominent branding. Include legal and licensing explanations, attribution and source notes, disclaimers, metadata and accessibility text, all UI states, neighbourhood pages, weekly editions and RSS. Preserve official names, quoted source terminology, factual meaning and consequential limitations. Use the existing review and relevant test workflow; no separate editorial approval gate. Keep generators and shared copy in step so the next publication retains this voice. Explain copy-only changes to an archived weekly edition through its explicit revision mechanism, without changing the original factual period or provenance.
+**Site-wide scope clarified 12 November 2026; later owner personality revision that day takes precedence over the earlier dry-humour guidance and the copy released in PR #50.** Apply this voice to **all** authored text and every authoritative template, generator and shared module that can re-create that text. The Scarb.TO repository's AGENTS.md rule binds future automated additions and edits. Do not hand-edit a generated page while leaving its upstream generator able to restore the old voice.
 
-Can a first-time visitor understand what this means? Is every first-person action true? Do the dates and sources support the claim? Is the limitation clear where it matters? Is the humour kind and optional? Can a technical detail move out of the headline without losing important meaning?
+Review the language in the existing ordinary code-review/test process, not an extra approval ceremony. Cover headings, controls, source/legal/footer text, mobile and desktop, filtered/empty/loading/stale/error states, print/share, accessibility and metadata, and future generated neighbourhood pages, weekly editions and RSS. Verify that weekdays are correct and raw timestamps are excluded from ordinary reader copy without discarding original source precision. Repeat generation must remain idempotent. Archived weekly copy edits require an explicitly explained revision, preserving original facts, periods, hashes and publication dates.
+
+Ask: Does this sound like someone who truly loves digging into real data and has brought their discoveries together for others who love it too? Can a first-time resident understand and use it? Is the enthusiasm earned and respectful? Are first-person checking claims, dates, sources and counts true? Do source rights, official terminology, legal credits and consequential warnings survive? Are button/ARIA/alt labels immediately clear? Would the next automated rebuild stay in character?
+
+
 
 ##### Visual relationship
 
