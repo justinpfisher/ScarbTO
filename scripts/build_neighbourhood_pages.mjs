@@ -18,7 +18,7 @@ export function renderAreaPage(template,code,area){
 
 export function renderAliasPage(alias,canonicalSlug){
   const destination=`/${canonicalSlug}/`;
-  return `<!doctype html>\n<html lang="en-CA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="canonical" href="https://scarb.to${destination}"><meta http-equiv="refresh" content="0;url=${destination}"><title>Scarb.TO neighbourhood page</title></head><body><p>This neighbourhood page has moved. <a href="${destination}">Continue to ${esc(canonicalSlug.replaceAll('-',' '))}</a>.</p><script>location.replace(${JSON.stringify(destination)}+location.search+location.hash);</script></body></html>\n`;
+  return `<!doctype html>\n<html lang="en-CA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="canonical" href="https://scarb.to${destination}"><meta http-equiv="refresh" content="0;url=${destination}"><title>Scarb.TO neighbourhood page</title></head><body><p>Looking for this neighbourhood? Its page is over here. <a href="${destination}">Continue to ${esc(canonicalSlug.replaceAll('-',' '))}</a>.</p><script>location.replace(${JSON.stringify(destination)}+location.search+location.hash);</script></body></html>\n`;
 }
 
 export function normalizeGeneratedText(value){

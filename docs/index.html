@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#143e3e">
-  <meta name="description" content="Scarb.TO - a living map of what has changed across Scarborough, built from official local data.">
-  <title>Scarb.TO - Scarborough, as it changes</title>
-  <link rel="alternate" type="application/rss+xml" title="Scarb.TO observed DineSafe changes" href="/feed.xml">
+  <meta name="description" content="Scarborough. I looked into it. Explore food inspection results and local records, with the dates, sources and useful limits close at hand.">
+  <title>Scarb.TO - Scarborough. I looked into it.</title>
+  <link rel="alternate" type="application/rss+xml" title="Scarb.TO food inspection updates" href="/feed.xml">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
@@ -24,7 +24,7 @@
     </header>
     <div class="intro-row">
       <div><p class="intro-tagline">Scarborough. I looked into it.</p><h1>What's happening around Scarborough?</h1><p>What’s changing around you, why it matters, and where to look next.</p></div>
-      <div class="data-status" id="data-status" role="status" aria-live="polite">Checking official data.</div>
+      <div class="data-status" id="data-status" role="status" aria-live="polite">Loading the latest saved City records.</div>
     </div>
     <div class="app-wrap">
       <aside class="filters" aria-label="Map filters">
@@ -37,16 +37,16 @@
             <button type="button" class="area-toggle" data-area-overlay="ward" aria-pressed="false">City wards</button>
           </div>
           <div class="area-choice-wrap" id="area-choice-wrap" hidden><label for="area-choice">Choose an area</label><select id="area-choice"><option value="">Choose an area</option></select></div>
-          <p class="area-overlay-note">Selecting an area filters the DineSafe map and list. Other layers keep their own geography.</p>
+          <p class="area-overlay-note">Choose an area to narrow the food inspection map and list. Beach samples and police totals cover different areas.</p>
         </div>
         <div id="filter-options" class="filter-options"><div class="view-tabs" role="group" aria-label="Browse mode">
-          <button class="tab active" data-mode="recent" type="button" aria-pressed="true">Recent activity</button>
+          <button class="tab active" data-mode="recent" type="button" aria-pressed="true">Browse updates</button>
           <button class="tab" data-mode="all" type="button" aria-pressed="false">All establishments</button>
           <button class="tab" data-mode="beach" type="button" aria-pressed="false">Beach samples</button>
           <button class="tab" data-mode="selected-calls" type="button" aria-pressed="false">Selected police calls</button>
         </div>
-        <p id="beach-filter-note" class="filter-note" hidden>Search, time, neighbourhood, and inspection-outcome filters apply to DineSafe views only.</p>
-        <p id="selected-calls-filter-note" class="filter-note" hidden>Opening this view makes an on-demand request to TPS/Esri. Counts expire and remain in memory only; no individual calls or locations are requested.</p>
+        <p id="beach-filter-note" class="filter-note" hidden>These are historical beach samples, not today's swimming advice. The search and filters below are for food inspections.</p>
+        <p id="selected-calls-filter-note" class="filter-note" hidden>When you open this view, I request totals from Toronto Police Service's Esri service. They stay only in this tab's memory until they expire. I don't request individual calls or their locations.</p>
         <label for="search">Find a place</label>
         <input id="search" type="search" placeholder="Name or address" autocomplete="off" spellcheck="false">
         <div class="control-grid">
@@ -65,11 +65,11 @@
           </div>
         </fieldset>
         <div class="filter-footer"><button id="reset" class="text-action" type="button">Reset filters</button><span>Filters saved on this device</span></div>
-        <div class="mobile-hint">Filters affect both the map and the matching records.</div></div>
+        <div class="mobile-hint">Your filters narrow both the map and the list.</div></div>
       </aside>
       <main class="map-results">
         <div class="map-panel">
-          <div id="map" role="region" aria-label="Interactive map of DineSafe establishments. Marker shape and letter supplement colour; the matching list spells out each outcome."></div><p id="selected-calls-map-note" class="map-mode-note" hidden>Selected calls are division totals in the list; no individual call locations are mapped.</p><p id="map-fallback" class="map-fallback" role="status" aria-live="polite" hidden>Map unavailable. Use the searchable results list below; feeds, filters and record links remain available.</p>
+          <div id="map" role="region" aria-label="Food inspection map. Marker shapes and letters show the outcome as well as colour. The list gives each result in words."></div><p id="selected-calls-map-note" class="map-mode-note" hidden>The list shows police division totals, not individual calls or dots on the map.</p><p id="map-fallback" class="map-fallback" role="status" aria-live="polite" hidden>The map isn't available. You can still search and filter the list below, and open the source links.</p>
           <div id="area-selection" class="area-selection" hidden>
             <button type="button" id="area-reopen" aria-label="Open selected area information"><span id="area-selection-name"></span></button>
             <button type="button" id="area-clear">Clear area</button>
@@ -85,7 +85,7 @@
           <button class="map-fit" id="fit" type="button" title="Show all Scarborough">Show all Scarborough</button>
         </div>
         <section class="results" id="results" aria-labelledby="results-title">
-          <div class="results-header"><div><p class="eyebrow" id="results-kicker">Official inspections</p><h2 id="results-title">Matching places</h2></div><span id="results-count" aria-live="polite"></span></div>
+          <div class="results-header"><div><p class="eyebrow" id="results-kicker">Food inspection results</p><h2 id="results-title">Matching places</h2></div><span id="results-count" aria-live="polite"></span></div>
           <p class="results-caption" id="results-caption">Results follow the map and your filters.</p>
           <aside id="area-panel" class="area-panel" aria-labelledby="area-title" hidden>
             <div class="area-panel-header">
@@ -95,7 +95,7 @@
             <div id="area-content" class="area-content"></div>
             <div class="area-panel-footer"><button type="button" id="area-panel-fit">View boundary</button><span>Official sources linked above</span></div>
           </aside>
-          <div class="record-list" id="record-list" tabindex="-1" aria-live="polite"><p class="empty">Waiting for a verified City of Toronto data snapshot.</p></div>
+          <div class="record-list" id="record-list" tabindex="-1" aria-live="polite"><p class="empty">Loading the saved City of Toronto records. The dates will tell you how recent they are.</p></div>
         </section>
       </main>
     </div>

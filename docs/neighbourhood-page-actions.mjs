@@ -26,7 +26,7 @@ export function initializePageActions(documentRef=globalThis.document,navigatorR
       }
     }
     if(await copyLink())return;
-    announce('Copy this neighbourhood page address from your browser to share it.');
+    announce("Sharing didn't open here. You can copy this page's address from your browser instead.");
   });
   printButton.addEventListener('click',()=>windowRef?.print?.());
 }

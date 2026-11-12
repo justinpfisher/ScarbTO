@@ -25,7 +25,7 @@ LICENCE_URL = "https://open.toronto.ca/open-data-licence/"
 MAX_ITEMS = 50
 EVENT_ID_RE = re.compile(r"^[0-9a-f]{20}$")
 EVENT_KINDS = {
-    "first_seen": "First observed",
+    "first_seen": "Added to Scarb.TO",
     "status_changed": "DineSafe status changed",
     "new_inspection": "New DineSafe inspection",
 }
@@ -162,7 +162,7 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
     atom_ns = "http://www.w3.org/2005/Atom"
     ET.register_namespace("atom", atom_ns)
     channel = ET.SubElement(root, "channel")
-    ET.SubElement(channel, "title").text = "Scarb.TO observed DineSafe changes"
+    ET.SubElement(channel, "title").text = "Scarb.TO food inspection updates"
     ET.SubElement(channel, "link").text = SITE_URL
     ET.SubElement(channel, f"{{{atom_ns}}}link", {
         "href": FEED_URL,
@@ -173,6 +173,7 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
         "Here are DineSafe changes I found in Scarborough, linked to the City source. "
         "Inspection dates come from City records; first-observed dates show when I recorded each change. "
         "The City status may have changed since. "
+        "A place newly added here is not necessarily a new business. Scarb.TO's editorial voice is AI-assisted, not first-hand reporting. "
         "Contains information licensed under the Open Government Licence – Toronto. "
         f"Licence: {LICENCE_URL}"
     )
@@ -182,20 +183,20 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
     for event in events[:MAX_ITEMS]:
         item = ET.SubElement(channel, "item")
         label = EVENT_KINDS[event["kind"]]
-        ET.SubElement(item, "title").text = f"{label}: {event['name']}"
+        ET.SubElement(item, "title").text = f"{event['name']}: {label}"
         ET.SubElement(item, "link").text = event["source_url"]
         guid = ET.SubElement(item, "guid", {"isPermaLink": "false"})
         guid.text = f"urn:scarbto:dinesafe:{event['id']}"
         ET.SubElement(item, "pubDate").text = format_datetime(event["detected_at"])
-        details = [f"Neighbourhood: {event['neighbourhood']}."]
+        details = [f"Neighbourhood in the City record: {event['neighbourhood']}."]
         if event["previous_status"]:
             details.append(f"Previous DineSafe status: {event['previous_status']}.")
         details.extend([
-            f"DineSafe status at observation: {event['status']}.",
+            f"DineSafe result when added: {event['status']}.",
             f"Inspection date: {event['inspection_date']}.",
-            f"First observed by Scarb.TO: {event['detected_at'].isoformat()}.",
+            f"Added to Scarb.TO: {event['detected_at'].isoformat()}. This is when I recorded the update, not the inspection date.",
             f"DineSafe establishment ID: {event['establishment_id']}.",
-            "Verify current information at the official Toronto Open Data DineSafe source.",
+            "This is a dated result, not a current safety assessment. Check the City's DineSafe record for anything newer.",
         ])
         ET.SubElement(item, "description").text = " ".join(details)
         ET.SubElement(item, "category").text = "DineSafe"

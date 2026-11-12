@@ -307,7 +307,7 @@ export class SelectedCallsClient {
           fetchedAt: new Date(completedAt).toISOString(),
           attribution: "Contains information licensed under the Open Government Licence - Ontario.",
           sourceUrl: "https://experience.arcgis.com/experience/a22f5295933e48a5b0a4c90cd3c4cae1",
-          disclosure: "These are selected calls published for Divisions 41, 42 and 43. They are not all crime, police activity, or officer presence.",
+          disclosure: "These are the selected calls TPS publishes for Divisions 41, 42 and 43, not all crime, police activity, or officer presence.",
         });
         this.current = {
           publicState,

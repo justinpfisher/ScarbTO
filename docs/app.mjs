@@ -40,7 +40,7 @@ let snapshot = null, beachPreview = null, map = null, selectedId = null, shapes 
 let neighbourhoodShapesPromise = null;
 let neighbourhoodFitRequestId = 0;
 let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = false, usingBeach = false, listLimit = 80;
-let dineSafeStatus={text:'Checking official data.',className:''}, dineSafeLoadState='loading', dineSafeLoadError='', beachPreviewState='loading';
+let dineSafeStatus={text:'Loading the City records.',className:''}, dineSafeLoadState='loading', dineSafeLoadError='', beachPreviewState='loading';
 const selectedCallsClient = new SelectedCallsClient();
 let selectedCallsViewState = {status:'unavailable',reason:'not loaded',counts:[]};
 let selectedCallsExpiryTimer=null, selectedCallsExpiryDeadlineMono=null, selectedCallsExpiryFetchedAt=null;
@@ -122,19 +122,19 @@ function syncDataStatus() {
   if(state.mode==='selected-calls'){
     if(selectedCallsViewState.status==='available')status.classList.add('warning');else if(selectedCallsViewState.reason!=='loading')status.classList.add('error');
     status.textContent=selectedCallsViewState.status==='available'
-      ? `TPS source data last edited ${publishedAt(selectedCallsViewState.sourceEditedAt)}; checked ${publishedAt(selectedCallsViewState.fetchedAt)}. Counts expire.`
-      : selectedCallsViewState.reason==='loading'?'Loading selected TPS calls for Divisions 41, 42 and 43.'
-      : 'Selected-call counts unavailable or stale. No current counts are shown.';
+      ? `TPS last changed these records ${publishedAt(selectedCallsViewState.sourceEditedAt)}; checked ${publishedAt(selectedCallsViewState.fetchedAt)}. Older counts are removed.`
+      : selectedCallsViewState.reason==='loading'?'Loading selected TPS call counts for Divisions 41, 42 and 43.'
+      : 'I cannot verify fresh selected-call counts right now, so none are shown.';
     return;
   }
   if(state.mode==='beach'){
-    if(beachPreviewState==='loading')status.textContent='Loading Toronto beach sample preview.';
+    if(beachPreviewState==='loading')status.textContent='Loading the historical beach samples.';
     else if(beachPreview){
       const latest=beachPreview.records.reduce((value,row)=>row.collectionDate>value?row.collectionDate:value,'0000-00-00');
-      status.textContent=`Toronto sample rows checked ${beachPreview.retrieved_on}; latest sample ${latest}. Not current swimming status.`;
+      status.textContent=`City sample records checked ${beachPreview.retrieved_on}; latest sample ${latest}. Not current swimming advice.`;
       status.classList.add('warning');
     }else{
-      status.textContent='Toronto beach sample preview unavailable. Not current swimming status.';
+      status.textContent='I could not load the historical beach samples. They are not current swimming advice.';
       status.classList.add('error');
     }
     return;
@@ -151,10 +151,10 @@ function syncMapAccessibilityLabel(){
   const mapLabel=selectedCallsMode
     ?'Map background only; selected calls are not mapped individually'
     :beachMode
-      ?'Interactive map of Scarborough beach sample reference point; it is not a sample-site coordinate'
+      ?'Map showing the beach reference point, not the individual sampling locations'
       :statusMarkerImagesAvailable
-        ?'Interactive map of DineSafe establishments. Marker shape and letter supplement colour; the matching list spells out each outcome.'
-        :'Interactive map of DineSafe establishments. Marker letters identify outcomes; map colour is supplementary and the matching list spells out each outcome.';
+        ?'Interactive map of places with DineSafe records. Shapes and letters identify inspection outcomes alongside colour. Each outcome is written out in the matching list.'
+        :'Interactive map of places with DineSafe records. Letters identify inspection outcomes alongside colour. Each outcome is written out in the matching list.';
   $('map').setAttribute('aria-label',mapLabel);
 }
 function syncControls() {
@@ -207,16 +207,16 @@ function performFilters() {
   listLimit=80;
   if(state.mode==='selected-calls'){
     usingBeach=false;visiblePlaces=[];visibleActivity=[];usingActivity=false;
-    $('results-kicker').textContent='Toronto Police Service · on-demand aggregate';
+    $('results-kicker').textContent='Toronto Police Service · counts when you open this view';
     $('results-title').textContent='Selected calls — Divisions 41, 42 and 43';
-    $('results-caption').textContent='Selected calls published for these divisions; not all crime, police activity, or officer presence. Opening this view requests grouped counts from TPS/Esri. No individual calls or locations are requested or mapped.';
+    $('results-caption').textContent='These are selected calls published by TPS, not all crime, police activity, or officer presence. Opening this view asks TPS/Esri for division totals only. I do not request or map individual calls or locations.';
     updateSource();renderList();areaExplorer?.sync();return;
   }
   if(state.mode==='beach'){
     usingBeach=true;visiblePlaces=[];visibleActivity=[];usingActivity=false;
     $('results-kicker').textContent='Toronto Open Data · dated samples';
     $('results-title').textContent=beachPreview?.beach_name||'Beach samples';
-    $('results-caption').textContent='A limited sample preview from the Toronto catalogue. Dated measurements are not current swimming advice.';
+    $('results-caption').textContent='Here are a few historical water samples from the City catalogue. They describe the dates shown, not whether it is safe to swim today.';
     updateSource();renderList();
     return;
   }
@@ -237,9 +237,9 @@ function performFilters() {
   usingActivity=state.mode==='recent' && visibleActivity.length>0;
   const activeIds=new Set(visibleActivity.map(e=>e.establishment_id));
   visiblePlaces=usingActivity ? eligible.filter(e=>activeIds.has(e.id)) : filterEstablishments(snapshot.establishments||[],state);
-  $('results-kicker').textContent=state.mode==='recent'?(usingActivity?'Changes first observed by Scarb.TO':'Latest City inspection records'):'DineSafe establishments';
+  $('results-kicker').textContent=state.mode==='recent'?(usingActivity?'Added to Scarb.TO':'Latest City inspection records'):'Places with DineSafe records';
   $('results-title').textContent=state.mode==='recent'?(usingActivity?'Recent changes':'Recently inspected'):'Matching places';
-  $('results-caption').textContent=usingActivity?'Here’s what I found comparing daily City snapshots. The inspection date may be earlier than when a record first appeared here.':
+  $('results-caption').textContent=usingActivity?'Here’s what I found comparing the City records from day to day. The inspection date may be earlier than when a record first appeared here.':
     state.mode==='recent'?'These places have recent inspection dates. That doesn’t mean their records are new; check the City’s record for current details.':
     'Here’s the latest City inspection record I have for each place.';
   updateSource();renderList();areaExplorer?.sync();
@@ -258,24 +258,24 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
       list.append(els('p','selected-calls-attribution','Contains information licensed under the Open Government Licence – Ontario.'));
     }else{
       $('results-count').textContent=view.reason==='loading'?'Loading':'Unavailable';
-      const message=view.reason==='loading'?'Loading selected counts from Toronto Police Service.':view.reason==='view hidden'?'Counts are cleared while this view is hidden. Reopen the view to request fresh counts.':'Selected-call counts are unavailable or stale. No counts are retained.';
+      const message=view.reason==='loading'?'Loading the selected call counts from Toronto Police Service.':view.reason==='view hidden'?'Counts are removed when you leave this view. Open it again to check for fresh counts.':'I cannot verify fresh selected-call counts right now. Older counts have been removed.';
       list.append(els('p','empty',message));list.append(els('p','selected-calls-attribution','Contains information licensed under the Open Government Licence – Ontario.'));
     }
-    const source=els('a','record-source-link','Open the official TPS selected-calls map');source.href='https://experience.arcgis.com/experience/a22f5295933e48a5b0a4c90cd3c4cae1';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
+    const source=els('a','record-source-link','See the TPS selected-calls map');source.href='https://experience.arcgis.com/experience/a22f5295933e48a5b0a4c90cd3c4cae1';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
     finishListRedraw(list,previousFocus);return;
   }
   if(usingBeach){
-    $('results-count').textContent=beachPreview?`${beachPreview.rows_included} sample rows`:beachPreviewState==='loading'?'Loading':'Unavailable';
+    $('results-count').textContent=beachPreview?`${beachPreview.rows_included} sample records`:beachPreviewState==='loading'?'Loading':'Unavailable';
     if(!beachPreview){
-      const message=beachPreviewState==='loading'?'Loading the dated Toronto beach sample preview.':'The dated Toronto sample preview is unavailable.';
+      const message=beachPreviewState==='loading'?'Loading the historical City beach samples.':'I could not load the historical City beach samples.';
       list.append(els('p','empty',message));
-      const source=els('a','record-source-link','Check Toronto Open Data source');source.href='https://open.toronto.ca/dataset/toronto-beaches-water-quality/';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
+      const source=els('a','record-source-link','See the City beach records');source.href='https://open.toronto.ca/dataset/toronto-beaches-water-quality/';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
       finishListRedraw(list,previousFocus);return;
     }
     list.append(renderBeachSamplePreview(document,beachPreview));
     finishListRedraw(list,previousFocus);return;
   }
-  if(!snapshot?.ready){const message=dineSafeLoadState==='error'?`Could not load the published dataset (${dineSafeLoadError}). Check the update history link below.`:dineSafeLoadState==='loading'?'Loading the validated City data snapshot.':'No validated DineSafe snapshot has been published. The map will populate after the first successful import.';list.append(els('p','empty',message));$('results-count').textContent=dineSafeLoadState==='error'?'Unavailable':'0 in view';finishListRedraw(list,previousFocus);return;}
+  if(!snapshot?.ready){const message=dineSafeLoadState==='error'?`I could not load the published records (${dineSafeLoadError}). The update history below may have more detail.`:dineSafeLoadState==='loading'?'Loading the City records checked for Scarb.TO.':'There are no checked DineSafe records here yet. Places will appear once the first set is ready.';list.append(els('p','empty',message));$('results-count').textContent=dineSafeLoadState==='error'?'Unavailable':'0 in view';finishListRedraw(list,previousFocus);return;}
   const bounds=map?.loaded()?map.getBounds():null;
   const inView=e=>!bounds||bounds.contains([e.longitude,e.latitude]);
   const matches=visiblePlaces.filter(inView);
@@ -291,7 +291,7 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
   }
   $('results-count').textContent=`${records.length.toLocaleString('en-CA')} in view`;
   if(!records.length){
-    list.append(els('p','empty','No matching places in the current map view. Clear or widen filters, or fit the map to Scarborough.'));
+    list.append(els('p','empty','No places match this view. Try fewer filters or show all of Scarborough. This does not mean nothing has happened here.'));
     const actions=els('div','empty-actions');
     const reset=els('button','empty-action','Clear filters');reset.type='button';reset.addEventListener('click',()=>$('reset').click());actions.append(reset);
     if(map){const fit=els('button','empty-action','Fit Scarborough');fit.type='button';fit.addEventListener('click',fitAll);actions.append(fit);}
@@ -309,9 +309,9 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
     meta.append(els('span','inspection-date','Inspection: '+localDate(entry.inspection_date)));
     if(entry.neighbourhood)meta.append(els('span','',entry.neighbourhood));
     if(entry.event){
-      const title={first_seen:'New to feed',new_inspection:'New inspection recorded',status_changed:`Changed from ${entry.event.previous_status||'unknown'}`} [entry.event.kind] || 'Updated';
+      const title={first_seen:'Added to Scarb.TO',new_inspection:'New inspection recorded',status_changed:`Changed from ${entry.event.previous_status||'unknown'}`} [entry.event.kind] || 'Updated';
       meta.append(els('span','',title));
-      meta.append(els('span','observed-date','First observed by Scarb.TO: '+publishedAt(entry.event.detected_at)));
+      meta.append(els('span','observed-date','Added to Scarb.TO: '+publishedAt(entry.event.detected_at)));
     }
     button.append(meta);
     button.addEventListener('click',()=>selectPlace(entry.id,true));
@@ -325,10 +325,10 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
       const inspectionDetail=meaningfulText(entry.inspection_detail);
       const establishmentType=meaningfulText(entry.type);
       const detailNote=inspectionDetail
-        ? `Recorded inspection detail: ${inspectionDetail}`
-        : establishmentType?`Establishment category: ${establishmentType}`:'No additional detail in this source row.';
+        ? `City inspection note: ${inspectionDetail}`
+        : establishmentType?`City category: ${establishmentType}`:'The City record has no further detail here.';
       detail.append(els('p','record-detail-note',detailNote));
-      const source=els('a','record-source-link','Open the City DineSafe record');
+      const source=els('a','record-source-link','See the City DineSafe record');
       source.dataset.id=entry.id;source.href=cityDineSafeRecordUrl(entry.id);source.target='_blank';source.rel='noopener noreferrer';
       detail.append(source);card.append(detail);
     }
@@ -398,14 +398,14 @@ function setMapUnavailable(error) {
   panel?.classList.add('map-unavailable');
   const fallback=$('map-fallback');
   fallback.hidden=false;
-  fallback.textContent='Map unavailable. Use the searchable results list below; feeds, filters and record links remain available.';
+  fallback.textContent='The map could not load. You can still search, filter and open the City records in the list below.';
   $('map').setAttribute('aria-hidden','true');
   $('fit').hidden=true;
   $('fit').disabled=true;
   const legend=$('map-legend');
   if(legend)legend.hidden=true;
   const hint=document.querySelector('.mobile-hint');
-  if(hint)hint.textContent='Filters affect the matching records. The map is unavailable.';
+  if(hint)hint.textContent='The map could not load, but your filters still work on the list.';
   if(error)console.warn('Interactive map unavailable:',error?.message||error);
   performFilters();
 }
@@ -553,18 +553,18 @@ async function loadDineSafeSnapshot() {
     // later when the user switches away from Beach mode.
     snapshot=candidate;
     dineSafeLoadState=candidate.ready?'ready':'not-ready';dineSafeLoadError='';
-    if(!candidate.ready){setDineSafeStatus('Awaiting first validated City data import','warning');performFilters();return;}
+    if(!candidate.ready){setDineSafeStatus('Waiting for the first checked City records','warning');performFilters();return;}
     populateNeighbourhoods();
     const stale=isStale(candidate.published_at);
     const cityReported=cityCatalogueRefreshText(candidate.source?.last_refreshed);
     setDineSafeStatus(stale
-      ? `Scarb.TO check may be stale (last published ${publishedAt(candidate.published_at)}) · ${cityReported} · check update history`
-      : `Scarb.TO checked ${publishedAt(candidate.published_at)} · ${cityReported} · not live`,
+      ? `These records may be out of date (last checked ${publishedAt(candidate.published_at)}) · ${cityReported} · check update history`
+      : `Last checked ${publishedAt(candidate.published_at)} · ${cityReported} · not live`,
       stale?'warning':'');
     performFilters();
   }catch(error){
     snapshot=null;dineSafeLoadState='error';dineSafeLoadError=error.message;
-    setDineSafeStatus('City data unavailable - last verified publication retained where possible','error');
+    setDineSafeStatus('I could not load the City records. No DineSafe results are shown.','error');
     performFilters();
   }
 }
