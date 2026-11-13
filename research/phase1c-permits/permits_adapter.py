@@ -310,6 +310,7 @@ def normalize_oar_address_points(
         raise PermitContractError("OAR geometry CRS must be explicitly qualified as EPSG:4326")
     boundary_polygons = _validated_neighbourhood_polygons(neighbourhood_features)
     points: dict[int, dict[str, Any]] = {}
+    outside_scope_ids: set[int] = set()
     grouped_rows: dict[int, list[dict[str, Any]]] = defaultdict(list)
     rejected = 0
     for row in rows:
@@ -340,9 +341,11 @@ def normalize_oar_address_points(
         if len(occurrences) > 1:
             rejected += len(occurrences) - 1
         row = occurrences[0]
-        ward = _qualified_ward(row.get("WARD"))
+        raw_ward = row.get("WARD")
+        ward = str(raw_ward).strip() if type(raw_ward) in (str, int) else ""
+        valid_city_ward = ward.isascii() and ward.isdecimal() and 1 <= int(ward) <= 25
         address = row.get("ADDRESS_FULL")
-        if ward is None or not isinstance(address, str) or not address.strip():
+        if not valid_city_ward or not isinstance(address, str) or not address.strip():
             rejected += 1
             continue
         geometry = row.get("geometry")
@@ -350,9 +353,6 @@ def normalize_oar_address_points(
             unlocated += 1
             continue
         coordinates = _oar_geometry_value(geometry)
-        if ward is None or not isinstance(address, str) or not address.strip():
-            rejected += 1
-            continue
         if not isinstance(coordinates, list) or len(coordinates) != 2 or any(type(value) not in (int, float) for value in coordinates):
             rejected += 1
             continue
@@ -360,7 +360,13 @@ def normalize_oar_address_points(
         if not all(math.isfinite(value) for value in (lon, lat)) or not (-180 <= lon <= 180 and -90 <= lat <= 90):
             rejected += 1
             continue
+        if not (-79.9 <= lon <= -78.8 and 43.4 <= lat <= 44.1):
+            rejected += 1
+            continue
         if not _point_in_validated_polygons(float(lon), float(lat), boundary_polygons):
+            outside_scope_ids.add(point_id)
+            continue
+        if _qualified_ward(ward) is None:
             rejected += 1
             continue
         points[point_id] = {
@@ -377,8 +383,11 @@ def normalize_oar_address_points(
         "total_count": total,
         "located_count": len(points),
         "unlocated_count": unlocated,
+        # Private accounting only; these IDs must not become public records.
+        "outside_scope_point_ids": sorted(outside_scope_ids),
+        "outside_scope_count": len(outside_scope_ids),
         "rejected_count": rejected,
-        "accounted_count": len(points) + unlocated + rejected,
+        "accounted_count": len(points) + unlocated + len(outside_scope_ids) + rejected,
     }
 
 
@@ -496,14 +505,26 @@ def normalize_permits(
         if point_id in points:
             raise PermitContractError("Duplicate OAR ADDRESS_POINT_ID")
         points[point_id] = point
+    outside_scope_ids: set[int] = set()
     if oar_accounting is not None:
+        outside_ids = oar_accounting.get("outside_scope_point_ids", [])
+        outside_count = oar_accounting.get("outside_scope_count", 0)
+        if (
+            not isinstance(outside_ids, list)
+            or any(type(value) is not int or value <= 0 for value in outside_ids)
+            or len(set(outside_ids)) != len(outside_ids)
+            or type(outside_count) is not int or outside_count != len(outside_ids)
+            or set(outside_ids).intersection(points)
+        ):
+            raise PermitContractError("OAR outside-scope accounting is inconsistent")
+        outside_scope_ids = set(outside_ids)
         names = ("total_count", "located_count", "unlocated_count", "rejected_count", "accounted_count")
         if any(type(oar_accounting.get(name)) is not int or oar_accounting[name] < 0 for name in names):
             raise PermitContractError("OAR mapper accounting must contain nonnegative integer counts")
         if (
             oar_accounting["located_count"] != len(points)
             or oar_accounting["accounted_count"] != oar_accounting["total_count"]
-            or oar_accounting["located_count"] + oar_accounting["unlocated_count"] + oar_accounting["rejected_count"] != oar_accounting["total_count"]
+            or oar_accounting["located_count"] + oar_accounting["unlocated_count"] + outside_count + oar_accounting["rejected_count"] != oar_accounting["total_count"]
         ):
             raise PermitContractError("OAR mapper accounting does not reconcile with mapped points")
 
@@ -513,6 +534,7 @@ def normalize_permits(
     source_ids_seen: set[int] = set()
     identity_collisions: list[dict[str, Any]] = []
     unlocated_permit_count = 0
+    outside_scope_permit_count = 0
     for row in rows:
         if not isinstance(row, dict):
             raise PermitContractError("Permit row must be an object")
@@ -530,7 +552,11 @@ def normalize_permits(
         key = (permit_number, revision)
         geo_id = row.get("GEO_ID")
         location = _address_for_geo_id(geo_id, points)
-        if location is None:
+        # GEO_ID syntax was validated above, including for missing joins.
+        outside_scope = geo_id not in (None, "") and int(geo_id) in outside_scope_ids
+        if outside_scope:
+            outside_scope_permit_count += 1
+        elif location is None:
             unlocated_permit_count += 1
         estimated_cost, cost_invalid = _source_number(row, "EST_CONST_COST")
         units_created, units_created_invalid = _source_number(
@@ -572,6 +598,7 @@ def normalize_permits(
             "address": display_address,
             "ward": location["ward"] if location else None,
             "locations": [location] if location else [],
+            "location_scope": "outside_coverage" if outside_scope else ("located" if location else "unresolved"),
             "official_url": _official_url(row.get("APPLICATION_URL"), fallback=None),
             "construction_state": "not_inferred",
         }
@@ -579,7 +606,7 @@ def normalize_permits(
             k: item[k] for k in (
                 "record_type", "record_key", "permit_type", "status", "application_date",
                 "issued_date", "completed_date", "estimated_cost", "dwelling_units_created",
-                "dwelling_units_lost", "quality_flags", "address", "ward"
+                "dwelling_units_lost", "quality_flags", "address", "ward", "location_scope"
             )
         }
         stable["locations"] = sorted(item["locations"], key=lambda loc: loc["address_point_id"])
@@ -638,6 +665,8 @@ def normalize_permits(
             "address_points_unlocated": oar_accounting.get("unlocated_count") if oar_accounting else None,
             "address_points_rejected": oar_accounting.get("rejected_count") if oar_accounting else None,
             "permit_rows_unlocated": unlocated_permit_count,
+            "address_points_outside_scope": len(outside_scope_ids),
+            "permit_rows_outside_scope": outside_scope_permit_count,
         },
     }
 
@@ -682,7 +711,7 @@ def combine_permit_collections(*collections: dict[str, Any]) -> dict[str, Any]:
         quarantined.update(collection.get("quarantined_record_keys", []))
         for name, value in collection.get("location_accounting", {}).items():
             if type(value) is int:
-                if name == "permit_rows_unlocated":
+                if name in {"permit_rows_unlocated", "permit_rows_outside_scope"}:
                     accounting[name] = accounting.get(name, 0) + value
                 elif name in accounting and accounting[name] != value:
                     raise PermitContractError("OAR location accounting changed across permit collections")

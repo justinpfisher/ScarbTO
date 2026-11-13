@@ -724,6 +724,89 @@ class PermitContractTests(unittest.TestCase):
             permits.export_public([])
 
 
+class OutsideScopeAccountingTests(unittest.TestCase):
+    def mapping(self, rows):
+        return permits.normalize_oar_address_points(
+            rows, neighbourhood_features=SQUARE, geometry_crs="EPSG:4326"
+        )
+
+    def test_source_wide_accounting_separates_outside_from_missing_and_invalid(self):
+        mapped = self.mapping([
+            oar_row(331669, coordinates=[-79.2, 43.8]),
+            oar_row(2, ward="19", coordinates=[-79.4, 43.7]),
+            oar_row(3, coordinates=None),
+            oar_row(4, ward="E2532", coordinates=[-79.4, 43.7]),
+            oar_row(5, ward="19", coordinates=[-79.2, 43.8]),
+            oar_row(6, coordinates=[0, 0]),
+        ])
+        self.assertEqual(mapped["outside_scope_point_ids"], [2])
+        self.assertEqual(mapped["outside_scope_count"], 1)
+        self.assertEqual(mapped["located_count"], 1)
+        self.assertEqual(mapped["unlocated_count"], 1)
+        self.assertEqual(mapped["rejected_count"], 3)
+        self.assertEqual(mapped["accounted_count"], 6)
+        normalized = permits.normalize_permits([
+            permit_row(),
+            permit_row(_id=2, PERMIT_NUM="outside", GEO_ID="2"),
+            permit_row(_id=3, PERMIT_NUM="missing", GEO_ID=3),
+            permit_row(_id=4, PERMIT_NUM="unknown", GEO_ID=999),
+        ], source_collection="active", address_points=mapped["address_points"], oar_accounting=mapped)
+        self.assertEqual(normalized["location_accounting"]["permit_rows_outside_scope"], 1)
+        self.assertEqual(normalized["location_accounting"]["permit_rows_unlocated"], 2)
+        scopes = {record["permit_number"]: record["location_scope"] for record in normalized["records"]}
+        self.assertEqual(scopes["outside"], "outside_coverage")
+        self.assertEqual(scopes["missing"], "unresolved")
+        self.assertEqual(normalized["publication_status"], "disabled_pending_source_and_privacy_review")
+
+    def test_conflicting_outside_and_inside_point_is_not_classified_as_outside(self):
+        rows = [oar_row(2, coordinates=[-79.4, 43.7]), oar_row(2, coordinates=[-79.2, 43.8])]
+        for ordered in (rows, list(reversed(rows))):
+            mapped = self.mapping(ordered)
+            self.assertEqual(mapped["outside_scope_point_ids"], [])
+            self.assertEqual(mapped["rejected_count"], 2)
+
+    def test_identical_outside_duplicates_keep_row_accounting(self):
+        mapped = self.mapping([oar_row(2, coordinates=[-79.4, 43.7])] * 2)
+        self.assertEqual(mapped["outside_scope_count"], 1)
+        self.assertEqual(mapped["rejected_count"], 1)
+        self.assertEqual(mapped["accounted_count"], 2)
+
+    def test_invalid_outside_accounting_is_rejected(self):
+        mapped = self.mapping([oar_row(2, coordinates=[-79.4, 43.7])])
+        for changed in ({"outside_scope_point_ids": [True]}, {"outside_scope_count": 2},
+                        {"outside_scope_point_ids": [2, 2]}, {"outside_scope_point_ids": ["2"]}):
+            with self.assertRaises(permits.PermitContractError):
+                permits.normalize_permits([], source_collection="active", address_points=[],
+                                          oar_accounting=mapped | changed)
+
+    def test_outside_row_still_participates_in_identity_collision(self):
+        mapped = self.mapping([oar_row(2, coordinates=[-79.4, 43.7])])
+        normalized = permits.normalize_permits([permit_row(GEO_ID=2), permit_row(_id=2, GEO_ID=999)],
+            source_collection="active", address_points=[], oar_accounting=mapped)
+        self.assertEqual(normalized["records"], [])
+        self.assertEqual(len(normalized["quarantined_record_keys"]), 1)
+
+    def test_same_id_cannot_be_both_mapped_and_outside(self):
+        mapped = self.mapping([oar_row(331669, coordinates=[-79.2, 43.8])])
+        mapped.update(outside_scope_point_ids=[331669], outside_scope_count=1)
+        with self.assertRaisesRegex(permits.PermitContractError, "outside-scope"):
+            permits.normalize_permits([], source_collection="active",
+                address_points=mapped["address_points"], oar_accounting=mapped)
+
+    def test_combined_collections_sum_outside_rows_not_shared_oar_counts(self):
+        mapped = self.mapping([oar_row(2, coordinates=[-79.4, 43.7])])
+        active = permits.normalize_permits([permit_row(GEO_ID=2)], source_collection="active",
+            address_points=[], oar_accounting=mapped)
+        for count in (0, 1, 2):
+            cleared = permits.normalize_permits([
+                permit_row(_id=index + 1, PERMIT_NUM=f"cleared-{index}", GEO_ID=2)
+                for index in range(count)
+            ], source_collection="cleared", address_points=[], oar_accounting=mapped)
+            combined = permits.combine_permit_collections(active, cleared)
+            self.assertEqual(combined["location_accounting"]["permit_rows_outside_scope"], count + 1)
+            self.assertEqual(combined["location_accounting"]["address_points_outside_scope"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()
 

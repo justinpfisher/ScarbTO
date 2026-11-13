@@ -125,7 +125,14 @@ including JSON-text CSV values and singleton `MultiPoint` values),
 checks finite WGS84 coordinates and membership in caller-supplied authoritative
 Scarborough neighbourhood polygons, and reports total, located, unlocated, and
 rejected row counts. Missing geometry is counted as unlocated; malformed,
-duplicate-ID, wrong-ward, out-of-range, or outside-boundary rows are rejected.
+conflicting duplicate-ID, inconsistent ward, or out-of-range rows are rejected.
+Valid Toronto points outside the supplied coverage polygons are separately
+accounted as outside scope, with private point IDs retained for exact permit
+joins. They are not counted as unresolved locations. Identical duplicate rows
+retain one classified point and count the extra rows as rejected. Permit
+records retain an explicit located/outside-coverage/unresolved classification;
+outside records still participate in identity-collision checks. These are
+disabled research candidates, not public output or source qualification.
 The accounting must reconcile before a caller uses the mapping. Polygon and
 MultiPolygon rings are validated as closed, and holes are excluded. This
 synthetic test path does not establish that the real OAR geometry field is
