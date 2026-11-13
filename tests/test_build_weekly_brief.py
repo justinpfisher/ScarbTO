@@ -11,12 +11,12 @@ from scripts.build_weekly_brief import BriefError, build_weekly_brief, complete_
 from scripts import build_weekly_brief as brief_module
 
 
-def event(event_id, detected_at, *, name="Cafe <Kitchen>", status="Pass", kind="status_changed", neighbourhood="West Rouge"):
+def event(event_id, detected_at, *, name="Cafe <Kitchen>", status="Pass", kind="status_changed", neighbourhood="West Rouge", establishment_id="entity-123"):
     return {
         "id": event_id * 20,
         "feed": "dinesafe",
         "kind": kind,
-        "establishment_id": "entity-123",
+        "establishment_id": establishment_id,
         "name": name,
         "address": "PRIVATE ADDRESS MUST NOT BE RENDERED",
         "neighbourhood": neighbourhood,
@@ -91,6 +91,243 @@ class WeeklyBriefTests(unittest.TestCase):
         manifest = json.loads((self.output / "editions.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["editions"][0]["event_count"], 2)
 
+    def test_subject_links_encode_ids_escape_names_and_use_canonical_area_routes(self):
+        write_archive(self.history, [
+            event(
+                "a",
+                "2026-11-03T10:00:00+00:00",
+                name="Cafe <Kitchen> & Tea",
+                establishment_id="entity /<one>",
+            )
+        ])
+        build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
+        page = (self.output / "2026-11-02" / "index.html").read_text(encoding="utf-8")
+
+        self.assertIn(
+            'href="https://www.toronto.ca/community-people/health-wellness-care/'
+            'health-programs-advice/food-safety/dinesafe/#establishment/entity%20%2F%3Cone%3E"',
+            page,
+        )
+        self.assertIn('href="/west-rouge/">West Rouge</a>', page)
+        self.assertIn("Cafe &lt;Kitchen&gt; &amp; Tea", page)
+        self.assertNotIn("entity /<one>", page)
+        self.assertIn("may contain newer information than the inspection date shown here", page)
+        self.assertIn(SOURCE_URL, page)
+
+    def test_missing_subject_id_renders_name_without_a_misleading_record_link(self):
+        payload = {
+            "period_start": "2026-11-02",
+            "period_end": "2026-11-08",
+            "events": [{
+                "id": "a" * 20,
+                "kind": "first_seen",
+                "name": "Cafe <Kitchen>",
+                "neighbourhood": "West Rouge",
+                "inspection_date": "2026-11-06",
+                "detected_at": "2026-11-07T10:00:00+00:00",
+                "status": "Pass",
+                "previous_status": None,
+            }],
+        }
+        record = {
+            "id": "dinesafe-weekly-2026-11-02",
+            "render_version": 2,
+            "revision": 1,
+            "generated_at": self.as_of.isoformat(),
+            "revised_at": None,
+            "correction_explanation": None,
+        }
+        page = brief_module._render_edition(payload, record).decode("utf-8")
+
+        self.assertIn("<strong>Cafe &lt;Kitchen&gt;: Added to Scarb.TO</strong>", page)
+        self.assertNotIn("#establishment/", page)
+        self.assertIn('href="/west-rouge/">West Rouge</a>', page)
+
+    def test_new_week_does_not_rewrite_an_archived_brief_or_its_hash(self):
+        write_archive(self.history, [event("a", "2026-11-03T10:00:00+00:00")])
+        build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
+        old_path = self.output / "2026-11-02" / "index.html"
+        old_bytes = old_path.read_bytes()
+        before = json.loads((self.output / "editions.json").read_text(encoding="utf-8"))["editions"]
+        old_record = next(item for item in before if item["period_start"] == "2026-11-02")
+
+        write_archive(self.history, [
+            event("a", "2026-11-03T10:00:00+00:00"),
+            event("b", "2026-11-10T10:00:00+00:00", name="New week cafe", establishment_id="entity-456"),
+        ])
+        build_weekly_brief(
+            self.history,
+            self.output,
+            self.corrections,
+            as_of=datetime(2026, 11, 16, 15, tzinfo=timezone.utc),
+        )
+        after = json.loads((self.output / "editions.json").read_text(encoding="utf-8"))["editions"]
+        archived = next(item for item in after if item["period_start"] == "2026-11-02")
+
+        self.assertEqual(old_path.read_bytes(), old_bytes)
+        self.assertEqual(archived["html_sha256"], old_record["html_sha256"])
+        self.assertEqual(archived["revision"], old_record["revision"])
+
+    def test_future_links_preserve_retained_revision_four_and_legacy_bytes(self):
+        write_archive(self.history, [event("a", "2026-11-03T10:00:00+00:00")])
+        render = brief_module._render_edition
+
+        def render_legacy(payload, record):
+            legacy_record = dict(record)
+            legacy_record.pop("render_version", None)
+            return render(payload, legacy_record)
+
+        with patch.object(brief_module, "_render_edition", side_effect=render_legacy):
+            build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
+
+        manifest_path = self.output / "editions.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        archived = manifest["editions"][0]
+        archived.pop("render_version")
+        archived.update({
+            "revision": 4,
+            "revised_at": "2026-11-12T22:12:21.649297+00:00",
+            "correction_explanation": (
+                "Corrected the neighbourhood attribution: Scarb.TO matches source "
+                "coordinates to City neighbourhood boundaries; DineSafe does not "
+                "supply these neighbourhood labels. Source coordinate errors can "
+                "affect the match. The archived records, reporting period and "
+                "original preparation time are unchanged."
+            ),
+        })
+        old_page = self.output / "2026-11-02" / "index.html"
+        start, end = complete_week(self.as_of)
+        events = brief_module.load_events(self.history)
+        payload = brief_module._content_payload(start, end, brief_module._week_events(events, start, end))
+        legacy_page_bytes = brief_module._render_edition(payload, archived)
+        old_page.write_bytes(legacy_page_bytes)
+        archived["html_sha256"] = brief_module._sha256(legacy_page_bytes)
+        manifest_path.write_bytes((json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
+        (self.output / "index.html").write_bytes(brief_module._render_index(manifest, start, end, True))
+        correction_v4 = {
+            "schema_version": 1,
+            "corrections": {
+                archived["id"]: {
+                    "revision": 4,
+                    "explanation": archived["correction_explanation"],
+                }
+            },
+        }
+        self.corrections.write_text(json.dumps(correction_v4), encoding="utf-8")
+        legacy_manifest_bytes = manifest_path.read_bytes()
+        legacy_index_bytes = (self.output / "index.html").read_bytes()
+        legacy_page_bytes = old_page.read_bytes()
+        source_archive = self.history / "2026-11.json"
+        original_source_bytes = source_archive.read_bytes()
+        original_source_fact = json.loads(original_source_bytes)["events"][0]
+        original_content_hash = archived["content_sha256"]
+        original_html_hash = archived["html_sha256"]
+        original_generated_at = archived["generated_at"]
+        original_period = (archived["period_start"], archived["period_end"])
+        original_event_count = archived["event_count"]
+
+        # A same-period rerun keeps the historical bytes and the retained
+        # revision-4 correction exactly as published.
+        build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
+        self.assertEqual(manifest_path.read_bytes(), legacy_manifest_bytes)
+        self.assertEqual((self.output / "index.html").read_bytes(), legacy_index_bytes)
+        self.assertEqual(old_page.read_bytes(), legacy_page_bytes)
+        self.assertEqual(source_archive.read_bytes(), original_source_bytes)
+
+        write_archive(self.history, [
+            event("a", "2026-11-03T10:00:00+00:00"),
+            event("b", "2026-11-10T10:00:00+00:00", name="New week cafe", establishment_id="entity-456"),
+        ])
+        rollover_source_bytes = source_archive.read_bytes()
+        next_week = datetime(2026, 11, 16, 15, tzinfo=timezone.utc)
+        build_weekly_brief(self.history, self.output, self.corrections, as_of=next_week)
+        revised_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        rolled_old = next(item for item in revised_manifest["editions"] if item["id"] == archived["id"])
+        new_record = next(item for item in revised_manifest["editions"] if item["period_start"] == "2026-11-09")
+        new_page_path = self.output / "2026-11-09" / "index.html"
+        new_page = new_page_path.read_bytes()
+        rolled_manifest_bytes = manifest_path.read_bytes()
+        rolled_index_bytes = (self.output / "index.html").read_bytes()
+        rolled_old_page = old_page.read_bytes()
+        self.assertNotIn("render_version", rolled_old)
+        self.assertEqual(new_record["render_version"], 2)
+        self.assertEqual(rolled_old["revision"], 4)
+        self.assertEqual(rolled_old["generated_at"], original_generated_at)
+        self.assertEqual(rolled_old["content_sha256"], original_content_hash)
+        self.assertEqual(rolled_old["html_sha256"], original_html_hash)
+        self.assertEqual((rolled_old["period_start"], rolled_old["period_end"]), original_period)
+        self.assertEqual(rolled_old["event_count"], original_event_count)
+        self.assertEqual(old_page.read_bytes(), legacy_page_bytes)
+        self.assertEqual(source_archive.read_bytes(), rollover_source_bytes)
+        rolled_source_fact = next(
+            item for item in json.loads(rollover_source_bytes)["events"] if item["id"] == original_source_fact["id"]
+        )
+        self.assertEqual(rolled_source_fact, original_source_fact)
+        self.assertIn(b"#establishment/entity-456", new_page)
+        self.assertIn(b'href="/west-rouge/"', new_page)
+        self.assertIn(b"may contain newer information than the inspection date shown here", new_page)
+
+        # Both the legacy edition and the new linked edition remain idempotent.
+        build_weekly_brief(self.history, self.output, self.corrections, as_of=next_week)
+        self.assertEqual(manifest_path.read_bytes(), rolled_manifest_bytes)
+        self.assertEqual((self.output / "index.html").read_bytes(), rolled_index_bytes)
+        self.assertEqual(old_page.read_bytes(), rolled_old_page)
+        self.assertEqual(new_page_path.read_bytes(), new_page)
+
+        # A real source correction still requires exactly the next revision.
+        write_archive(self.history, [
+            event("a", "2026-11-03T10:00:00+00:00", status="Closed"),
+            event("b", "2026-11-10T10:00:00+00:00", name="New week cafe", establishment_id="entity-456"),
+        ])
+        corrected_source_bytes = source_archive.read_bytes()
+        self.assertNotEqual(corrected_source_bytes, original_source_bytes)
+        with self.assertRaisesRegex(BriefError, "Correction revision must increment"):
+            build_weekly_brief(self.history, self.output, self.corrections, as_of=next_week)
+        self.assertEqual(manifest_path.read_bytes(), rolled_manifest_bytes)
+        self.assertEqual((self.output / "index.html").read_bytes(), rolled_index_bytes)
+        self.assertEqual(old_page.read_bytes(), rolled_old_page)
+        self.assertEqual(new_page_path.read_bytes(), new_page)
+
+        correction_v5 = {
+            "schema_version": 1,
+            "corrections": {
+                archived["id"]: {
+                    "revision": 5,
+                    "explanation": "Corrected the historic DineSafe status after verifying the preserved source record.",
+                }
+            },
+        }
+        self.corrections.write_text(json.dumps(correction_v5), encoding="utf-8")
+        build_weekly_brief(self.history, self.output, self.corrections, as_of=next_week)
+        corrected_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        revised = next(item for item in corrected_manifest["editions"] if item["id"] == archived["id"])
+        self.assertEqual(revised["revision"], 5)
+        self.assertNotIn("render_version", revised)
+        self.assertEqual((revised["period_start"], revised["period_end"]), original_period)
+        self.assertEqual(revised["generated_at"], original_generated_at)
+        self.assertNotEqual(revised["content_sha256"], original_content_hash)
+        self.assertEqual(revised["event_count"], original_event_count)
+        corrected_page = old_page.read_bytes()
+        self.assertIn(b"Closed", corrected_page)
+        self.assertNotIn(b"#establishment/", corrected_page)
+        corrected_manifest_bytes = manifest_path.read_bytes()
+
+        build_weekly_brief(self.history, self.output, self.corrections, as_of=next_week)
+        self.assertEqual(manifest_path.read_bytes(), corrected_manifest_bytes)
+        self.assertEqual(old_page.read_bytes(), corrected_page)
+        self.assertEqual(new_page_path.read_bytes(), new_page)
+
+    def test_unknown_or_malformed_render_versions_fail_manifest_validation(self):
+        write_archive(self.history, [event("a", "2026-11-03T10:00:00+00:00")])
+        build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
+        manifest = json.loads((self.output / "editions.json").read_text(encoding="utf-8"))
+        for version in (0, 3, True, "2", None):
+            with self.subTest(version=version):
+                candidate = json.loads(json.dumps(manifest))
+                candidate["editions"][0]["render_version"] = version
+                with self.assertRaisesRegex(BriefError, "Invalid weekly-brief render version"):
+                    brief_module._validate_manifest(candidate)
+
     def test_quiet_week_creates_no_edition_or_fake_item(self):
         write_archive(self.history, [event("a", "2026-11-01T10:00:00+00:00")])
         count = build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
@@ -135,6 +372,7 @@ class WeeklyBriefTests(unittest.TestCase):
         manifest = json.loads((self.output / "editions.json").read_text(encoding="utf-8"))["editions"][0]
         page = (self.output / "2026-11-02" / "index.html").read_text(encoding="utf-8")
         self.assertEqual(manifest["revision"], 2)
+        self.assertEqual(manifest["render_version"], 2)
         self.assertEqual(manifest["generated_at"], self.as_of.isoformat())
         self.assertIn("Correction, revision 2", page)
         self.assertIn("Corrected the source event status", page)

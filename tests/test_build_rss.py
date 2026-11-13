@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
 
-from scripts.build_rss import FEED_URL, LICENCE_URL, SOURCE_URL, FeedError, build_feed, load_events, write_feed, reader_date
+from scripts.build_rss import CITY_RECORD_URL_PREFIX, FEED_URL, LICENCE_URL, SOURCE_URL, FeedError, build_feed, load_events, write_feed, reader_date
 
 
 def make_event(event_id="0" * 20, *, month="2026-11", detected_at="2026-11-02T10:00:00+00:00", kind="status_changed", feed="dinesafe", **overrides):
@@ -64,7 +64,9 @@ class BuildRssTests(unittest.TestCase):
             self.assertEqual(len(items), 2)
             self.assertEqual(items[0].findtext("guid"), "urn:scarbto:dinesafe:" + "1" * 20)
             self.assertEqual(items[0].findtext("pubDate"), "Mon, 02 Nov 2026 10:00:00 +0000")
-            self.assertEqual(items[0].findtext("link"), SOURCE_URL)
+            self.assertEqual(items[0].findtext("link"), CITY_RECORD_URL_PREFIX + "12345")
+            self.assertIn(SOURCE_URL, items[0].findtext("description"))
+            self.assertEqual(events[0]["source_url"], SOURCE_URL)
             self.assertIn("Neighbourhood matched by Scarb.TO: West Rouge", items[0].findtext("description"))
             self.assertIn("not a neighbourhood label supplied by DineSafe", items[0].findtext("description"))
             self.assertIn("Inaccurate source coordinates", items[0].findtext("description"))
@@ -79,6 +81,17 @@ class BuildRssTests(unittest.TestCase):
             self.assertNotIn("43.8", xml)
             self.assertNotIn("-79.2", xml)
             self.assertEqual(FEED_URL, "https://scarb.to/feed.xml")
+
+    def test_record_links_encode_establishment_ids_as_one_url_component(self):
+        with tempfile.TemporaryDirectory() as temp:
+            history = Path(temp)
+            write_archive(history, "2026-11", [make_event(establishment_id="A/B &?#42")])
+            root = ET.fromstring(build_feed(load_events(history), built_at=datetime(2026, 11, 3, tzinfo=timezone.utc)))
+            item = root.find("channel/item")
+            self.assertEqual(item.findtext("link"), CITY_RECORD_URL_PREFIX + "A%2FB%20%26%3F%2342")
+            self.assertIn(f"City source dataset: {SOURCE_URL}.", item.findtext("description"))
+            self.assertEqual(item.findtext("guid"), "urn:scarbto:dinesafe:" + "0" * 20)
+            self.assertEqual(item.findtext("pubDate"), "Mon, 02 Nov 2026 10:00:00 +0000")
 
     def test_reader_dates_use_toronto_day_without_changing_rss_timestamp(self):
         with tempfile.TemporaryDirectory() as temp:
