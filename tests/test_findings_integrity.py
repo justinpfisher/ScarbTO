@@ -13,6 +13,7 @@ from scripts.update_dinesafe import normalise
 ROOT = Path(__file__).resolve().parents[1]
 COVERAGE = "All available source rows for this establishment, date and outcome; the source supplies no inspection identifier."
 FIELDS = ['id', 'name', 'address', 'type', 'inspection_detail', 'inspection_findings', 'findings_coverage', 'status', 'inspection_date', 'latitude', 'longitude', 'ward', 'neighbourhood', 'source_url', 'licence_url', 'collected_at']
+LEGACY_FIELDS = [field for field in FIELDS if field not in {'inspection_findings', 'findings_coverage'}]
 
 
 class FindingsIntegrityTests(unittest.TestCase):
@@ -36,13 +37,16 @@ class FindingsIntegrityTests(unittest.TestCase):
     def write(self, root, snapshot):
         (root / 'snapshot.json').write_text(json.dumps(snapshot), encoding='utf-8')
         # Independent export construction matching the collector's public CSV.
+        has_findings = bool(snapshot['establishments']) and 'inspection_findings' in snapshot['establishments'][0]
+        fields = FIELDS if has_findings else LEGACY_FIELDS
         stream = io.StringIO()
-        writer = csv.DictWriter(stream, fieldnames=FIELDS)
+        writer = csv.DictWriter(stream, fieldnames=fields)
         writer.writeheader()
         for entry in snapshot['establishments']:
-            row = {key: entry.get(key) for key in FIELDS}
+            row = {key: entry.get(key) for key in fields}
             row.update(source_url='https://open.toronto.ca/dataset/dinesafe/', licence_url='https://open.toronto.ca/open-data-licence/', collected_at=snapshot['published_at'])
-            row['inspection_findings'] = json.dumps(entry.get('inspection_findings'), ensure_ascii=False, sort_keys=True)
+            if has_findings:
+                row['inspection_findings'] = json.dumps(entry.get('inspection_findings'), ensure_ascii=False, sort_keys=True)
             for key in ('id', 'name', 'address', 'type', 'inspection_detail', 'ward', 'neighbourhood'):
                 value = row.get(key)
                 if isinstance(value, str) and value.lstrip().startswith(('=', '+', '-', '@', '\t', '\r')):
@@ -51,7 +55,16 @@ class FindingsIntegrityTests(unittest.TestCase):
         (root / 'establishments.csv').write_bytes(stream.getvalue().encode('utf-8-sig'))
 
     def test_legacy_snapshot_remains_valid(self):
-        self.assertGreater(validate_snapshot_integrity(ROOT / 'docs/data')['establishments'], 300)
+        snapshot = json.loads((ROOT / 'docs/data/snapshot.json').read_text(encoding='utf-8'))
+        for row in snapshot['establishments']:
+            row.pop('inspection_findings', None)
+            row.pop('findings_coverage', None)
+        with tempfile.TemporaryDirectory(dir=ROOT) as temp:
+            root = Path(temp)
+            self.write(root, snapshot)
+            before = {name: (root / name).read_bytes() for name in ('snapshot.json', 'establishments.csv')}
+            self.assertGreater(validate_snapshot_integrity(root)['establishments'], 300)
+            self.assertEqual(before, {name: (root / name).read_bytes() for name in before})
 
     def test_collector_five_findings_and_csv_preserved(self):
         snapshot, target = self.snapshot()
