@@ -1,0 +1,67 @@
+{
+  "generator_sha256": "8cd9a964e78e4dc2403a02cd3740c606614d6be55290cbead348007f315fa99d",
+  "region_definition_sha256": "11fe95d9f511fad2d41bec48bf2863c4031118ca853c0cf58aaa15c0382836a2",
+  "source_git_blobs": {
+    "scarborough-council-boundary.geojson": "06cb43ee1b137938f6feb8dd9b355dcf819b8838",
+    "scarborough-neighbourhoods.geojson": "14ba105712c753a8d1f47b9d00648381987dedf8"
+  },
+  "crs": "+proj=aeqd +lat_0=43.78 +lon_0=-79.20 +datum=WGS84 +units=m +no_defs",
+  "fragment_colour_transfers": [],
+  "precision_grid_m": 0.001,
+  "source_feature_count": 31,
+  "region_count": 8,
+  "source_gap_m2": 650.9054911812718,
+  "source_overlap_m2": 2.086162567138672e-07,
+  "outline_area_m2": 188477311.92640057,
+  "simplification_tolerance_m": 40,
+  "outline_hausdorff_m": 39.67698199117444,
+  "final_gap_m2": 0.0,
+  "final_overlap_m2": 0.0,
+  "region_components": [
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "region_component_areas_m2": [
+    [
+      17081038.455734387
+    ],
+    [
+      24614253.110446613
+    ],
+    [
+      46481910.609172955
+    ],
+    [
+      31062666.21705924
+    ],
+    [
+      23025944.266631998
+    ],
+    [
+      26075699.728992596
+    ],
+    [
+      6987660.751742681
+    ],
+    [
+      13219020.423885033
+    ]
+  ],
+  "source_outline_bounds": [
+    -11369.602,
+    -12033.015,
+    6821.427,
+    8384.377
+  ],
+  "render_scale": 0.04897785182358256,
+  "font_sha256": "8cd08d97e89c24d0aa92edd2f0f4c8ee6195eee9b7c9f154865a58b02f0c1c0d",
+  "tool_versions": {
+    "shapely": "2.1.2"
+  }
+}
