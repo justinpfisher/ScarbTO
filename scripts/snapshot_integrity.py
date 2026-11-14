@@ -18,6 +18,10 @@ QUALITY_KEYS = {"source_rows", "geocoded_rows", "scarborough_rows", "scarborough
 ENTRY_KEYS = {"id", "name", "address", "type", "inspection_detail", "status", "inspection_date", "latitude", "longitude", "ward", "neighbourhood"}
 ACTIVITY_KEYS = {"id", "feed", "kind", "establishment_id", "name", "address", "neighbourhood", "inspection_date", "detected_at", "status", "previous_status", "latitude", "longitude", "source_url"}
 CSV_FIELDS = ["id", "name", "address", "type", "inspection_detail", "status", "inspection_date", "latitude", "longitude", "ward", "neighbourhood", "source_url", "licence_url", "collected_at"]
+FINDINGS_ENTRY_KEYS = ENTRY_KEYS | {"inspection_findings", "findings_coverage"}
+FINDINGS_CSV_FIELDS = CSV_FIELDS[:5] + ["inspection_findings", "findings_coverage"] + CSV_FIELDS[5:]
+FINDING_KEYS = {"row_id", "wording", "category", "severity", "observation", "inspection_date", "outcome_date", "outcome", "fine"}
+FINDINGS_COVERAGE = "All available source rows for this establishment, date and outcome; the source supplies no inspection identifier."
 STATUSES = {"Pass", "Conditional Pass", "Closed"}
 ACTIVITY_KINDS = {"first_seen", "new_inspection", "status_changed"}
 
@@ -63,7 +67,8 @@ def _is_resource_url(value: Any) -> bool:
 
 def _csv_bytes(snapshot: dict[str, Any]) -> bytes:
     stream = io.StringIO()
-    writer = csv.DictWriter(stream, fieldnames=CSV_FIELDS)
+    has_findings = "inspection_findings" in snapshot["establishments"][0]
+    writer = csv.DictWriter(stream, fieldnames=FINDINGS_CSV_FIELDS if has_findings else CSV_FIELDS)
     writer.writeheader()
     for entry in snapshot["establishments"]:
         row = {
@@ -72,12 +77,39 @@ def _csv_bytes(snapshot: dict[str, Any]) -> bytes:
             "licence_url": LICENCE_URL,
             "collected_at": snapshot["published_at"],
         }
+        if has_findings:
+            row["inspection_findings"] = json.dumps(entry["inspection_findings"], ensure_ascii=False, sort_keys=True)
         for field in ("id", "name", "address", "type", "inspection_detail", "ward", "neighbourhood"):
             value = row.get(field)
             if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@", "\t", "\r")):
                 row[field] = "'" + value
         writer.writerow(row)
     return stream.getvalue().encode("utf-8-sig")
+
+
+def _validate_findings(row: dict[str, Any]) -> None:
+    """Check the collector's public finding contract without normalising source text."""
+    if row["findings_coverage"] != FINDINGS_COVERAGE:
+        raise SnapshotIntegrityError("Inspection findings coverage differs from the collector contract")
+    findings = row["inspection_findings"]
+    if not isinstance(findings, list):
+        raise SnapshotIntegrityError("Inspection findings must be an array")
+    seen_rows: set[str] = set()
+    seen_payloads: set[str] = set()
+    for finding in findings:
+        if not isinstance(finding, dict) or set(finding) != FINDING_KEYS:
+            raise SnapshotIntegrityError("Inspection finding schema is unexpected")
+        if any(value is not None and not isinstance(value, str) for value in finding.values()):
+            raise SnapshotIntegrityError("Inspection finding fields must retain source strings or null")
+        if not any(finding.values()):
+            raise SnapshotIntegrityError("Inspection finding has no source values")
+        payload = json.dumps(finding, sort_keys=True)
+        row_id = finding["row_id"]
+        if payload in seen_payloads or (row_id and row_id in seen_rows):
+            raise SnapshotIntegrityError("Inspection finding identity is duplicated or conflicting")
+        seen_payloads.add(payload)
+        if row_id:
+            seen_rows.add(row_id)
 
 
 def validate_snapshot_integrity(data_dir: str | Path, *, now: datetime | None = None) -> dict[str, Any]:
@@ -130,9 +162,16 @@ def validate_snapshot_integrity(data_dir: str | Path, *, now: datetime | None = 
     if not isinstance(entries, list) or len(entries) < 300 or len(entries) != quality["scarborough_establishments"]:
         raise SnapshotIntegrityError("Snapshot establishment count is below threshold or disagrees with quality metadata")
     seen_ids: set[str] = set()
+    # Keep the exact legacy export usable until a qualified refresh replaces it.
+    # A collector run emits one uniform schema, never mixed legacy/new rows.
+    entry_keys = set(entries[0]) if isinstance(entries[0], dict) else set()
+    if entry_keys not in (ENTRY_KEYS, FINDINGS_ENTRY_KEYS):
+        raise SnapshotIntegrityError("Establishment row schema is unexpected")
     for row in entries:
-        if not isinstance(row, dict) or set(row) != ENTRY_KEYS:
+        if not isinstance(row, dict) or set(row) != entry_keys:
             raise SnapshotIntegrityError("Establishment row schema is unexpected")
+        if entry_keys == FINDINGS_ENTRY_KEYS:
+            _validate_findings(row)
         ident = row.get("id")
         if not isinstance(ident, str) or not ident or ident in seen_ids:
             raise SnapshotIntegrityError("Establishment identifiers are missing or duplicated")
