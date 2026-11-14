@@ -7,23 +7,14 @@ import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
 
 const root = resolve(fileURLToPath(new URL('../docs/', import.meta.url)));
-const templatePath = resolve(root, 'neighbourhood-page.template.html');
 const mime = new Map([
   ['.html', 'text/html; charset=utf-8'], ['.css', 'text/css; charset=utf-8'],
   ['.svg', 'image/svg+xml'],
 ]);
 
 async function startServer() {
-  const template = (await readFile(templatePath, 'utf8'))
-    .replaceAll('{{CODE}}', '143')
-    .replaceAll('{{NAME}}', 'West Rouge')
-    .replaceAll('{{SLUG}}', 'west-rouge');
   const server = createServer(async (request, response) => {
     const url = new URL(request.url, 'http://127.0.0.1');
-    if (url.pathname === '/west-rouge/index.html') {
-      response.writeHead(200, {'content-type': 'text/html; charset=utf-8'}).end(template);
-      return;
-    }
     const relative = url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname).replace(/^\/+/, '');
     const file = resolve(root, relative);
     if (file !== root && !file.startsWith(root + sep)) {

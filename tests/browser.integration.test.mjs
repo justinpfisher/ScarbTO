@@ -5,6 +5,8 @@ import {mkdir, readFile, stat} from 'node:fs/promises';
 import {extname, resolve, sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
+import './brand.browser.test.mjs';
+import './brand-generated-pages.test.mjs';
 import {WARDS, NEIGHBOURHOODS} from '../docs/area-selection.mjs';
 import {buildPageFiles} from '../scripts/build_neighbourhood_pages.mjs';
 
