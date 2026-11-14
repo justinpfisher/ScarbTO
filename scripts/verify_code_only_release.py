@@ -31,9 +31,9 @@ MAX_API_BYTES = 1_000_000
 # Exact last-good baseline independently verified for this code-only rollout.
 # Update only alongside a separately verified successful publisher run.
 PINNED_BASELINE = {
-    "commit": "7ff53874cd75769f1bb75c7cfcfae404ce61448b",
-    "tree": "f9fd994243e32a7262913f352b85fc534e7bf934",
-    "run_id": 43279147086,
+    "commit": "962a8ba32cd26ec1983f4fc6ee53065341978485",
+    "tree": "7e6e84b5c8e4ceac912e01fc99c53205f4c3721e",
+    "run_id": 43476494235,
 }
 
 
