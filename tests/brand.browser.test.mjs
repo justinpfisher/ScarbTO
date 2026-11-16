@@ -102,16 +102,21 @@ test('neighbourhood sharing page keeps branding accessible and print controls hi
       assert.equal(tagline === 'none', width > 420);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
       assert.equal(overflow, false, `horizontal overflow at ${width}px`);
+      assert.equal(await page.locator('#share-page').isVisible(), true);
+      assert.equal(await page.locator('#print-page').isVisible(), true);
       await page.emulateMedia({media: 'print'});
       assert.equal(await page.locator('.print-brand').evaluate(el => getComputedStyle(el).display), 'block');
-      assert.equal(await page.locator('#share-page').evaluate(el => getComputedStyle(el).display), 'none');
-      assert.equal(await page.locator('#print-page').evaluate(el => getComputedStyle(el).display), 'none');
+      assert.equal(await page.locator('#share-page').isVisible(), false);
+      assert.equal(await page.locator('#print-page').isVisible(), false);
       assert.equal(await page.locator('.site-header').evaluate(el => getComputedStyle(el).display), 'flex');
       const printLogoWidth = await page.locator('.print-brand img').evaluate(async img => {
         await img.decode();
         return img.naturalWidth;
       });
       assert.ok(printLogoWidth > 0);
+      await page.emulateMedia({media: 'screen'});
+      assert.equal(await page.locator('#share-page').isVisible(), true);
+      assert.equal(await page.locator('#print-page').isVisible(), true);
       await page.close();
     }
   } finally {
