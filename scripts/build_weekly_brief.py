@@ -417,14 +417,44 @@ def build_weekly_brief(
     return len(current_events)
 
 
+def preserve_weekly_archive(output_dir: Path) -> int:
+    """Verify issued editions without asserting coverage for a new week.
+
+    A code-only publication has no new collection/coverage evidence. Neither
+    the wall clock nor the newest recorded event proves a complete source week.
+    Preserve every archived byte, including the index and correction controls.
+    """
+    manifest = _read_json(output_dir / "editions.json", {"schema_version": SCHEMA_VERSION, "editions": []})
+    _validate_manifest(manifest)
+    registered = set()
+    if manifest["editions"] and not (output_dir / "index.html").is_file():
+        raise BriefError("Published weekly-brief index is missing; refusing silent recreation")
+    for edition in manifest["editions"]:
+        page = output_dir / edition["period_start"] / "index.html"
+        registered.add(page)
+        if not page.is_file() or _sha256(page.read_bytes()) != edition["html_sha256"]:
+            raise BriefError(f"Published weekly-brief page for {edition['id']} differs from its registry hash")
+    if any(page not in registered for page in output_dir.glob("*/index.html")):
+        raise BriefError("Weekly-brief page exists without its registry record; refusing to preserve an unverified edition")
+    return len(manifest["editions"])
+
+
 def main(argv: list[str] | None = None) -> int:
     root = ROOT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--history-dir", type=Path, default=root / "docs" / "data" / "history")
     parser.add_argument("--output-dir", type=Path, default=root / "docs" / "briefs")
     parser.add_argument("--corrections", type=Path, default=root / "docs" / "briefs" / "corrections.json")
+    parser.add_argument("--preserve-archive", action="store_true", help="Verify and retain issued editions unchanged; do not infer a new or quiet week from retained data")
     args = parser.parse_args(argv)
     try:
+        if args.preserve_archive:
+            count = preserve_weekly_archive(args.output_dir)
+            if count:
+                print(f"Code-only publication: retained {count} verified archived weekly edition(s) unchanged. No new reporting week was assessed.")
+            else:
+                print("Code-only publication: no verified archived weekly edition is available. No new reporting week was assessed or edition created.")
+            return 0
         count = build_weekly_brief(args.history_dir, args.output_dir, args.corrections)
     except BriefError as exc:
         print(f"WEEKLY BRIEF NOT BUILT: {exc}", file=sys.stderr)

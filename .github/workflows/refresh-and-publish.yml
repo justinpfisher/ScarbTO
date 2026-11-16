@@ -160,7 +160,12 @@ jobs:
       - name: Generate source-linked DineSafe RSS
         run: python scripts/build_rss.py
       - name: Generate weekly source-linked DineSafe brief
-        run: python scripts/build_weekly_brief.py
+        run: |
+          if [ "${{ inputs.release_mode }}" = "code_only" ]; then
+            python scripts/build_weekly_brief.py --preserve-archive
+          else
+            python scripts/build_weekly_brief.py
+          fi
       - name: Persist only validated data and recoverable release baseline
         run: |
           git config user.name "Scarb.TO data publisher"
