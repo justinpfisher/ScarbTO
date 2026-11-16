@@ -1,7 +1,7 @@
 import {prepareOutputs,downloadBlob,attributedMap,retainedOutput} from './community-exports.mjs';
 import {validateProfile,composeEdition,finaliseEdition,reviseEdition,verifyReceipt,digest,canonical,counts,COUNT_RULE} from './community-publishing.mjs';
 const el=id=>document.getElementById(id);
-let registry,release,previous=null,draft=null,exactStart=null;
+let registry,release,previous=null,draft=null,exactStart=null,importGeneration=0;
 const status=value=>{el('status').textContent=value;};
 const localInput=value=>{const d=new Date(value);return new Date(d.valueOf()-d.getTimezoneOffset()*60000).toISOString().slice(0,19);};
 async function json(path){const r=await fetch(path,{cache:'no-cache'});if(!r.ok)throw new Error('I could not load the qualified information. Please try again later.');return r.json();}
@@ -25,7 +25,7 @@ function restoreReceipt(value) {
  try {applyProfile(value.profile);status('Previous exact information cut-off restored. Its printed copy stays unchanged.');}
  catch {applyProfile(value.profile,value.boundaries);for(const input of document.querySelectorAll('#core input,#nearby input'))input.checked=false;el('name').value=value.profile.name;status('The boundary version changed. Your prior receipt and exact cut-off are retained. Choose current coverage explicitly; the next edition will explain the changed selection.');}
 }
-function invalidate(){draft=null;el('proof-section').hidden=true;el('embed-section').hidden=true;}
+function invalidate(){importGeneration++;draft=null;el('proof-section').hidden=true;el('embed-section').hidden=true;}
 el('settings').addEventListener('input',invalidate);
 el('start').addEventListener('input',()=>{exactStart=null;});
 el('settings').addEventListener('submit',event=>{event.preventDefault();try{
@@ -42,7 +42,22 @@ el('saved-profiles').onchange=event=>{try{if(event.target.value){applyProfile(sa
 el('save-settings').onclick=async()=>{try{const p=profile();download(p,'scarb-community-settings.json');const id=await digest(p);savedProfiles[id]=p;if(Object.keys(savedProfiles).length>30)throw new Error('Settings downloaded. This device already has 30 saved profiles; keep the portable file.');try{localStorage.setItem('scarb-community-profiles',JSON.stringify(savedProfiles));refreshSavedProfiles();status('Coverage saved on this device and downloaded for backup. No edition marker changed.');}catch{status('Settings downloaded; browser storage is unavailable. Keep the file for another visit or device.');}}catch(e){status(e.message);}};
 el('text').onclick=()=>{if(draft)download(draft.copy+'\n\n'+draft.footer,'scarb-community-copy.txt','text/plain;charset=utf-8');};
 el('finalise').onclick=async()=>{if(!draft)return;const button=el('finalise');button.disabled=true;try{const activeDraft=draft,candidate=structuredClone(draft);const outputs=await prepareOutputs(candidate);if(draft!==activeDraft)throw new Error('The proof changed while exporting. Review and finalise the new proof.');const prepared={...candidate,renderer:{version:1,jspdf_version:'4.2.1',jspdf_git_blob:'0e600d49d2b2bf81dd97c1509e22d108c2ddd3b4'},outputs:{text:await retainedOutput(new Blob([candidate.copy+'\n\n'+candidate.footer],{type:'text/plain;charset=utf-8'})),pdf:await retainedOutput(outputs.pdf),png:await retainedOutput(outputs.png),map:await retainedOutput(attributedMap(candidate))}};const original=prepared.correction_original,explanation=prepared.correction_explanation;delete prepared.correction_original;delete prepared.correction_explanation;const receipt=original?await reviseEdition(original,prepared,explanation):await finaliseEdition(prepared);if(draft!==activeDraft)throw new Error('The proof changed while finalising. Review the new proof before proceeding.');if(new Blob([JSON.stringify(receipt,null,2)]).size>5*1024*1024)throw new Error('This package exceeds the 5 MB portable-receipt limit. Choose a smaller layout before finalising; your previous marker is unchanged.');download(receipt,`scarb-edition-${receipt.edition_id}.json`);previous=receipt;exactStart=receipt.source_cutoffs.dinesafe;el('start').value=localInput(exactStart);try{localStorage.setItem('scarb-community-finalised',JSON.stringify(receipt));}catch{status('Your receipt downloaded, but this browser could not save it. Keep the file for your next edition.');return;}status('Finalised on this device. Keep the receipt with your exported copy; import it for the next edition.');}catch(error){status(error.message);}finally{button.disabled=false;}};
-el('import').onchange=async event=>{try{const file=event.target.files[0];if(!file)return;if(file.size>5*1024*1024)throw new Error('That receipt is too large. Choose a file under 5 MB.');const value=JSON.parse(await file.text());if(value.state==='finalised'){await verifiedSourceReceipt(value);restoreReceipt(value);}else{applyProfile(value);previous=null;exactStart=release.history_start;el('start').value=localInput(exactStart);status('Settings restored as a separate publication. Import its finalised receipt to continue it, or choose an explicit first-edition start.');}invalidate();}catch(error){status(error.message);}finally{event.target.value='';}};
+el('import').onchange=async event=>{
+ const file=event.target.files[0];if(!file)return;
+ event.target.value='';const generation=++importGeneration;
+ try{
+  if(file.size>5*1024*1024)throw new Error('That receipt is too large. Choose a file under 5 MB.');
+  const value=JSON.parse(await file.text());if(generation!==importGeneration)return;
+  if(value.state==='finalised'){
+   await verifiedSourceReceipt(value);if(generation!==importGeneration)return;
+   restoreReceipt(value);
+  }else{
+   applyProfile(value);previous=null;exactStart=release.history_start;el('start').value=localInput(exactStart);
+   status('Settings restored as a separate publication. Import its finalised receipt to continue it, or choose an explicit first-edition start.');
+  }
+  invalidate();
+ }catch(error){if(generation===importGeneration)status(error.message);}
+};
 try{
  const latest=await json('/community-data/latest.json');if(!/^[a-f0-9]{64}$/.test(latest.release_id)||!/^[a-f0-9]{64}$/.test(latest.boundary_version))throw new Error('The release reference is invalid.');
  [registry,release]=await Promise.all([json(`/community-data/boundaries/${latest.boundary_version}.json`),json(`/community-data/releases/${latest.release_id}.json`)]);
