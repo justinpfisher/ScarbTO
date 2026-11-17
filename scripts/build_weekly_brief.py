@@ -30,6 +30,7 @@ SITE_URL = "https://scarb.to/"
 BRIEFS_URL = f"{SITE_URL}briefs/"
 TORONTO = "America/Toronto"
 SCHEMA_VERSION = 1
+BRIEF_RENDER_VERSION = 2
 
 
 class BriefError(ValueError):
@@ -172,19 +173,29 @@ def _render_edition(payload: dict, record: dict) -> bytes:
             f'<span>Updated {reader_date(datetime.fromisoformat(record["revised_at"]).astimezone(ZoneInfo(TORONTO)).date())}.</span></aside>'
         )
     first_generated = esc(record["generated_at"])
+    render_version = record.get("render_version", 1)
+    if type(render_version) is not int or render_version not in (1, BRIEF_RENDER_VERSION):
+        raise BriefError("Unsupported weekly-brief render version")
+    brand_metadata = ""
+    style = "body{font:1rem/1.55 system-ui,sans-serif;max-width:70rem;margin:auto;padding:1rem;color:#163c3c}h1,h2{line-height:1.2}li{margin:.65rem 0}a{color:#075c73}.summary{display:flex;gap:2rem;flex-wrap:wrap}aside{border-left:.25rem solid #a43;padding:.75rem;margin:1rem 0}small{color:#333}"
+    site_nav = f'<nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/briefs/">All weekly briefs</a> · <a href="/feed.xml">DineSafe RSS</a></nav>'
+    if render_version == BRIEF_RENDER_VERSION:
+        brand_metadata = '<meta name="theme-color" content="#0A3D2A"><link rel="icon" type="image/svg+xml" href="/assets/brand/scarbto-icon.svg">'
+        style = "body{font:1rem/1.55 system-ui,sans-serif;max-width:70rem;margin:auto;padding:1rem;color:#0A3D2A;background:#F8F5EA}h1,h2{line-height:1.2}li{margin:.65rem 0}a{color:#0F5132}.summary{display:flex;gap:2rem;flex-wrap:wrap}aside{border-left:.25rem solid #D2683C;padding:.75rem;margin:1rem 0}small{color:#42594E}.brand-header{display:flex;align-items:center;gap:1rem;min-height:72px;border-bottom:1px solid #D5DED2;margin-bottom:1rem}.brand-link{display:block;line-height:0}.brand-lockup{display:block;width:min(304px,45vw);max-height:64px;height:auto}.brand-tagline{display:none}.brand-link:focus-visible{outline:3px solid #0F5132;outline-offset:4px}@media(max-width:420px){.brand-lockup{width:64px}.brand-tagline{display:block;color:#0A3D2A;font-weight:700}}@media print{body{background:#fff;color:#000}.brand-header{break-after:avoid}}"
+        site_nav = f'<header class="brand-header"><a class="brand-link" href="{SITE_URL}" aria-label="Scarb.TO home"><picture><source media="(max-width: 420px)" srcset="/assets/brand/scarbto-mark.svg"><img class="brand-lockup" src="/assets/brand/scarbto-connected.svg" alt=""></picture></a><span class="brand-tagline">Scarborough. I looked into it.</span></header><nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/briefs/">All weekly briefs</a> · <a href="/feed.xml">DineSafe RSS</a></nav>'
     page = f'''<!doctype html>
 <html lang="en-CA">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Explore a week of Scarborough food inspection updates with me, with dates and City DineSafe sources to follow.">
-  <link rel="canonical" href="{BRIEFS_URL}{start.isoformat()}/">
+  {brand_metadata}<link rel="canonical" href="{BRIEFS_URL}{start.isoformat()}/">
   <link rel="alternate" type="application/rss+xml" title="Scarb.TO food inspection updates" href="/feed.xml">
   <title>{esc(title)} | Scarb.TO</title>
-  <style>body{{font:1rem/1.55 system-ui,sans-serif;max-width:70rem;margin:auto;padding:1rem;color:#163c3c}}h1,h2{{line-height:1.2}}li{{margin:.65rem 0}}a{{color:#075c73}}.summary{{display:flex;gap:2rem;flex-wrap:wrap}}aside{{border-left:.25rem solid #a43;padding:.75rem;margin:1rem 0}}small{{color:#333}}</style>
+  <style>{style}</style>
 </head>
 <body>
-  <nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/briefs/">All weekly briefs</a> · <a href="/feed.xml">DineSafe RSS</a></nav>
+  {site_nav}
   <main>
     <h1>{esc(title)}</h1>
     <p>There's plenty to explore in Scarborough's food inspection records. I've brought together the updates I added from {_fmt_date(start)} through {_fmt_date(end)}. Start with a place you know, or follow a neighbourhood name and see what turns up.</p>
@@ -216,8 +227,8 @@ def _render_index(manifest: dict, current_start: date, current_end: date, has_cu
     else:
         quiet = ""
     page = f'''<!doctype html>
-<html lang="en-CA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Weekly briefs | Scarb.TO</title><style>body{{font:1rem/1.55 system-ui,sans-serif;max-width:60rem;margin:auto;padding:1rem;color:#163c3c}}a{{color:#075c73}}li{{margin:.75rem 0}}</style></head>
-<body><nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/feed.xml">DineSafe RSS</a></nav><main><h1>A week of food inspection discoveries</h1><p>I love seeing how these records fit together. Pick a week and explore the food inspection updates I gathered from City DineSafe records, with dates and sources to follow. A week without new records here does not mean nothing happened. I only make a brief when there are updates to share.</p>{quiet}<h2>Choose a week to explore</h2><ul>{links}</ul></main></body></html>
+<html lang="en-CA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0A3D2A"><link rel="icon" type="image/svg+xml" href="/assets/brand/scarbto-icon.svg"><title>Weekly briefs | Scarb.TO</title><style>body{{font:1rem/1.55 system-ui,sans-serif;max-width:60rem;margin:auto;padding:1rem;color:#0A3D2A;background:#F8F5EA}}a{{color:#0F5132}}li{{margin:.75rem 0}}.brand-header{{display:flex;align-items:center;gap:1rem;min-height:72px;border-bottom:1px solid #D5DED2;margin-bottom:1rem}}.brand-link{{display:block;line-height:0}}.brand-lockup{{display:block;width:min(304px,45vw);max-height:64px;height:auto}}.brand-tagline{{display:none}}.brand-link:focus-visible{{outline:3px solid #0F5132;outline-offset:4px}}@media(max-width:420px){{.brand-lockup{{width:64px}}.brand-tagline{{display:block;color:#0A3D2A;font-weight:700}}}}</style></head>
+<body><header class="brand-header"><a class="brand-link" href="{SITE_URL}" aria-label="Scarb.TO home"><picture><source media="(max-width: 420px)" srcset="/assets/brand/scarbto-mark.svg"><img class="brand-lockup" src="/assets/brand/scarbto-connected.svg" alt=""></picture></a><span class="brand-tagline">Scarborough. I looked into it.</span></header><nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/feed.xml">DineSafe RSS</a></nav><main><h1>A week of food inspection discoveries</h1><p>I love seeing how these records fit together. Pick a week and explore the food inspection updates I gathered from City DineSafe records, with dates and sources to follow. A week without new records here does not mean nothing happened. I only make a brief when there are updates to share.</p>{quiet}<h2>Choose a week to explore</h2><ul>{links}</ul></main></body></html>
 '''
     return page.encode("utf-8")
 
@@ -236,6 +247,9 @@ def _validate_manifest(value: dict) -> None:
     for item in value["editions"]:
         if not isinstance(item, dict):
             raise BriefError("Invalid weekly-brief edition record")
+        render_version = item.get("render_version", 1)
+        if type(render_version) is not int or render_version not in (1, BRIEF_RENDER_VERSION):
+            raise BriefError("Unsupported weekly-brief render version")
         edition_id = item.get("id")
         path = item.get("path")
         if not isinstance(edition_id, str) or edition_id in ids:
@@ -376,6 +390,7 @@ def build_weekly_brief(
                 "period_start": start.isoformat(),
                 "period_end": end.isoformat(),
                 "revision": 1,
+                "render_version": BRIEF_RENDER_VERSION,
                 "generated_at": generated_at,
                 "revised_at": None,
                 "correction_explanation": None,
@@ -417,14 +432,44 @@ def build_weekly_brief(
     return len(current_events)
 
 
+def preserve_weekly_archive(output_dir: Path) -> int:
+    """Verify issued editions without asserting coverage for a new week.
+
+    A code-only publication has no new collection/coverage evidence. Neither
+    the wall clock nor the newest recorded event proves a complete source week.
+    Preserve every archived byte, including the index and correction controls.
+    """
+    manifest = _read_json(output_dir / "editions.json", {"schema_version": SCHEMA_VERSION, "editions": []})
+    _validate_manifest(manifest)
+    registered = set()
+    if manifest["editions"] and not (output_dir / "index.html").is_file():
+        raise BriefError("Published weekly-brief index is missing; refusing silent recreation")
+    for edition in manifest["editions"]:
+        page = output_dir / edition["period_start"] / "index.html"
+        registered.add(page)
+        if not page.is_file() or _sha256(page.read_bytes()) != edition["html_sha256"]:
+            raise BriefError(f"Published weekly-brief page for {edition['id']} differs from its registry hash")
+    if any(page not in registered for page in output_dir.glob("*/index.html")):
+        raise BriefError("Weekly-brief page exists without its registry record; refusing to preserve an unverified edition")
+    return len(manifest["editions"])
+
+
 def main(argv: list[str] | None = None) -> int:
     root = ROOT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--history-dir", type=Path, default=root / "docs" / "data" / "history")
     parser.add_argument("--output-dir", type=Path, default=root / "docs" / "briefs")
     parser.add_argument("--corrections", type=Path, default=root / "docs" / "briefs" / "corrections.json")
+    parser.add_argument("--preserve-archive", action="store_true", help="Verify and retain issued editions unchanged; do not infer a new or quiet week from retained data")
     args = parser.parse_args(argv)
     try:
+        if args.preserve_archive:
+            count = preserve_weekly_archive(args.output_dir)
+            if count:
+                print(f"Code-only publication: retained {count} verified archived weekly edition(s) unchanged. No new reporting week was assessed.")
+            else:
+                print("Code-only publication: no verified archived weekly edition is available. No new reporting week was assessed or edition created.")
+            return 0
         count = build_weekly_brief(args.history_dir, args.output_dir, args.corrections)
     except BriefError as exc:
         print(f"WEEKLY BRIEF NOT BUILT: {exc}", file=sys.stderr)

@@ -5,6 +5,8 @@ import {mkdir, readFile, stat} from 'node:fs/promises';
 import {extname, resolve, sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {chromium} from 'playwright';
+import './brand.browser.test.mjs';
+import './brand-generated-pages.test.mjs';
 import {WARDS, NEIGHBOURHOODS} from '../docs/area-selection.mjs';
 import {buildPageFiles} from '../scripts/build_neighbourhood_pages.mjs';
 
@@ -1079,16 +1081,20 @@ test('static neighbourhood pages use the qualified set and route into the same s
   await page.waitForFunction(()=>window.__clipboardWrites.length===1);
   assert.equal(await page.evaluate(()=>window.__clipboardWrites[0]),'https://scarb.to/west-rouge/');
   assert.equal(await page.locator('#page-action-status').textContent(),'Neighbourhood link copied.');
+  const screenControls=['.brand','.header-link','.page-actions','.page-action-status','.primary-link'];
+  for(const selector of screenControls) assert.equal(await page.locator(selector).isVisible(),true,`${selector} is visible on screen before print`);
   await page.emulateMedia({media:'print'});
+  assert.equal(await page.locator('#show-more').count(),1,'the conditional show-more control still exists');
+  for(const selector of [...screenControls,'#show-more']) assert.equal(await page.locator(selector).isVisible(),false,`${selector} is hidden in print`);
+  assert.equal(await page.locator('.print-brand').isVisible(),true,'print retains the approved noninteractive identity');
   const printLayout=await page.evaluate(()=>({
-    hidden:['.site-header','.page-actions','.page-action-status','.primary-link','#show-more'].every(selector=>getComputedStyle(document.querySelector(selector)).display==='none'),
     readable:['#page-title','#inspection-list .record-item','.source-note','.reuse-note'].every(selector=>{
       const node=document.querySelector(selector);return Boolean(node&&getComputedStyle(node).display!=='none'&&node.getClientRects().length);
     }),
   }));
-  assert.equal(printLayout.hidden,true,'print view hides navigation and interactive controls');
   assert.equal(printLayout.readable,true,'print view retains the title, records, source and reuse guidance');
   await page.emulateMedia({media:'screen'});
+  for(const selector of screenControls) assert.equal(await page.locator(selector).isVisible(),true,`${selector} is visible again after print`);
   assert.match(await page.locator('#feed-status').textContent(),/records checked/);
   assert.doesNotMatch(await page.locator('#feed-status').textContent(),/City catalogue/);
     assert.match(await page.locator('#source-provenance').textContent(),/City catalogue timestamp/);
