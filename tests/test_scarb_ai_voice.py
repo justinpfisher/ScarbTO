@@ -211,6 +211,22 @@ class AiVoiceTests(unittest.TestCase):
         with self.assertRaises(v.VoiceError): self.generate(transport=fake)
         self.assertEqual(fake.calls, [])
 
+    def test_public_catalogue_requires_exact_protected_receipt_bytes(self):
+        p = copy.deepcopy(OFFICIAL)
+        self.generate(p, {**CONFIG, "enabled": False}, FakeTransport([]))
+        catalogue = v.compile_catalogue([p], CONFIG, self.state)
+        path = self.state / "candidate.json"
+        path.write_text(json.dumps(catalogue), encoding="utf-8")
+        self.assertTrue(v.verify_catalogue([p], CONFIG, self.state, path))
+        edited = copy.deepcopy(catalogue)
+        edited["entries"][p["id"]]["text"] += " A different sentence."
+        path.write_text(json.dumps(edited), encoding="utf-8")
+        with self.assertRaisesRegex(v.VoiceError, "differs"):
+            v.verify_catalogue([p], CONFIG, self.state, path)
+        path.unlink()
+        with self.assertRaisesRegex(v.VoiceError, "missing"):
+            v.verify_catalogue([p], CONFIG, self.state, path)
+
     def test_fixture_receipts_cannot_be_published_as_api_results(self):
         self.generate()
         with self.assertRaisesRegex(v.VoiceError, "Unqualified"): v.compile_catalogue([PACKET], CONFIG, self.state)

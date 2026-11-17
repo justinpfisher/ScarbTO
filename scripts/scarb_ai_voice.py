@@ -368,9 +368,25 @@ def compile_catalogue(packets: list, config: dict, state: Path) -> dict:
     return {"version": VERSION, "entries": entries}
 
 
+def verify_catalogue(packets: list, config: dict, state: Path, artifact: Path) -> bool:
+    """Attest public candidate bytes against all exact accepted private receipts.
+
+    Run in the authorised protected authoring environment. A source-level hash
+    printed by an untrusted public catalogue is never sufficient evidence.
+    """
+    need(artifact.is_file() and artifact.stat().st_size <= 10 * 1024 * 1024, "Candidate catalogue is missing or oversized")
+    try:
+        public = json.loads(artifact.read_text(encoding="utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError, OSError):
+        raise VoiceError("Invalid candidate catalogue") from None
+    need(encoded(public) == encoded(compile_catalogue(packets, config, state)),
+         "Public catalogue differs from accepted, independently validated receipts")
+    return True
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["plan", "generate", "compile"])
+    parser.add_argument("command", choices=["plan", "generate", "compile", "verify"])
     parser.add_argument("--requests", type=Path, required=True)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--state", type=Path, required=True, help="Protected local state outside public docs and source control")
@@ -392,6 +408,10 @@ def main() -> None:
         for packet in packets:
             generate(packet, config, args.state)
         print("Accepted translations saved locally; nothing published.")
+    elif args.command == "verify":
+        need(args.output is not None, "Provide a candidate file for verification")
+        verify_catalogue(packets, config, args.state, args.output)
+        print("Candidate matches all accepted receipts; this is not live or model qualification.")
     else:
         need(args.output is not None and args.output.resolve().is_relative_to(args.state.resolve()) and not args.output.exists(), "Choose a new candidate inside private state; do not overwrite last-good files")
         atomic_json(args.output, compile_catalogue(packets, config, args.state))

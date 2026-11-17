@@ -143,6 +143,15 @@ python scripts/scarb_ai_voice.py generate --requests STATE/requests.json --confi
 python scripts/scarb_ai_voice.py compile --requests STATE/requests.json --config STATE/config.json --state STATE --output STATE/catalogue-candidate.json
 ```
 
+Run `python scripts/scarb_ai_voice.py verify --requests STATE/requests.json
+--config STATE/config.json --state STATE --output CANDIDATE` in the protected
+GMKtec authoring environment after compilation and before publishing the
+candidate. It compares the entire candidate against independently retained,
+validated accepted receipts; changing displayed copy after AI acceptance fails.
+It is not a cryptographic signature or a substitute for code review, and the
+publisher cannot infer validity from a `receipt_sha256` field supplied by an
+untrusted catalogue alone.
+
 `plan` never calls a model. `generate` produces immutable accepted receipts or
 holds the new input. `compile` needs an accepted entry for **every exact request**,
 rejects test-origin receipts, and refuses to overwrite an existing destination.
