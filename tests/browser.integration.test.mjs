@@ -1184,3 +1184,41 @@ test('neighbourhood page remains readable on a narrow phone viewport', {timeout:
   assert.ok(dimensions.width<=dimensions.viewport,`page has horizontal overflow: ${JSON.stringify(dimensions)}`);
   assert.equal(await page.locator('#inspection-list .record-item').count(),1);
 });
+
+
+test('public saved areas persist and recover across desktop and mobile without changing other saved state', {timeout:60_000}, async t=>{
+  const {server,origin}=await startStaticServer();
+  const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+  t.after(async()=>{await browser.close();await new Promise(done=>server.close(done));});
+  for (const width of [1280,390]) {
+    const context=await browser.newContext({viewport:{width,height:900}});
+    const page=await context.newPage(), pageErrors=[];
+    page.on('pageerror',error=>pageErrors.push(error.message));
+    await installLocalRoutes(page,origin,{maplibreFailure:true});
+    await page.goto(origin,{waitUntil:'domcontentloaded'});
+    try {
+      await page.locator('#saved-area-choice:not([disabled])').waitFor();
+      await page.evaluate(()=>localStorage.setItem('scarb-community-finalised','unchanged'));
+      await page.locator('#saved-area-choice').selectOption('ward:20');
+      await page.locator('#save-public-area').click();
+      await page.locator('#saved-area-choice').selectOption('neighbourhood:143');
+      await page.locator('#save-public-area').click();
+      await page.locator('#save-public-area').click();
+      assert.equal(await page.locator('#saved-areas-list li').count(),2);
+      assert.match(await page.locator('#saved-areas-status').textContent(),/already saved/);
+      await page.reload();await page.locator('#saved-areas-list li').first().waitFor();
+      assert.equal(await page.locator('#saved-areas-list li').count(),2);
+      assert.equal(await page.evaluate(()=>localStorage.getItem('scarb-community-finalised')),'unchanged');
+      assert.equal(await page.locator('#saved-areas-list a').last().getAttribute('href'),'/?areaKind=neighbourhood&areaCode=143&mode=all&days=all');
+      await page.locator('#saved-areas-list button').first().click();
+      assert.equal(await page.locator('#saved-areas-list li').count(),1);
+      assert.equal(await page.locator('#saved-area-choice').evaluate(el=>el===document.activeElement),true);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+      await page.emulateMedia({media:'print'});
+      assert.equal(await page.locator('.saved-public-areas').isVisible(),false);
+      await page.emulateMedia({media:'screen'});
+      assert.equal(await page.locator('.saved-public-areas').isVisible(),true);
+      assert.deepEqual(pageErrors,[]);
+    } finally { await context.close(); }
+  }
+});

@@ -191,3 +191,12 @@ a,.text-action,.record-source-link{color:var(--brand-forest)}
 .brand-lockup{max-height:64px}
 
 @media(min-width:421px){.intro-row .intro-tagline{display:none}}
+
+.saved-public-areas { margin:1rem 0; }
+.saved-public-areas h2 { font-size:1rem; margin:0; }
+.saved-public-areas p { font-size:.85rem; }
+.saved-public-areas select { width:100%; max-width:100%; }
+.saved-public-areas ul { padding-left:1.1rem; }
+.saved-public-areas li { margin:.4rem 0; overflow-wrap:anywhere; }
+.saved-public-areas li button { margin-left:.5rem; }
+@media print { .saved-public-areas { display:none; } }
