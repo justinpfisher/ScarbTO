@@ -12,6 +12,8 @@ import hashlib
 import io
 import json
 import os
+import socket
+import ssl
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -112,6 +114,20 @@ class DataError(RuntimeError):
     pass
 
 
+def transport_failure_kind(exc: OSError) -> str:
+    """Classify transport failures without exposing exception text or URL queries."""
+    reason = exc.reason if isinstance(exc, URLError) else exc
+    if isinstance(reason, TimeoutError):
+        return 'timeout'
+    if isinstance(reason, socket.gaierror):
+        return 'dns'
+    if isinstance(reason, ssl.SSLError):
+        return 'tls'
+    if isinstance(reason, ConnectionError):
+        return 'connection'
+    return 'other-network'
+
+
 def download(url: str, stage: str) -> bytes:
     req = Request(url, headers=HEADERS)
     parsed = urlsplit(url)
@@ -126,8 +142,9 @@ def download(url: str, stage: str) -> bytes:
             return blob
     except HTTPError as exc:
         raise DataError(f'HTTP {exc.code} retrieving {stage} from {endpoint}') from None
-    except (URLError, TimeoutError, OSError):
-        raise DataError(f'Network failure retrieving {stage} from {endpoint}') from None
+    except (URLError, TimeoutError, OSError) as exc:
+        kind = transport_failure_kind(exc)
+        raise DataError(f'Network failure ({kind}) retrieving {stage} from {endpoint}') from None
 
 
 def json_bytes(raw: bytes, label: str) -> dict:
