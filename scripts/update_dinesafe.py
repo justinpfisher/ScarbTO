@@ -572,7 +572,9 @@ def main() -> None:
         source_url, refreshed = get_resources(metadata)
         raw_csv = download(source_url, 'DineSafe CSV')
         raw_wards = download(WARDS + '?' + urlencode(MAP_QUERY), 'official ward geography')
+        wards_retrieved_at = datetime.now(timezone.utc).isoformat()
         raw_neigh = download(NEIGHBOURHOODS + '?' + urlencode(MAP_QUERY), 'official neighbourhood geography')
+        neighbourhoods_retrieved_at = datetime.now(timezone.utc).isoformat()
     wards = json_bytes(raw_wards, 'wards')
     neighbourhoods = json_bytes(raw_neigh, 'neighbourhoods')
     previous_path = args.output / 'snapshot.json'
@@ -600,8 +602,24 @@ def main() -> None:
             if isinstance(value, str) and value.lstrip().startswith(('=', '+', '-', '@', '\t', '\r')):
                 line[field] = "'" + value
         writer.writerow(line)
+    # Evidence of these validated inputs, not a City version date or permission to reuse them.
+    # Offline fixtures and code-only retained releases must never look like live retrievals.
+    geometry_receipts = []
+    if not all(sources):
+        for endpoint, retrieved_at, raw, qualified in (
+            (WARDS, wards_retrieved_at, raw_wards, overlay_wards),
+            (NEIGHBOURHOODS, neighbourhoods_retrieved_at, raw_neigh, overlay_neighbourhoods),
+        ):
+            qualified_bytes = json.dumps(qualified, separators=(',', ':'), ensure_ascii=False).encode()
+            geometry_receipts.append({
+                'endpoint': endpoint, 'query': MAP_QUERY, 'retrieved_at': retrieved_at,
+                'raw_sha256': hashlib.sha256(raw).hexdigest(),
+                'qualified_sha256': hashlib.sha256(qualified_bytes).hexdigest(),
+            })
     print(json.dumps({'quality': snapshot['quality'], 'new_activity': len(snapshot['activity']),
-                     'dry_run': args.dry_run, 'source': source_url}, indent=2))
+                     'dry_run': args.dry_run, 'source': source_url,
+                     'geometry_input_mode': 'offline-fixture' if all(sources) else 'live-fetch',
+                     'validated_geometry_receipts': geometry_receipts}, indent=2))
     if args.dry_run:
         return
     archive_writes = prepare_activity_archives(args.output, snapshot['activity'])
