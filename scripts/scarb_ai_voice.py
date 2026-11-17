@@ -25,6 +25,10 @@ ENDPOINT = "https://api.openai.com/v1/responses"
 MODELS = {"gpt-6-luna": (0.10, 0.50), "gpt-6.1-terra": (1.0, 5.0), "gpt-6.1-sol": (2.0, 10.0)}
 SURFACES = {"home", "map", "list", "filters", "saved-areas", "neighbourhood", "brief", "rss", "community", "evidence", "export", "embed", "metadata", "accessibility", "source-note", "error"}
 KINDS = {"editorial", "functional", "safety", "verbatim"}
+OFFICIAL_VERBATIM_SOURCES = frozenset({
+    "https://open.toronto.ca/dataset/dinesafe/",
+    "https://open.toronto.ca/open-data-licence/",
+})
 TOKEN = re.compile(r"\{\{LOCK:([A-Z][A-Z0-9_]{0,63})\}\}")
 SHA = re.compile(r"[a-f0-9]{64}")
 AUTHOR = """You write Scarb.TO's distinctive 2x Scarb voice, in Canadian English.
@@ -114,6 +118,18 @@ def packet_check(packet: dict) -> None:
     need(isinstance(packet["limits"], dict) and set(packet["limits"]) == {"words", "characters"}, "Invalid limits")
     need(all(type(n) is int and 1 <= n <= 10000 for n in packet["limits"].values()), "Invalid copy limit")
     need(len(encoded(packet)) <= 24000, "Request too large; split by meaningful editorial unit")
+    # "verbatim" is only a whole-source value, never a way to bypass AI
+    # translation for arbitrary house copy. New sources require explicit review.
+    if packet["kind"] == "verbatim":
+        need(packet["id"].startswith("official."), "Verbatim output must be an explicitly classified official value")
+        need(packet["surface"] in {"source-note", "accessibility", "metadata"}, "Verbatim output cannot masquerade as editorial copy")
+        need(packet["draft"] == "{{LOCK:VERBATIM}}" and set(packet["locks"]) == {"VERBATIM"},
+             "Verbatim lane must consist only of one protected source value")
+        need(len(packet["evidence"]) == 1 and packet["evidence"][0]["source"] in OFFICIAL_VERBATIM_SOURCES,
+             "Verbatim source is not qualified")
+        item = packet["evidence"][0]
+        need(item["fact"] == packet["locks"]["VERBATIM"] and item["sha256"] == digest(item["fact"]),
+             "Verbatim value must exactly match the checked source-fact digest")
     # The draft itself is not exempt from token, link and numerical safeguards.
     text_check(packet, {"body": packet["draft"], "evidence_ids": ids})
 

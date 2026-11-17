@@ -46,6 +46,13 @@ and embeds. It excludes addresses, coordinates and non-allowlisted fields.
 
 ### Protected text and genuine creativity
 
+The zero-model `verbatim` exception is narrowly restricted to an exact whole
+City-source field value, stored as a single `VERBATIM` lock with matching
+source-fact digest and an explicitly allowlisted official source. Marking
+ordinary Scarb-authored prose as `verbatim` now fails qualification. This is
+not a new general-purpose bypass for copy from a new feed or public web page.
+
+
 Values appear as `{{LOCK:NAME}}`, `{{LOCK:OUTCOME}}`, `{{LOCK:INSPECTION_DATE}}`,
 `{{LOCK:OBSERVED_DATE}}`, or other named locks. The model must retain each once.
 The guard restores their original values after writing and counts the final text.

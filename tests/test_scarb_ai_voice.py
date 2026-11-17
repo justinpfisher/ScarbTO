@@ -20,6 +20,12 @@ PACKET = {"id": "fixture.boundary", "surface": "neighbourhood", "kind": "editori
           "evidence": [{"id": "fixture-map", "source": "repo:tests/fictional-evidence", "sha256": "a" * 64,
                         "fact": "Fictional test only: twelve source records, not necessarily distinct businesses."}],
           "limits": {"words": 100, "characters": 1000}}
+OFFICIAL = {"id": "official.dinesafe-outcome", "surface": "source-note", "kind": "verbatim",
+            "draft": "{{LOCK:VERBATIM}}", "locks": {"VERBATIM": "Conditional Pass"},
+            "evidence": [{"id": "dinesafe-official", "source": "https://open.toronto.ca/dataset/dinesafe/",
+                          "sha256": v.digest("Conditional Pass"), "fact": "Conditional Pass"}],
+            "limits": {"words": 20, "characters": 200}}
+
 REVIEW = {"approve": True, "meaning_preserved": True, "limitations_preserved": True, "voice_pass": True, "issues": []}
 
 
@@ -52,6 +58,23 @@ class AiVoiceTests(unittest.TestCase):
         return v.generate(packet or copy.deepcopy(PACKET), config or copy.deepcopy(CONFIG), self.state,
                           transport=transport or FakeTransport(), env=ENV if env is None else env, now=NOW)
 
+    def test_verbatim_cannot_bypass_ai_translator(self):
+        # Ordinary house copy must go through the writer, even when someone
+        # labels it verbatim. Official values can pass only as whole exact locks.
+        with self.assertRaisesRegex(v.VoiceError, "Verbatim"):
+            v.packet_check({**PACKET, "kind": "verbatim"})
+        v.packet_check(OFFICIAL)
+        for item in (
+            {**OFFICIAL, "id": "static.home-intro"},
+            {**OFFICIAL, "draft": "A lovely discovery: {{LOCK:VERBATIM}}"},
+            {**OFFICIAL, "locks": {"VERBATIM": "Pass"}},
+            {**OFFICIAL, "evidence": [{**OFFICIAL["evidence"][0], "source": "https://example.invalid"}]},
+            {**OFFICIAL, "evidence": [{**OFFICIAL["evidence"][0], "sha256": "a"*64}]},
+            {**OFFICIAL, "surface": "community"},
+        ):
+            with self.subTest(item=item), self.assertRaises(v.VoiceError):
+                v.packet_check(item)
+
     def test_input_schema_and_protected_facts(self):
         v.packet_check(PACKET)
         result = v.text_check(PACKET, writer())
@@ -81,7 +104,7 @@ class AiVoiceTests(unittest.TestCase):
         with self.assertRaises(v.VoiceError): v.text_check({**p, "limits": {"words": 40, "characters": 200}}, writer(p))
 
     def test_fixed_warnings_use_no_model(self):
-        p = {**PACKET, "kind": "verbatim"}
+        p = copy.deepcopy(OFFICIAL)
         fake = FakeTransport([])
         receipt = self.generate(p, {**CONFIG, "enabled": False}, fake)
         self.assertEqual(fake.calls, [])
@@ -213,7 +236,7 @@ class AiVoiceTests(unittest.TestCase):
         self.assertEqual(PACKET, original)
 
     def test_compile_all_or_nothing_duplicate_and_missing_entries(self):
-        p = {**PACKET, "kind": "verbatim"}
+        p = copy.deepcopy(OFFICIAL)
         self.generate(p, {**CONFIG, "enabled": False}, FakeTransport([]))
         self.assertEqual(len(v.compile_catalogue([p], CONFIG, self.state)["entries"]), 1)
         with self.assertRaises(v.VoiceError): v.compile_catalogue([p, p], CONFIG, self.state)
