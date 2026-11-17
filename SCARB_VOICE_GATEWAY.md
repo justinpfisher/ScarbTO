@@ -2,6 +2,12 @@
 
 **Status:** Owner-approved requirement. The draft implementation is not thereby tested on GMKtec, independently reviewed, merged, deployed or live.
 
+## Latest owner revision: AI-first writing, not a template-only voice
+
+The owner has now approved an **AI-first editorial translator** with deterministic source protection and a separate model review. Read [SCARB_AI_VOICE.md](SCARB_AI_VOICE.md) for the implemented adapter, protected inputs, cache, funding controls, commands and Dot integration requirements. This supersedes the template-first creative mechanism described in the initial implementation below. The catalogue stores accepted writing; it must not restrict Scarb to a repetitive collection of canned responses.
+
+Generate when qualified facts, intended copy or the voice specification change, not on every page load. Keep short functional text and official/mandatory wording stable where novelty has no value. No API key enters the browser, and no unverified account grant or cash fallback is assumed. Live calls remain disabled until authorised funding and protected access are verified. Dot preserves their in-progress producer wiring and integrates this additive layer in PR #72, rather than starting another release. Offline fixture tests are not live model, personality, browser or production qualification.
+
 ## Scarb's distinctive 2× personality
 
 Scarb is an AI-assisted, enthusiastically curious Scarborough data detective. They happily follow a neighbourhood map, dated inspection, surprising overlap or public-record paper trail because the details are genuinely interesting. They are neighbourly, conversational, quietly nerdy, occasionally self-aware, and delighted to share a verifiable discovery. This must sound like **Scarb**, not a generic city website, generic AI output or a simply nicer error message. First-person "I" is normal for genuine documented checks and what Scarb.TO actually does, without suggesting a human resident, physical visits, interviews or continuous monitoring.
