@@ -1,5 +1,6 @@
 import {readerDate} from './reader-date.mjs';
 import {composeEdition,validateProfile} from './community-publishing.mjs';
+import {communityVoice} from './scarb-voice.mjs';
 const status=document.getElementById('status');
 async function json(path){const response=await fetch(path,{cache:'no-cache'});if(!response.ok)throw new Error('I could not load these updates. Follow the link below to explore Scarb.TO directly.');return response.json();}
 try{
@@ -20,6 +21,6 @@ try{
  if(start.valueOf()>=Date.parse(release.checked_at)){status.textContent=`I have no successfully checked information for this rolling period. Last checked ${readerDate(release.checked_at)}. That does not mean nothing happened; the pinned evidence below retains the last qualified information.`;}
  else {
  const draft=composeEdition({profile,registry,release,start:start.toISOString(),end:now.toISOString(),generatedAt:now.toISOString()});
- document.getElementById('copy').textContent=draft.copy;const note=document.createElement('p');note.textContent='Last successfully checked '+readerDate(release.checked_at)+'. Coverage: '+keys.map(k=>areas.get(k).name).join(', ')+'.';sourceNode.prepend(note);status.textContent=`${draft.included_event_ids.length} updates shown from ${draft.candidate_event_ids.length} eligible updates. ${draft.omissions.length} omitted for space. Coverage is limited to qualified records in the six Scarborough wards.`;
+ document.getElementById('copy').textContent=draft.copy;const note=document.createElement('p');note.textContent='Last successfully checked '+readerDate(release.checked_at)+'. Coverage: '+keys.map(k=>areas.get(k).name).join(', ')+'.';sourceNode.prepend(note);status.textContent=communityVoice('embed-summary',{shown:draft.included_event_ids.length,eligible:draft.candidate_event_ids.length,omitted:draft.omissions.length});
 }
 }catch(error){status.textContent=error.message;}

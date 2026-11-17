@@ -1,5 +1,6 @@
 import {prepareOutputs,downloadBlob,attributedMap,retainedOutput} from './community-exports.mjs';
 import {validateProfile,composeEdition,finaliseEdition,reviseEdition,verifyReceipt,digest,canonical,counts,COUNT_RULE} from './community-publishing.mjs';
+import {staticCopy} from './scarb-voice.mjs';
 const el=id=>document.getElementById(id);
 let registry,release,previous=null,draft=null,exactStart=null,importGeneration=0;
 const status=value=>{el('status').textContent=value;};
@@ -66,7 +67,7 @@ try{
  exactStart=release.history_start;el('start').value=localInput(exactStart);el('end').value=localInput(new Date().toISOString());
  try{const saved=JSON.parse(localStorage.getItem('scarb-community-finalised')||'null');if(saved&&!code){await verifiedSourceReceipt(saved);restoreReceipt(saved);}}catch{status('I could not restore the previous edition. Import its receipt or choose dates explicitly.');}
  try{savedProfiles=JSON.parse(localStorage.getItem('scarb-community-profiles')||'{}');if(!savedProfiles||typeof savedProfiles!=='object'||Array.isArray(savedProfiles)||Object.keys(savedProfiles).length>30)savedProfiles={};refreshSavedProfiles();}catch{savedProfiles={};}
- el('settings').hidden=false;if(!previous)status('Choose your coverage and reporting dates. Drafting or downloading text does not advance your previous-edition marker.');
+ el('settings').hidden=false;if(!previous)status(staticCopy('editor-start'));
 }catch(error){status(error.message);}
 for(const kind of ['pdf','png'])el(kind).onclick=async()=>{if(!draft)return;const button=el(kind);button.disabled=true;try{const activeDraft=draft,candidate=structuredClone(draft);const output=await prepareOutputs(candidate);if(draft!==activeDraft)throw new Error('The proof changed while exporting. Export the newly reviewed proof.');downloadBlob(output[kind],`scarb-community-proof.${kind}`);status(`Exported ${output.width_mm} by ${output.height_mm} mm. The image alternative is ${output.pixels.join(' by ')} pixels at 300 dpi. Review the actual file before finalising.`);}catch(error){status(error.message);}finally{button.disabled=false;}};
 el('map').onclick=()=>{if(draft)downloadBlob(attributedMap(draft),'scarb-community-map.svg');};

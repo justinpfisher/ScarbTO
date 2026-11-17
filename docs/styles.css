@@ -200,3 +200,8 @@ a,.text-action,.record-source-link{color:var(--brand-forest)}
 .saved-public-areas li { margin:.4rem 0; overflow-wrap:anywhere; }
 .saved-public-areas li button { margin-left:.5rem; }
 @media print { .saved-public-areas { display:none; } }
+
+/* Keep the mosaic mark and a readable visible wordmark together on narrow screens. */
+.brand-name{display:none}
+.intro-row .intro-tagline{display:block;color:var(--brand-forest)}
+@media(max-width:420px){.site-header{height:auto;min-height:88px;flex-wrap:wrap;gap:2px 10px;padding:8px 0}.identity{display:flex;gap:7px;align-items:center;min-width:0}.brand-lockup{width:45px;max-height:48px}.brand-name{display:inline;color:var(--brand-ink);font-size:clamp(21px,7vw,27px);font-weight:800;letter-spacing:-.03em}.header-right{flex:1 1 100%;justify-content:flex-start;gap:4px 14px}.header-place{width:auto;text-align:left}}

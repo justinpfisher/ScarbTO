@@ -48,7 +48,7 @@ test('home branding selects the approved asset at and above 420px', async () => 
   const {server, origin} = await startServer();
   const browser = await chromium.launch({headless: true});
   try {
-    for (const [width, expected] of [[420, 'scarbto-mark.svg'], [421, 'scarbto-connected.svg']]) {
+    for (const [width, expected] of [[320, 'scarbto-mark.svg'], [375, 'scarbto-mark.svg'], [390, 'scarbto-mark.svg'], [420, 'scarbto-mark.svg'], [421, 'scarbto-connected.svg'], [1363, 'scarbto-connected.svg']]) {
       const page = await pageAt(browser, origin, '/', width);
       const brand = await page.locator('.identity').evaluate(async link => {
         const image = link.querySelector('img');
@@ -66,8 +66,9 @@ test('home branding selects the approved asset at and above 420px', async () => 
       assert.equal(brand.href, '/');
       assert.equal(brand.source, expected);
       assert.ok(brand.naturalWidth > 0);
+      assert.equal(await page.locator('.brand-name').isVisible(), width <= 420, 'visible home lettering');
       const taglineDisplay = await page.locator('.intro-tagline').evaluate(el => getComputedStyle(el).display);
-      assert.equal(taglineDisplay === 'none', width > 420);
+      assert.notEqual(taglineDisplay, 'none', 'separate tagline is readable');
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
       assert.equal(overflow, false, `horizontal overflow at ${width}px`);
       await page.close();
@@ -82,7 +83,7 @@ test('neighbourhood sharing page keeps branding accessible and print controls hi
   const {server, origin} = await startServer();
   const browser = await chromium.launch({headless: true});
   try {
-    for (const [width, expected] of [[420, 'scarbto-mark-light.svg'], [421, 'scarbto-connected-light.svg']]) {
+    for (const [width, expected] of [[320, 'scarbto-mark-light.svg'], [375, 'scarbto-mark-light.svg'], [390, 'scarbto-mark-light.svg'], [420, 'scarbto-mark-light.svg'], [421, 'scarbto-connected-light.svg'], [1363, 'scarbto-connected-light.svg']]) {
       const page = await pageAt(browser, origin, '/west-rouge/index.html', width);
       const brand = await page.locator('.brand').evaluate(async link => {
         const image = link.querySelector('img');
@@ -98,8 +99,9 @@ test('neighbourhood sharing page keeps branding accessible and print controls hi
       assert.equal(brand.alt, '');
       assert.equal(brand.source, expected);
       assert.ok(brand.width > 0);
+      assert.equal(await page.locator('.brand-name').isVisible(), width <= 420, 'visible neighbourhood lettering');
       const tagline = await page.locator('.brand-tagline').evaluate(el => getComputedStyle(el).display);
-      assert.equal(tagline === 'none', width > 420);
+      assert.notEqual(tagline, 'none', 'separate tagline is readable');
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
       assert.equal(overflow, false, `horizontal overflow at ${width}px`);
       assert.equal(await page.locator('#share-page').isVisible(), true);
@@ -118,6 +120,29 @@ test('neighbourhood sharing page keeps branding accessible and print controls hi
       assert.equal(await page.locator('#share-page').isVisible(), true);
       assert.equal(await page.locator('#print-page').isVisible(), true);
       await page.close();
+    }
+  } finally {
+    await browser.close();
+    await new Promise(resolveClose => server.close(resolveClose));
+  }
+});
+
+test('community editor, evidence and embed direct arrivals show Scarb.TO lettering', async () => {
+  const {server, origin} = await startServer();
+  const browser = await chromium.launch({headless: true});
+  try {
+    for (const route of ['/community/index.html', '/community/evidence/index.html', '/embed/index.html']) {
+      for (const width of [320, 390, 1363]) {
+        const page = await pageAt(browser, origin, route, width);
+        const name = page.locator('.scarb-brand-title');
+        assert.equal(await name.isVisible(), true, route + ' needs a visible site name');
+        assert.equal((await name.textContent()).trim(), 'Scarb.TO');
+        assert.equal(await page.locator('.scarb-home').getAttribute('aria-label'), 'Scarb.TO home');
+        assert.equal(await page.locator('.scarb-home img').getAttribute('alt'), '');
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false,
+          'no overflow at ' + route + ' ' + width + 'px');
+        await page.close();
+      }
     }
   } finally {
     await browser.close();

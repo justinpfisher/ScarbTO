@@ -1,9 +1,10 @@
+import {staticCopy} from './scarb-voice.mjs';
 /** One measured layout feeds vector PDF and 300-dpi PNG. No HTML conversion. */
 import {digest} from './community-publishing.mjs';
 let fontBytes=null;
 async function loadFont(){if(!fontBytes){const r=await fetch('/assets/community/DMSans.ttf');if(!r.ok)throw new Error('The licensed export font could not load. Try again before exporting.');fontBytes=new Uint8Array(await r.arrayBuffer());}return fontBytes;}
 export async function prepareOutputs(edition){
- if(!window.jspdf?.jsPDF)throw new Error('The PDF tools could not load. Your text and receipt remain available.');
+ if(!window.jspdf?.jsPDF)throw new Error(staticCopy('missing-pdf-tools'));
  const bytes=await loadFont();let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);
  const {width_mm:w,height_mm:h,margin_mm:m,grayscale}=edition.profile.layout;
  const pdf=new window.jspdf.jsPDF({orientation:w>h?'landscape':'portrait',unit:'mm',format:[w,h],compress:true,putOnlyUsedFonts:true});
@@ -16,7 +17,7 @@ export async function prepareOutputs(edition){
    pdf.setFontSize(size);const step=size*0.352778*1.4;
    for(const paragraph of text.split('\n')){
      const wrapped=paragraph?pdf.splitTextToSize(paragraph,w-2*m):[''];
-     for(const line of wrapped){if(y+size*0.352778*.3>h-m)throw new Error('This copy does not fit the chosen physical page at readable size. Choose less copy or a larger layout.');lines.push({text:line,size,y});pdf.text(line,m,y);y+=step;}
+     for(const line of wrapped){if(y+size*0.352778*.3>h-m)throw new Error('This update needs more page space to stay readable. Try a larger page or fewer updates; the source details need to stay legible.');lines.push({text:line,size,y});pdf.text(line,m,y);y+=step;}
    }
    y+=3;
  }

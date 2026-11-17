@@ -1,5 +1,6 @@
 /** Shared, deterministic publishing rules. No network, storage, DOM or mutable globals. */
 import {readerDate} from './reader-date.mjs';
+import {communityVoice,VOICE_REVISION} from './scarb-voice.mjs';
 export const VERSION = 1;
 export const SOURCE = 'https://open.toronto.ca/dataset/dinesafe/';
 export const LICENCE = 'https://open.toronto.ca/open-data-licence/';
@@ -132,9 +133,11 @@ function fits(copy,footer,limits) {
   return (!limits.words||n.words<=limits.words)&&(!limits.characters||n.characters<=limits.characters);
 }
 function eventCopy(event,coverage) {
-  const prefix=coverage==='nearby'?'Nearby: ':'';
-  const novelty=event.kind==='first_seen'?'added to the records I checked (not a confirmed opening)':event.kind==='status_changed'?`a recorded change from ${event.previous_status} to ${event.status}`:'an inspection update';
-  return `${prefix}${event.name}: ${novelty}. DineSafe recorded ${event.status} for the inspection on ${readerDate(event.inspection_date)}. I first recorded this information on ${readerDate(event.detected_at)}.`;
+  return communityVoice('event', {
+    name:event.name, eventKind:event.kind, previousStatus:event.previous_status,
+    status:event.status, inspected:readerDate(event.inspection_date),
+    recorded:readerDate(event.detected_at), nearby:coverage==='nearby'
+  });
 }
 /** Draft generation never changes a previous receipt or advances a saved watermark. */
 export function composeEdition({profile,registry,release,start,end,previous=null,generatedAt,correctionOf=null}) {
@@ -155,9 +158,10 @@ export function composeEdition({profile,registry,release,start,end,previous=null
   const eligible=selected.filter(({record:e})=>(instant(e.detected_at)>startMs||(firstAtBeginning&&instant(e.detected_at)===startMs))&&instant(e.detected_at)<=instant(cutoff)&&!already.has(e.id));
   const candidates=(correctionOf?eligible.filter(x=>correctionOf.candidate_event_ids.includes(x.record.id)):eligible).sort((a,b)=>instant(b.record.detected_at)-instant(a.record.detected_at)||a.record.id.localeCompare(b.record.id));
   const changed=previous&&canonical(previous.profile)!==canonical(profile);
-  const warnings=[...[...new Set([...profile.core,...profile.nearby].map(id=>registry[id].coverage_note).filter(Boolean))],`These dated inspection results are not restaurant ratings or a guarantee of conditions today. Check the official DineSafe record for anything newer.`, ...(generatedMs-checked>72*3600000?[`I couldn't check for anything newer than ${readerDate(release.checked_at)}. This edition does not cover later information.`]:[]), ...(changed?['The coverage or settings changed since the previous edition, so this is not a like-for-like comparison.']:[])];
-  const heading=`Food inspection updates for ${profile.name}`;
-  const period=`Information added ${firstAtBeginning?'from':'after'} ${readerDate(start)} through ${readerDate(cutoff)}. Original inspection dates appear beside each result.`;
+  // Versioned source coverage notes are evidence, not copy to mutate in place.
+  const warnings=[...[...new Set([...profile.core,...profile.nearby].map(id=>registry[id].coverage_note).filter(Boolean))].map(note=>communityVoice('boundary-note',{note})),communityVoice('limitations'), ...(generatedMs-checked>72*3600000?[communityVoice('stale',{checked:readerDate(release.checked_at)})]:[]), ...(changed?[communityVoice('changed')]:[])];
+  const heading=communityVoice('heading',{name:profile.name});
+  const period=communityVoice('period',{inclusive:firstAtBeginning,start:readerDate(start),end:readerDate(cutoff)});
   const footer=`Edition revision 1. Information cut-off: ${readerDate(cutoff)}.\nCity of Toronto DineSafe: ${SOURCE}\nOpen Government Licence - Toronto: ${LICENCE}\nInformation checked ${readerDate(release.checked_at)}. Evidence: https://scarb.to/community/evidence/?release=${release.id}\nPrepared with Scarb.TO. Keep the downloaded receipt with this edition.`;
   const paragraphs=[]; const included=[]; const omissions=[];
   const render=()=>[heading,period,...paragraphs,...warnings].join('\n\n');
@@ -169,12 +173,12 @@ export function composeEdition({profile,registry,release,start,end,previous=null
   }
   const snapshot=profile.include_snapshot?selectCoverage(release.records||[],profile,registry):[];
   let snapshotIncluded=false;
-  if(profile.include_snapshot){paragraphs.push(`For context: this selection contains ${snapshot.length} qualified DineSafe establishment records as checked on ${readerDate(release.checked_at)}. This is a dated snapshot, not a count of events during the reporting period or necessarily distinct businesses.`);if(fits(render(),footer,profile.limits))snapshotIncluded=true;else{paragraphs.pop();omissions.push({id:'snapshot',reason:'space'});}}
-  if(!candidates.length) paragraphs.push('I found no new updates in the qualified records checked for this selection and period. That does not mean nothing happened.');
+  if(profile.include_snapshot){paragraphs.push(communityVoice('snapshot',{count:snapshot.length,checked:readerDate(release.checked_at)}));if(fits(render(),footer,profile.limits))snapshotIncluded=true;else{paragraphs.pop();omissions.push({id:'snapshot',reason:'space'});}}
+  if(!candidates.length) paragraphs.push(communityVoice('empty'));
   if(candidates.length&&!included.length) fail('This limit leaves no room for one complete update. Increase it rather than dropping the qualifications.');
   if(!fits(render(),footer,profile.limits)) fail('The no-update explanation needs a larger copy limit.');
   const copy=render().normalize('NFC');
-  return {schema_version:VERSION,state:'draft',revision:1,generated_at:generatedAt,profile:structuredClone(profile),boundaries:Object.fromEntries([...profile.core,...profile.nearby].map(id=>[id,structuredClone(registry[id])])),requested_period:{start,end,start_inclusive:firstAtBeginning},source_cutoffs:{dinesafe:cutoff},release_id:release.id,evidence:structuredClone(release),snapshot_record_ids:snapshotIncluded?snapshot.map(x=>x.record.id):[],previously_included_event_ids:[...priorIds],publication_included_event_ids:[...new Set([...priorIds,...(correctionOf?.publication_included_event_ids||[]),...included])],candidate_event_ids:candidates.map(x=>x.record.id),included_event_ids:included,omissions,copy,footer,counts:{editorial:counts(copy),sources:counts(footer),panel:counts(copy+'\n\n'+footer)},composition_version:VERSION};
+  return {schema_version:VERSION,state:'draft',revision:1,generated_at:generatedAt,profile:structuredClone(profile),boundaries:Object.fromEntries([...profile.core,...profile.nearby].map(id=>[id,structuredClone(registry[id])])),requested_period:{start,end,start_inclusive:firstAtBeginning},source_cutoffs:{dinesafe:cutoff},release_id:release.id,evidence:structuredClone(release),snapshot_record_ids:snapshotIncluded?snapshot.map(x=>x.record.id):[],previously_included_event_ids:[...priorIds],publication_included_event_ids:[...new Set([...priorIds,...(correctionOf?.publication_included_event_ids||[]),...included])],candidate_event_ids:candidates.map(x=>x.record.id),included_event_ids:included,omissions,copy,footer,counts:{editorial:counts(copy),sources:counts(footer),panel:counts(copy+'\n\n'+footer)},composition_version:VOICE_REVISION};
 }
 export async function finaliseEdition(draft) {
   if(draft.state!=='draft') fail('Only a reviewed draft can be finalised.');
