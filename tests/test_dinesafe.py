@@ -3,9 +3,11 @@ import io
 import json
 import tempfile
 import subprocess
+import socket
+import ssl
 import unittest
-from unittest.mock import patch
-from urllib.error import HTTPError
+from unittest.mock import MagicMock, patch
+from urllib.error import HTTPError, URLError
 from datetime import datetime, timezone
 from pathlib import Path
 import sys
@@ -80,6 +82,43 @@ class IngestionTests(unittest.TestCase):
         self.assertIn('https://gis.toronto.ca/query', str(caught.exception))
         self.assertNotIn('token', str(caught.exception))
         request.assert_called_once()
+
+    def test_download_transport_failures_are_classified_without_leaking_or_retry(self):
+        cases = [
+            (TimeoutError('private-detail'), 'timeout'),
+            (URLError(TimeoutError('private-detail')), 'timeout'),
+            (socket.gaierror(-2, 'private-detail'), 'dns'),
+            (URLError(socket.gaierror(-2, 'private-detail')), 'dns'),
+            (ssl.SSLError('private-detail'), 'tls'),
+            (URLError(ssl.SSLCertVerificationError('private-detail')), 'tls'),
+            (ConnectionResetError('private-detail'), 'connection'),
+            (URLError(ConnectionRefusedError('private-detail')), 'connection'),
+            (OSError('private-detail'), 'other-network'),
+            (URLError('private-detail timeout'), 'other-network'),
+        ]
+        url = 'https://user:password@city.test/query?token=hidden#fragment'
+        for failure, kind in cases:
+            with self.subTest(kind=kind, failure=type(failure).__name__):
+                with patch('update_dinesafe.urlopen', side_effect=failure) as request:
+                    with self.assertRaises(DataError) as caught:
+                        download(url, 'official neighbourhood geography')
+                self.assertEqual(str(caught.exception),
+                    f'Network failure ({kind}) retrieving official neighbourhood geography from https://city.test/query')
+                request.assert_called_once()
+                self.assertEqual(request.call_args.kwargs, {'timeout': 120})
+                self.assertEqual(request.call_args.args[0].full_url, url)
+                self.assertTrue(caught.exception.__suppress_context__)
+
+    def test_download_read_timeout_stays_fail_closed(self):
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.status = 200
+        response.read.side_effect = TimeoutError('private-detail')
+        with patch('update_dinesafe.urlopen', return_value=response) as request:
+            with self.assertRaisesRegex(DataError, r'Network failure \(timeout\)'):
+                download('https://city.test/query?token=hidden', 'official ward geography')
+        request.assert_called_once()
+        response.read.assert_called_once_with(100 * 1024 * 1024 + 1)
 
     def test_latest_inspection_and_exclusion_and_names(self):
         csv_data=rows_as_csv([item('10','Northern Café','Pass','2026-10-01'),item('10','Northern Café','Conditional Pass','2026-10-18'),item('11','East, Diner','Closed','2026-10-20',43.84,-79.2),item('99','Outside','Pass','2026-10-15',43.60,-79.6)])
