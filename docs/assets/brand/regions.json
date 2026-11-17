@@ -1,0 +1,88 @@
+{
+  "status": "Generated asset candidate; independent asset review accepted, integrated release pending",
+  "purpose": "Decorative geographic groups only; never official boundaries or data filters",
+  "regions": [
+    {
+      "name": "Northwest",
+      "colour": "#7AAE7A",
+      "members": [
+        "Steeles",
+        "Pleasant View",
+        "L'Amoreaux West",
+        "East L'Amoreaux",
+        "Tam O'Shanter-Sullivan"
+      ]
+    },
+    {
+      "name": "North",
+      "colour": "#0F5132",
+      "members": [
+        "Milliken",
+        "Agincourt North",
+        "Agincourt South-Malvern West"
+      ]
+    },
+    {
+      "name": "Northeast",
+      "colour": "#0A3D2A",
+      "members": [
+        "Morningside Heights",
+        "Malvern West",
+        "Malvern East",
+        "West Rouge"
+      ]
+    },
+    {
+      "name": "West",
+      "colour": "#0F5132",
+      "members": [
+        "Wexford/Maryvale",
+        "Dorset Park",
+        "Clairlea-Birchmount",
+        "Ionview",
+        "Kennedy Park",
+        "Oakridge"
+      ]
+    },
+    {
+      "name": "Centre",
+      "colour": "#CFE6C2",
+      "members": [
+        "Bendale-Glen Andrew",
+        "Bendale South",
+        "Woburn North",
+        "Golfdale-Cedarbrae-Woburn",
+        "Eglinton East"
+      ]
+    },
+    {
+      "name": "East",
+      "colour": "#7AAE7A",
+      "members": [
+        "Morningside",
+        "Highland Creek",
+        "West Hill",
+        "Centennial Scarborough"
+      ]
+    },
+    {
+      "name": "Southeast",
+      "colour": "#D2683C",
+      "members": [
+        "Scarborough Village",
+        "Guildwood"
+      ]
+    },
+    {
+      "name": "Southwest",
+      "colour": "#CFE6C2",
+      "members": [
+        "Birchcliffe-Cliffside",
+        "Cliffcrest"
+      ]
+    }
+  ],
+  "membership_revision": "Centennial Scarborough moved from disconnected Southeast specimen group to adjacent East (Highland Creek/West Hill) for continuity. All 31 source features retained exactly once.",
+  "licence": "Contains information licensed under the Open Government Licence – Toronto. https://open.toronto.ca/open-data-licence/"
+}
+

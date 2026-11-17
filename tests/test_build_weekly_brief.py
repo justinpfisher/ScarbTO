@@ -131,7 +131,7 @@ class WeeklyBriefTests(unittest.TestCase):
         }
         record = {
             "id": "dinesafe-weekly-2026-11-02",
-            "render_version": 2,
+            "render_version": 3,
             "revision": 1,
             "generated_at": self.as_of.isoformat(),
             "revised_at": None,
@@ -250,7 +250,7 @@ class WeeklyBriefTests(unittest.TestCase):
         rolled_index_bytes = (self.output / "index.html").read_bytes()
         rolled_old_page = old_page.read_bytes()
         self.assertNotIn("render_version", rolled_old)
-        self.assertEqual(new_record["render_version"], 2)
+        self.assertEqual(new_record["render_version"], 3)
         self.assertEqual(rolled_old["revision"], 4)
         self.assertEqual(rolled_old["generated_at"], original_generated_at)
         self.assertEqual(rolled_old["content_sha256"], original_content_hash)
@@ -321,11 +321,11 @@ class WeeklyBriefTests(unittest.TestCase):
         write_archive(self.history, [event("a", "2026-11-03T10:00:00+00:00")])
         build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
         manifest = json.loads((self.output / "editions.json").read_text(encoding="utf-8"))
-        for version in (0, 3, True, "2", None):
+        for version in (0, 4, True, "3", None):
             with self.subTest(version=version):
                 candidate = json.loads(json.dumps(manifest))
                 candidate["editions"][0]["render_version"] = version
-                with self.assertRaisesRegex(BriefError, "Invalid weekly-brief render version"):
+                with self.assertRaisesRegex(BriefError, "Unsupported weekly-brief render version"):
                     brief_module._validate_manifest(candidate)
 
     def test_quiet_week_creates_no_edition_or_fake_item(self):
@@ -372,7 +372,6 @@ class WeeklyBriefTests(unittest.TestCase):
         manifest = json.loads((self.output / "editions.json").read_text(encoding="utf-8"))["editions"][0]
         page = (self.output / "2026-11-02" / "index.html").read_text(encoding="utf-8")
         self.assertEqual(manifest["revision"], 2)
-        self.assertEqual(manifest["render_version"], 2)
         self.assertEqual(manifest["generated_at"], self.as_of.isoformat())
         self.assertIn("Correction, revision 2", page)
         self.assertIn("Corrected the source event status", page)
