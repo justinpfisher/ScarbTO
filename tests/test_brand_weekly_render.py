@@ -48,6 +48,25 @@ class BrandWeeklyRenderTests(unittest.TestCase):
         self.assertIn("#0A3D2A", page)
         self.assertIn("#F8F5EA", page)
 
+    def test_linked_mosaic_is_distinct_from_existing_mosaic(self):
+        mosaic = brief._render_edition(PAYLOAD, {**RECORD, "render_version": 2})
+        linked = brief._render_edition(PAYLOAD, {**RECORD, "render_version": 3})
+        self.assertIn(b"scarbto-connected.svg", mosaic)
+        self.assertIn(b"scarbto-connected.svg", linked)
+        self.assertNotIn(b"#establishment/123", mosaic)
+        self.assertIn(b"#establishment/123", linked)
+        self.assertNotIn(b'href="/west-rouge/"', mosaic)
+        self.assertIn(b'href="/west-rouge/"', linked)
+        for version in (1, 2, 3):
+            revised = brief._correction_record(
+                {**RECORD, "render_version": version},
+                {"revision": 2, "explanation": "Dated correction."},
+                generated_at="2026-11-17T00:00:00+00:00",
+                content_hash="a" * 64,
+                event_count=1,
+            )
+            self.assertEqual(revised["render_version"], version)
+
     def test_correction_preserves_brand_render_version(self):
         revised = brief._correction_record(
             {**RECORD, "render_version": 2},
@@ -60,7 +79,7 @@ class BrandWeeklyRenderTests(unittest.TestCase):
 
     def test_unknown_render_version_fails_closed(self):
         with self.assertRaisesRegex(brief.BriefError, "Unsupported weekly-brief render version"):
-            brief._render_edition(PAYLOAD, {**RECORD, "render_version": 3})
+            brief._render_edition(PAYLOAD, {**RECORD, "render_version": 4})
         edition = {
             **RECORD,
             "period_start": "2026-11-09",
@@ -68,7 +87,7 @@ class BrandWeeklyRenderTests(unittest.TestCase):
             "path": "briefs/2026-11-09/",
             "content_sha256": "a" * 64,
             "html_sha256": "b" * 64,
-            "render_version": 3,
+            "render_version": 4,
         }
         with self.assertRaisesRegex(brief.BriefError, "Unsupported weekly-brief render version"):
             brief._validate_manifest({"editions": [edition]})

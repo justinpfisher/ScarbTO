@@ -11,11 +11,14 @@ import hashlib
 import html
 import json
 import os
+import re
 import sys
 import tempfile
+import unicodedata
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import quote
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 # Make the repository package importable when this file is run directly by the
@@ -31,6 +34,11 @@ BRIEFS_URL = f"{SITE_URL}briefs/"
 TORONTO = "America/Toronto"
 SCHEMA_VERSION = 1
 BRIEF_RENDER_VERSION = 2
+LINKED_RENDER_VERSION = 3
+OFFICIAL_RECORD_URL = (
+    "https://www.toronto.ca/community-people/health-wellness-care/"
+    "health-programs-advice/food-safety/dinesafe/#establishment/"
+)
 
 
 class BriefError(ValueError):
@@ -137,7 +145,32 @@ def _fmt_date(value: date) -> str:
     return reader_date(value, weekday=False)
 
 
+def _official_record_url(establishment_id: object) -> str | None:
+    """Return Toronto's existing exact-record destination for a valid ID."""
+    if not isinstance(establishment_id, str) or not establishment_id.strip():
+        return None
+    # Match JavaScript encodeURIComponent used by docs/logic.mjs.
+    return OFFICIAL_RECORD_URL + quote(establishment_id, safe="-_.!~*'()")
+
+
+def _neighbourhood_url(name: object) -> str | None:
+    """Match the canonical slug rule in docs/neighbourhood-routes.mjs."""
+    if not isinstance(name, str) or not name.strip():
+        return None
+    normalized = unicodedata.normalize("NFKD", name)
+    normalized = "".join(
+        character for character in normalized
+        if not unicodedata.category(character).startswith("M")
+    )
+    normalized = normalized.lower().replace("&", " and ")
+    slug = re.sub(r"[^a-z0-9]+", "-", normalized).strip("-")
+    return f"/{slug}/" if slug else None
+
+
 def _render_edition(payload: dict, record: dict) -> bytes:
+    render_version = record.get("render_version", 1)
+    if type(render_version) is not int or render_version not in (1, BRIEF_RENDER_VERSION, LINKED_RENDER_VERSION):
+        raise BriefError("Unsupported weekly-brief render version")
     start = date.fromisoformat(payload["period_start"])
     end = date.fromisoformat(payload["period_end"])
     events = payload["events"]
@@ -145,18 +178,27 @@ def _render_edition(payload: dict, record: dict) -> bytes:
     area_counts = Counter(event["neighbourhood"] for event in events)
     title = f"Food inspection updates: {_fmt_date(start)} to {_fmt_date(end)}"
     esc = html.escape
-    rows = [
-        f'<li id="event-{esc(event["id"])}">'
-        f'<strong>{esc(event["name"])}: {esc(EVENT_KINDS[event["kind"]])}</strong> '
-        f'<span>({esc(event["neighbourhood"])}; neighbourhood matched by Scarb.TO)</span> '
-        f'<span>DineSafe result when added: {esc(event["status"])}.</span> '
-        + (f'<span>Previous status: {esc(event["previous_status"])}.</span> ' if event["kind"] == "status_changed" and event["previous_status"] else "")
-        + f'<span>Inspection date: <time datetime="{esc(event["inspection_date"])}">{reader_date(date.fromisoformat(event["inspection_date"]))}</time>.</span> '
-        + f'<span>Added to Scarb.TO: <time datetime="{esc(event["detected_at"])}">{reader_date(datetime.fromisoformat(event["detected_at"]).astimezone(ZoneInfo(TORONTO)).date())}</time>.</span>'
-        + f'<details><summary>Exact recording time</summary><p>I first recorded this update at {esc(event["detected_at"])}. This is not the inspection time or this page\'s publication time.</p></details>'
-        + "</li>"
-        for event in events
-    ]
+    rows = []
+    for event in events:
+        name = esc(event["name"])
+        record_url = _official_record_url(event.get("establishment_id"))
+        if render_version == LINKED_RENDER_VERSION and record_url:
+            name = f'<a href="{esc(record_url)}">{name}</a>'
+        neighbourhood = esc(event["neighbourhood"])
+        area_url = _neighbourhood_url(event.get("neighbourhood"))
+        if render_version == LINKED_RENDER_VERSION and area_url:
+            neighbourhood = f'<a href="{esc(area_url)}">{neighbourhood}</a>'
+        rows.append(
+            f'<li id="event-{esc(event["id"])}">'
+            f'<strong>{name}: {esc(EVENT_KINDS[event["kind"]])}</strong> '
+            f'<span>({neighbourhood}; neighbourhood matched by Scarb.TO)</span> '
+            f'<span>DineSafe result when added: {esc(event["status"])}.</span> '
+            + (f'<span>Previous status: {esc(event["previous_status"])}.</span> ' if event["kind"] == "status_changed" and event["previous_status"] else "")
+            + f'<span>Inspection date: <time datetime="{esc(event["inspection_date"])}">{reader_date(date.fromisoformat(event["inspection_date"]))}</time>.</span> '
+            + f'<span>Added to Scarb.TO: <time datetime="{esc(event["detected_at"])}">{reader_date(datetime.fromisoformat(event["detected_at"]).astimezone(ZoneInfo(TORONTO)).date())}</time>.</span>'
+            + f'<details><summary>Exact recording time</summary><p>I first recorded this update at {esc(event["detected_at"])}. This is not the inspection time or this page\'s publication time.</p></details>'
+            + "</li>"
+        )
     kinds = "".join(
         f'<li>{esc(EVENT_KINDS[kind])}: {count}</li>'
         for kind, count in sorted(kind_counts.items(), key=lambda item: EVENT_KINDS[item[0]])
@@ -172,14 +214,17 @@ def _render_edition(payload: dict, record: dict) -> bytes:
             f'{esc(record["correction_explanation"])} '
             f'<span>Updated {reader_date(datetime.fromisoformat(record["revised_at"]).astimezone(ZoneInfo(TORONTO)).date())}.</span></aside>'
         )
+    subject_link_note = ""
+    if render_version == LINKED_RENDER_VERSION:
+        subject_link_note = (
+            '<p>Each place name opens the City\'s current DineSafe record. '
+            'It may contain newer information than the inspection date shown here.</p>\n    '
+        )
     first_generated = esc(record["generated_at"])
-    render_version = record.get("render_version", 1)
-    if type(render_version) is not int or render_version not in (1, BRIEF_RENDER_VERSION):
-        raise BriefError("Unsupported weekly-brief render version")
     brand_metadata = ""
     style = "body{font:1rem/1.55 system-ui,sans-serif;max-width:70rem;margin:auto;padding:1rem;color:#163c3c}h1,h2{line-height:1.2}li{margin:.65rem 0}a{color:#075c73}.summary{display:flex;gap:2rem;flex-wrap:wrap}aside{border-left:.25rem solid #a43;padding:.75rem;margin:1rem 0}small{color:#333}"
     site_nav = f'<nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/briefs/">All weekly briefs</a> · <a href="/feed.xml">DineSafe RSS</a></nav>'
-    if render_version == BRIEF_RENDER_VERSION:
+    if render_version in (BRIEF_RENDER_VERSION, LINKED_RENDER_VERSION):
         brand_metadata = '<meta name="theme-color" content="#0A3D2A"><link rel="icon" type="image/svg+xml" href="/assets/brand/scarbto-icon.svg">'
         style = "body{font:1rem/1.55 system-ui,sans-serif;max-width:70rem;margin:auto;padding:1rem;color:#0A3D2A;background:#F8F5EA}h1,h2{line-height:1.2}li{margin:.65rem 0}a{color:#0F5132}.summary{display:flex;gap:2rem;flex-wrap:wrap}aside{border-left:.25rem solid #D2683C;padding:.75rem;margin:1rem 0}small{color:#42594E}.brand-header{display:flex;align-items:center;gap:1rem;min-height:72px;border-bottom:1px solid #D5DED2;margin-bottom:1rem}.brand-link{display:block;line-height:0}.brand-lockup{display:block;width:min(304px,45vw);max-height:64px;height:auto}.brand-tagline{display:none}.brand-link:focus-visible{outline:3px solid #0F5132;outline-offset:4px}@media(max-width:420px){.brand-lockup{width:64px}.brand-tagline{display:block;color:#0A3D2A;font-weight:700}}@media print{body{background:#fff;color:#000}.brand-header{break-after:avoid}}"
         site_nav = f'<header class="brand-header"><a class="brand-link" href="{SITE_URL}" aria-label="Scarb.TO home"><picture><source media="(max-width: 420px)" srcset="/assets/brand/scarbto-mark.svg"><img class="brand-lockup" src="/assets/brand/scarbto-connected.svg" alt=""></picture></a><span class="brand-tagline">Scarborough. I looked into it.</span></header><nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/briefs/">All weekly briefs</a> · <a href="/feed.xml">DineSafe RSS</a></nav>'
@@ -206,7 +251,7 @@ def _render_edition(payload: dict, record: dict) -> bytes:
     {correction}
     <h2>Explore the updates</h2>
     <ol>{''.join(rows)}</ol>
-    <p>Want to follow the trail? Start with <a href="{SOURCE_URL}">City of Toronto DineSafe Open Data</a>. This brief uses information licensed under the <a href="{LICENCE_URL}">Open Government Licence – Toronto</a>.</p>
+    {subject_link_note}<p>Want to follow the trail? Start with <a href="{SOURCE_URL}">City of Toronto DineSafe Open Data</a>. This brief uses information licensed under the <a href="{LICENCE_URL}">Open Government Licence – Toronto</a>.</p>
     <details><summary>How this edition was made</summary><p><small>Edition ID: {esc(record["id"])}. Revision: {record["revision"]}. First prepared: {first_generated} (UTC). Revised: {esc(record["revised_at"] or "Not revised")}. These are the edition's preparation times, not when it went live. I leave individual addresses and map coordinates out of these briefs.</small></p></details><p>I love following these records. Scarb.TO's editorial voice is AI-assisted, not first-hand reporting.</p>
   </main>
 </body>
@@ -248,7 +293,7 @@ def _validate_manifest(value: dict) -> None:
         if not isinstance(item, dict):
             raise BriefError("Invalid weekly-brief edition record")
         render_version = item.get("render_version", 1)
-        if type(render_version) is not int or render_version not in (1, BRIEF_RENDER_VERSION):
+        if type(render_version) is not int or render_version not in (1, BRIEF_RENDER_VERSION, LINKED_RENDER_VERSION):
             raise BriefError("Unsupported weekly-brief render version")
         edition_id = item.get("id")
         path = item.get("path")
@@ -390,7 +435,7 @@ def build_weekly_brief(
                 "period_start": start.isoformat(),
                 "period_end": end.isoformat(),
                 "revision": 1,
-                "render_version": BRIEF_RENDER_VERSION,
+                "render_version": LINKED_RENDER_VERSION,
                 "generated_at": generated_at,
                 "revised_at": None,
                 "correction_explanation": None,

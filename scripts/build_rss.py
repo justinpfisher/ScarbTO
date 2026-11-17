@@ -17,11 +17,13 @@ import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone
 from email.utils import format_datetime
 from pathlib import Path
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 FEED_URL = "https://scarb.to/feed.xml"
 SITE_URL = "https://scarb.to/"
 SOURCE_URL = "https://open.toronto.ca/dataset/dinesafe/"
+CITY_RECORD_URL_PREFIX = "https://www.toronto.ca/community-people/health-wellness-care/health-programs-advice/food-safety/dinesafe/#establishment/"
 LICENCE_URL = "https://open.toronto.ca/open-data-licence/"
 MAX_ITEMS = 50
 EVENT_ID_RE = re.compile(r"^[0-9a-f]{20}$")
@@ -38,6 +40,11 @@ def reader_date(value: date, *, weekday: bool = True) -> str:
     weekdays = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
     day = f"{months[value.month - 1]} {value.day}, {value.year}"
     return f"{weekdays[value.weekday()]}, {day}" if weekday else day
+
+
+def city_record_url(establishment_id: str) -> str:
+    """Link to the official DineSafe record, encoding the ID as one URL component."""
+    return CITY_RECORD_URL_PREFIX + quote(establishment_id, safe="-_.!~*'()")
 
 
 class FeedError(ValueError):
@@ -193,7 +200,7 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
         item = ET.SubElement(channel, "item")
         label = EVENT_KINDS[event["kind"]]
         ET.SubElement(item, "title").text = f"{event['name']}: {label}"
-        ET.SubElement(item, "link").text = event["source_url"]
+        ET.SubElement(item, "link").text = city_record_url(event["establishment_id"])
         guid = ET.SubElement(item, "guid", {"isPermaLink": "false"})
         guid.text = f"urn:scarbto:dinesafe:{event['id']}"
         ET.SubElement(item, "pubDate").text = format_datetime(event["detected_at"])
@@ -202,6 +209,7 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
         if event["previous_status"]:
             details.append(f"Previous DineSafe status: {event['previous_status']}.")
         details.extend([
+            f"City source dataset: {event['source_url']}.",
             f"DineSafe result when added: {event['status']}.",
             f"Inspection date: {reader_date(date.fromisoformat(event['inspection_date']))}.",
             f"Added to Scarb.TO: {reader_date(event['detected_at'].astimezone(ZoneInfo('America/Toronto')).date())}. This is when I first recorded the update, not the inspection date.",
