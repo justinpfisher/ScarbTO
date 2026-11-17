@@ -1,4 +1,6 @@
 import csv
+import hashlib
+import contextlib
 import io
 import json
 import tempfile
@@ -12,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'scripts'))
+import update_dinesafe as collector
 from update_dinesafe import (DataError, build_snapshot, date_string, get_resources, in_geometry,
     make_activity, normalise, atomic_write, download, prepare_activity_archives, reconcile_activity_history,
     AREA_NEIGHBOURHOODS, AREA_WARDS, qualified_area_features)
@@ -296,6 +299,51 @@ class IngestionTests(unittest.TestCase):
         with self.assertRaisesRegex(DataError,'Incomplete'):
             qualified_area_features(missing,AREA_NEIGHBOURHOODS)
 
+    def test_live_geometry_receipts_are_hash_only_and_do_not_add_fetches(self):
+        def shapes(dictionary):
+            return {'type': 'FeatureCollection', 'features': [
+                {'type': 'Feature', 'properties': {'AREA_NAME': name, 'AREA_SHORT_CODE': code},
+                 'geometry': polygon(-79.45,43.70,-79.35,43.80)} for code, name in dictionary.items()]}
+        raw_wards = json.dumps(shapes(AREA_WARDS)).encode()
+        raw_neigh = json.dumps(shapes(AREA_NEIGHBOURHOODS)).encode()
+        feed = rows_as_csv([item('1','PRIVATE TEST CONTENT','Pass','2026-10-20')])
+        with tempfile.TemporaryDirectory() as folder:
+            argv = ['collector', '--output', folder, '--minimum', '1', '--dry-run']
+            stdout = io.StringIO()
+            with patch.object(sys, 'argv', argv), patch.object(collector, 'get_resources',
+                    return_value=('https://example.invalid/fixture.csv', None)), patch.object(
+                    collector, 'download', side_effect=[b'{}', feed, raw_wards, raw_neigh]) as fetch, contextlib.redirect_stdout(stdout):
+                collector.main()
+            self.assertEqual(fetch.call_count, 4)
+            self.assertEqual([call.args[0] for call in fetch.call_args_list][2:], [
+                collector.WARDS + '?' + collector.urlencode(collector.MAP_QUERY),
+                collector.NEIGHBOURHOODS + '?' + collector.urlencode(collector.MAP_QUERY)])
+            report = json.loads(stdout.getvalue())
+            self.assertEqual(report['geometry_input_mode'], 'live-fetch')
+            receipts = report['validated_geometry_receipts']
+            self.assertEqual(len(receipts), 2)
+            for receipt, endpoint, raw, names in zip(receipts,
+                    [collector.WARDS, collector.NEIGHBOURHOODS], [raw_wards, raw_neigh],
+                    [AREA_WARDS, AREA_NEIGHBOURHOODS]):
+                self.assertEqual(set(receipt), {'endpoint', 'query', 'retrieved_at', 'raw_sha256', 'qualified_sha256'})
+                self.assertEqual(receipt['endpoint'], endpoint)
+                self.assertEqual(receipt['query'], collector.MAP_QUERY)
+                self.assertIsNotNone(datetime.fromisoformat(receipt['retrieved_at']).tzinfo)
+                self.assertEqual(receipt['raw_sha256'], hashlib.sha256(raw).hexdigest())
+                qualified = json.dumps(qualified_area_features(json.loads(raw), names), separators=(',', ':'), ensure_ascii=False).encode()
+                self.assertEqual(receipt['qualified_sha256'], hashlib.sha256(qualified).hexdigest())
+            self.assertNotIn('PRIVATE TEST CONTENT', stdout.getvalue())
+            self.assertEqual(list(Path(folder).iterdir()), [])
+            stdout = io.StringIO()
+            with patch.object(sys, 'argv', argv), patch.object(collector, 'get_resources',
+                    return_value=('https://example.invalid/fixture.csv', None)), patch.object(
+                    collector, 'download', side_effect=[b'{}', feed, DataError('failed ward')]) as fetch, contextlib.redirect_stdout(stdout):
+                with self.assertRaises(DataError):
+                    collector.main()
+            self.assertEqual(fetch.call_count, 3)
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(list(Path(folder).iterdir()), [])
+
     def test_offline_cli_publication_and_failed_refresh_preserves_baseline(self):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder)
@@ -314,6 +362,8 @@ class IngestionTests(unittest.TestCase):
                 '--output',str(root/'published'),'--minimum','1']
             ok=subprocess.run(cmd,capture_output=True,text=True)
             self.assertEqual(ok.returncode,0,ok.stderr)
+            self.assertEqual(json.loads(ok.stdout)["geometry_input_mode"], "offline-fixture")
+            self.assertEqual(json.loads(ok.stdout)["validated_geometry_receipts"], [])
             snap=root/'published'/'snapshot.json'
             baseline=snap.read_bytes()
             self.assertEqual(json.loads(baseline)['establishments'][0]['name'],'Working Diner')
