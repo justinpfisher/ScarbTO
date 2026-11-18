@@ -217,7 +217,7 @@ test('homepage uses the Mosaic lockup with an accessible home link and standalon
   ]);
   assert.match(html,/<source media="\(max-width: 420px\)" srcset="\.\/assets\/brand\/scarbto-mark\.svg">/);
   assert.match(html,/<img class="brand-lockup" src="\.\/assets\/brand\/scarbto-connected\.svg" alt="">/);
-  assert.match(html,/<a class="identity" href="\/" aria-label="Scarb\.TO home">\s*<picture>\s*<source media="\(max-width: 420px\)" srcset="\.\/assets\/brand\/scarbto-mark\.svg">\s*<img class="brand-lockup" src="\.\/assets\/brand\/scarbto-connected\.svg" alt="">\s*<\/picture>\s*<\/a>/);
+  assert.match(html,/<a class="identity" href="\/" aria-label="Scarb\.TO home">\s*<picture>\s*<source media="\(max-width: 420px\)" srcset="\.\/assets\/brand\/scarbto-mark\.svg">\s*<img class="brand-lockup" src="\.\/assets\/brand\/scarbto-connected\.svg" alt="">\s*<\/picture>\s*<span class="brand-name">Scarb\.TO<\/span>\s*<\/a>/);
   assert.match(css,/\.brand-lockup\{display:block;width:min\(304px,45vw\);height:auto\}/);
   assert.match(css,/@media\(max-width:420px\)\{\.brand-lockup\{width:64px\}\}/);
   assert.match(lockup,/<title id="title">Scarb\.TO<\/title>/);
