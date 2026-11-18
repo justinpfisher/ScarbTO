@@ -48,7 +48,7 @@ test('home branding selects the approved asset at and above 420px', async () => 
   const {server, origin} = await startServer();
   const browser = await chromium.launch({headless: true});
   try {
-    for (const [width, expected] of [[320, 'scarbto-mark.svg'], [375, 'scarbto-mark.svg'], [390, 'scarbto-mark.svg'], [420, 'scarbto-mark.svg'], [421, 'scarbto-connected.svg'], [1363, 'scarbto-connected.svg']]) {
+    for (const [width, expected] of [[320, 'scarbto-mark.svg'], [375, 'scarbto-mark.svg'], [390, 'scarbto-mark.svg'], [420, 'scarbto-mark.svg'], [421, 'scarbto-connected.svg'], [1363, 'scarbto-connected.svg'], [1440, 'scarbto-connected.svg']]) {
       const page = await pageAt(browser, origin, '/', width);
       const brand = await page.locator('.identity').evaluate(async link => {
         const image = link.querySelector('img');
@@ -66,6 +66,7 @@ test('home branding selects the approved asset at and above 420px', async () => 
       assert.equal(brand.href, '/');
       assert.equal(brand.source, expected);
       assert.ok(brand.naturalWidth > 0);
+      assert.equal(await page.locator('.brand-name').textContent(), 'Scarb.TO');
       assert.equal(await page.locator('.brand-name').isVisible(), width <= 420, 'visible home lettering');
       const taglineDisplay = await page.locator('.intro-tagline').evaluate(el => getComputedStyle(el).display);
       assert.notEqual(taglineDisplay, 'none', 'separate tagline is readable');
@@ -83,7 +84,7 @@ test('neighbourhood sharing page keeps branding accessible and print controls hi
   const {server, origin} = await startServer();
   const browser = await chromium.launch({headless: true});
   try {
-    for (const [width, expected] of [[320, 'scarbto-mark-light.svg'], [375, 'scarbto-mark-light.svg'], [390, 'scarbto-mark-light.svg'], [420, 'scarbto-mark-light.svg'], [421, 'scarbto-connected-light.svg'], [1363, 'scarbto-connected-light.svg']]) {
+    for (const [width, expected] of [[320, 'scarbto-mark-light.svg'], [375, 'scarbto-mark-light.svg'], [390, 'scarbto-mark-light.svg'], [420, 'scarbto-mark-light.svg'], [421, 'scarbto-connected-light.svg'], [1363, 'scarbto-connected-light.svg'], [1440, 'scarbto-connected-light.svg']]) {
       const page = await pageAt(browser, origin, '/west-rouge/index.html', width);
       const brand = await page.locator('.brand').evaluate(async link => {
         const image = link.querySelector('img');
@@ -99,6 +100,7 @@ test('neighbourhood sharing page keeps branding accessible and print controls hi
       assert.equal(brand.alt, '');
       assert.equal(brand.source, expected);
       assert.ok(brand.width > 0);
+      assert.equal(await page.locator('.brand-name').textContent(), 'Scarb.TO');
       assert.equal(await page.locator('.brand-name').isVisible(), width <= 420, 'visible neighbourhood lettering');
       const tagline = await page.locator('.brand-tagline').evaluate(el => getComputedStyle(el).display);
       assert.notEqual(tagline, 'none', 'separate tagline is readable');
@@ -148,4 +150,21 @@ test('community editor, evidence and embed direct arrivals show Scarb.TO letteri
     await browser.close();
     await new Promise(resolveClose => server.close(resolveClose));
   }
+});
+
+test('neighbourhood directory keeps visible mobile name without overlap', async () => {
+  const {server, origin} = await startServer();
+  const browser = await chromium.launch({headless: true});
+  try {
+    for (const width of [320, 390, 420, 421, 1440]) {
+      const page = await pageAt(browser, origin, '/neighbourhoods/index.html', width);
+      assert.equal(await page.locator('.brand-name').textContent(), 'Scarb.TO');
+      assert.equal(await page.locator('.brand-name').isVisible(), width <= 420);
+      assert.equal(await page.locator('.brand').getAttribute('aria-label'), 'Scarb.TO home');
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      const a = await page.locator('.brand').boundingBox(), b = await page.locator('.header-link').boundingBox();
+      assert.ok(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y);
+      await page.close();
+    }
+  } finally { await browser.close(); await new Promise(resolveClose => server.close(resolveClose)); }
 });
