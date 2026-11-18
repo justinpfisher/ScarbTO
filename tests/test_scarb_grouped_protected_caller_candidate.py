@@ -199,3 +199,37 @@ class ScopedCapRegressionTests(unittest.TestCase):
      with self.assertRaises(w.v.VoiceError):w.invoke_protected(mp,w.sha(mp),state=state,env_loader=loader,now=now)
      loader.assert_not_called();api.assert_not_called()
     self.assertEqual((state/'usage.json').read_bytes(),before);self.assertFalse((state/'grouped-runs').exists())
+
+class Utf8PreflightTests(unittest.TestCase):
+ def test_real_finding_scope_strict_utf8_under_cp1252_default(self):
+  from unittest.mock import Mock
+  original_read=Path.read_text
+  def windows_read(path,encoding=None,errors=None):
+   return original_read(path,encoding=encoding or 'cp1252',errors=errors or 'strict')
+  with tempfile.TemporaryDirectory() as d:
+   state=Path(d);mp,env,t,now=ProtectedCallerTests().prepare(state)
+   ids=['static.finding-explanation-7e0c1202c0f59cfd','static.finding-explanation-376035dc95fc05a1','static.finding-explanation-fb4d5d15fe5e5507']
+   current=w.emitter.c.seam.current_canonical_requests();packets=[current[i] for i in ids];rp=state/'fixture-requests.json';cp=state/'fixture-config.json'
+   w.emitter.save(state,rp.name,packets)
+   config=json.loads(cp.read_text(encoding='utf8'));config['month_cap_usd']=.962127;config['funding']['pilot_cap_usd']=.962127;config['funding']['pilot_request_sha256']=[w.v.digest(p) for p in sorted(packets,key=lambda p:p['id'])];w.emitter.save(state,cp.name,config)
+   w.emitter.save(state,'usage.json',{'months':{'2026-11':.902151},'paid_pilot_usd':.902151})
+   m=json.loads(mp.read_text(encoding='utf8'));m.update(version='scarb-grouped-wrapper-production-1',requests_sha256=w.sha(rp),config_sha256=w.sha(cp),packet_bindings={p['id']:w.v.digest(p) for p in packets},pilot_cap_nusd=962127000);w.emitter.save(state,mp.name,m)
+   self.assertIn(chr(176),rp.read_text(encoding='utf8'));self.assertNotEqual(json.loads(rp.read_text(encoding='cp1252')),packets)
+   loader=Mock(side_effect=AssertionError('No credential lookup'));before=(state/'usage.json').read_bytes()
+   with patch.object(w,'LIVE_GROUPED_ENABLED',True),patch('scripts.scarb_packet_consumption_candidate.protected_root',lambda:state),patch.object(Path,'read_text',windows_read),patch.object(w.v,'api_request',side_effect=AssertionError('No network')) as api:
+    self.assertTrue(w.invoke_protected(mp,w.sha(mp),state=state,env_loader=loader,now=now,preflight=True)['ready_for_protected_lookup'])
+    # Funding allowlist follows the canonical manifest's key order, not request order.
+    allowed=list(config['funding']['pilot_request_sha256']);config['funding']['pilot_request_sha256']=list(reversed(allowed));w.emitter.save(state,cp.name,config);m['config_sha256']=w.sha(cp);w.emitter.save(state,mp.name,m)
+    with self.assertRaisesRegex(w.v.VoiceError,'Exact prepaid scope mismatch'):w.invoke_protected(mp,w.sha(mp),state=state,env_loader=loader,now=now,preflight=True)
+    config['funding']['pilot_request_sha256']=allowed
+    # Expired and changed raw-byte manifests still refuse before secret lookup.
+    config['funding']['expires_at']='2029-01-01T00:00:00Z';w.emitter.save(state,cp.name,config);m['config_sha256']=w.sha(cp);w.emitter.save(state,mp.name,m)
+    with self.assertRaises(w.v.VoiceError):w.invoke_protected(mp,w.sha(mp),state=state,env_loader=loader,now=now,preflight=True)
+    config['funding']['expires_at']='2030-01-01T04:00:00Z';w.emitter.save(state,cp.name,config);m['config_sha256']=w.sha(cp)
+    original=rp.read_bytes();rp.write_bytes(original+b' ');w.emitter.save(state,mp.name,m)
+    with self.assertRaisesRegex(w.v.VoiceError,'Exact config or requests changed'):w.invoke_protected(mp,w.sha(mp),state=state,env_loader=loader,now=now,preflight=True)
+    # Even a separately pinned invalid-UTF8 file gets no fallback decoding.
+    rp.write_bytes(bytes([255]));m['requests_sha256']=w.sha(rp);w.emitter.save(state,mp.name,m)
+    with self.assertRaises(UnicodeDecodeError):w.invoke_protected(mp,w.sha(mp),state=state,env_loader=loader,now=now,preflight=True)
+    loader.assert_not_called();api.assert_not_called()
+   self.assertEqual((state/'usage.json').read_bytes(),before);self.assertFalse((state/'grouped-runs').exists());self.assertFalse(w.LIVE_GROUPED_ENABLED)
