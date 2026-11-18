@@ -5241,6 +5241,42 @@
       ],
       [
         "accepted_resolver",
+        "origin"
+      ],
+      [
+        "accepted_resolver",
+        "scarb-grouped-projection-3"
+      ],
+      [
+        "accepted_resolver",
+        "version"
+      ],
+      [
+        "accepted_resolver",
+        "prompt_version"
+      ],
+      [
+        "accepted_resolver",
+        "manifest_sha256"
+      ],
+      [
+        "accepted_resolver",
+        "packet_id"
+      ],
+      [
+        "accepted_resolver",
+        "scarb-grouped-run-envelope-3"
+      ],
+      [
+        "accepted_resolver",
+        "numeric-citation-2"
+      ],
+      [
+        "accepted_resolver",
+        "receipt_sha256"
+      ],
+      [
+        "accepted_resolver",
         "[a-f0-9]{64}"
       ],
       [
