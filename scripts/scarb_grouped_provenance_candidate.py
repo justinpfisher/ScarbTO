@@ -49,6 +49,8 @@ def _verify_pinned(root,pin,current_packets):
         from scripts.scarb_grouped_context_candidate import current_contexts,context_prompts
         v.need(membership,'Contextual admission requires packet membership')
         contexts=current_contexts(current_packets)
+        from scripts.scarb_group21_source_compatibility import historical_context
+        contexts=historical_context(pin,contexts,env['source_context'])
         v.need(env['source_context']==contexts and pin.get('source_context_sha256')==v.digest(contexts),'Current source context mismatch')
         a,r=context_prompts(current_packets,pin['requested_models'],contexts,authors,prompt_version=prompt_version)
     else:
@@ -80,7 +82,7 @@ def verify_grouped_provenance(root,current_packets):
     v.need(pin.get('expected_purpose','production-grouped-review')=='production-grouped-review','Synthetic runner cannot be admitted')
     v.need(pin.get('membership_version')==1 and v.digest(snapshot(pin['solo_state_root']))==pin.get('solo_state_sha256'),'Current solo holds/acceptances differ')
     env=json.loads((Path(root)/'envelope.json').read_text(encoding='utf8'))
-    v.need(env.get('version')=='scarb-grouped-run-envelope-2','Context-bound grouped version required for actual admission')
+    v.need(env.get('version') in {'scarb-grouped-run-envelope-2','scarb-grouped-run-envelope-3'},'Context-bound grouped version required for actual admission')
     return _verify_pinned(root,TRUSTED_GROUPED_RUNS[digest],current_packets)
 
 

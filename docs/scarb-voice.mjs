@@ -384,7 +384,7 @@ export const SCARB_COPY = Object.freeze({
   "finding-explanation-7507fe18e4efce30": "Food equipment was not designed so it could be readily cleaned.",
   "finding-explanation-54a68a5e7db206d7": "Food equipment was not made of material that could be readily cleaned.",
   "finding-explanation-fcf37504d73b4996": "Food equipment was not of sound, tight construction.",
-  "finding-explanation-2c28027af8513b95": "Reusable articles were not designed so they could be readily cleaned.",
+  "finding-explanation-2c28027af8513b95": "Multi-service articles that were not readily cleanable were being used.",
   "finding-explanation-e515079639b0b2ad": "Reusable articles were being used for a purpose they were not suitable for.",
   "finding-explanation-c4fbfa3a08039d7c": "Equipment in contact with food was not corrosion-resistant.",
   "finding-explanation-ff5650b4f3e1d752": "Utensils in contact with food were not corrosion-resistant.",

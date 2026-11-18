@@ -105,6 +105,8 @@ def compile_admitted_mixed_draft(bundle,config):
    identity=packet['id'];text=v.text_check(packet,solo.assemble(packet,authors[identity]))
    v.need(v.digest(text)==proof['text_sha256'][identity],'Verified projection differs')
    entries[identity]={'text':text,'packet_sha256':v.digest(packet),'receipt_sha256':digest,'origin':'scarb-grouped-projection-2'}
+   if env['version']=='scarb-grouped-run-envelope-3':
+    entries[identity].update(origin='scarb-grouped-projection-3',provenance={'version':env['version'],'prompt_version':env['prompt_version'],'manifest_sha256':digest,'packet_id':identity})
  v.need(set(entries)==set(current),'Missing full 736-item current catalogue')
  return {'version':'scarb-mixed-production-draft-1','entries':entries}
 

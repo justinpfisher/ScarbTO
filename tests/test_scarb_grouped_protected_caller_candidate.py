@@ -39,6 +39,23 @@ class ProtectedCallerTests(unittest.TestCase):
     with self.assertRaises(w.v.VoiceError):self.invoke(state,prepared)
     self.assertEqual(prepared[2].calls,[]);self.assertEqual((state/'usage.json').read_bytes(),before)
     self.assertFalse((state/'grouped-runs').exists())
+ def test_compatibility_helper_bytes_pinned_before_preflight_side_effects(self):
+  import shutil
+  with tempfile.TemporaryDirectory() as d,tempfile.TemporaryDirectory() as code:
+   state=Path(d);prepared=self.prepare(state);mp,env,transport,now=prepared
+   manifest=json.loads(mp.read_text());self.assertIn('scarb_group21_source_compatibility',manifest['code_sha256'])
+   root=Path(code);(root/'scripts').mkdir()
+   names=[n+'.py' for n in w.SOURCES]+['scarb_finding_contexts.mjs','scarb_selected_calls_contexts.mjs','launch_scarb_grouped_candidate.py','run-scarb-grouped-candidate.ps1']
+   for name in names:shutil.copyfile(w.ROOT/'scripts'/name,root/'scripts'/name)
+   helper=root/'scripts/scarb_group21_source_compatibility.py';helper.write_bytes(helper.read_bytes()+b'\n# altered fixture only\n')
+   before={p.name:p.read_bytes() for p in state.iterdir() if p.is_file()}
+   with patch.object(w,'ROOT',root),patch.object(w,'exact_prepaid_funding') as funding,patch.object(w.emitter.c,'current_contexts') as context,patch.object(w.emitter,'_run_sequence') as dispatch:
+    with self.assertRaisesRegex(w.v.VoiceError,'Imported code changed'):
+     w._invoke(mp,w.sha(mp),state=state,expected_state=state,env=env,transport=transport,now=now,completed_at=None,preflight=True)
+    funding.assert_not_called();context.assert_not_called();dispatch.assert_not_called()
+   self.assertEqual(before,{p.name:p.read_bytes() for p in state.iterdir() if p.is_file()})
+   self.assertEqual(transport.calls,[]);self.assertFalse((state/'grouped-runs').exists())
+
  def test_injected_failure_is_not_retried(self):
   with tempfile.TemporaryDirectory() as d:
    state=Path(d);prepared=list(self.prepare(state));prepared[2]=w.f.FixtureTransport([w.v.TransportFailure('transport-timeout',None)])
@@ -131,7 +148,7 @@ class ExternalPinMaterializationTests(unittest.TestCase):
    base=Path(d);repo=base/'source';repo.mkdir()
    archive=subprocess.check_output(['git','archive','--format=zip','HEAD'],cwd=w.ROOT)
    with zipfile.ZipFile(io.BytesIO(archive)) as z:z.extractall(repo)
-   for name in subprocess.check_output(['git','diff','--name-only'],cwd=w.ROOT,text=True).splitlines():
+   for name in sorted(set(subprocess.check_output(['git','diff','--name-only'],cwd=w.ROOT,text=True).splitlines()) | {'scripts/'+n+'.py' for n in w.SOURCES}):
     target=repo/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(w.ROOT/name,target)
    candidate=repo/'scripts/scarb_grouped_protected_caller_candidate.py'
    source=candidate.read_text(encoding='utf8');self.assertIn('LIVE_GROUPED_ENABLED=False',source)

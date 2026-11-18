@@ -21,6 +21,9 @@ def accepted_resolver(catalogue, expected):
         provenance = entry.get("provenance") if isinstance(entry, dict) else None
         group_ok = mixed and grouped and provenance == {
             "version": "scarb-grouped-run-envelope-2", "manifest_sha256": entry.get("receipt_sha256"), "packet_id": key}
+        if mixed and isinstance(entry, dict) and entry.get("origin") == "scarb-grouped-projection-3":
+            group_ok = provenance == {"version": "scarb-grouped-run-envelope-3",
+                "prompt_version": "numeric-citation-2", "manifest_sha256": entry.get("receipt_sha256"), "packet_id": key}
         if (not isinstance(request_hash, str) or re.fullmatch(r"[a-f0-9]{64}", request_hash) is None
                 or not isinstance(entry, dict) or entry.get("packet_sha256") != request_hash
                 or not isinstance(entry.get("receipt_sha256"), str)

@@ -306,7 +306,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "use multi-service articles not of readily cleanable form - sec. 8(1)(c)",
-    "Reusable articles were not designed so they could be readily cleaned."
+    "Multi-service articles that were not readily cleanable were being used."
   ],
   [
     "use multi-service articles not suitable for intended purpose - sec. 8(1)(d)",
