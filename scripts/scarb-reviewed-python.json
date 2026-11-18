@@ -5177,7 +5177,19 @@
       ],
       [
         "accepted_resolver",
+        "scarb-ai-voice-mixed-1"
+      ],
+      [
+        "accepted_resolver",
+        "version"
+      ],
+      [
+        "accepted_resolver",
         "scarb-ai-voice-1"
+      ],
+      [
+        "accepted_resolver",
+        "scarb-ai-voice-mixed-1"
       ],
       [
         "accepted_resolver",
@@ -5194,6 +5206,38 @@
       [
         "accepted_resolver",
         "entries"
+      ],
+      [
+        "accepted_resolver",
+        "origin"
+      ],
+      [
+        "accepted_resolver",
+        "scarb-grouped-projection-2"
+      ],
+      [
+        "accepted_resolver",
+        "provenance"
+      ],
+      [
+        "accepted_resolver",
+        "version"
+      ],
+      [
+        "accepted_resolver",
+        "manifest_sha256"
+      ],
+      [
+        "accepted_resolver",
+        "packet_id"
+      ],
+      [
+        "accepted_resolver",
+        "scarb-grouped-run-envelope-2"
+      ],
+      [
+        "accepted_resolver",
+        "receipt_sha256"
       ],
       [
         "accepted_resolver",

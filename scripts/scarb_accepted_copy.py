@@ -9,19 +9,24 @@ from copy import deepcopy
 
 
 def accepted_resolver(catalogue, expected):
-    if (not isinstance(catalogue, dict) or catalogue.get("version") != "scarb-ai-voice-1"
+    mixed = isinstance(catalogue, dict) and catalogue.get("version") == "scarb-ai-voice-mixed-1"
+    if (not isinstance(catalogue, dict) or catalogue.get("version") not in ("scarb-ai-voice-1", "scarb-ai-voice-mixed-1")
             or not isinstance(catalogue.get("entries"), dict) or not isinstance(expected, dict)
-            or set(catalogue["entries"]) != set(expected)):
+            or set(catalogue["entries"]) != set(expected) or (mixed and len(expected) != 736)):
         raise ValueError("AI copy catalogue does not match the qualified request manifest")
     entries = {}
     for key, request_hash in expected.items():
         entry = catalogue["entries"][key]
+        grouped = isinstance(entry, dict) and entry.get("origin") == "scarb-grouped-projection-2"
+        provenance = entry.get("provenance") if isinstance(entry, dict) else None
+        group_ok = mixed and grouped and provenance == {
+            "version": "scarb-grouped-run-envelope-2", "manifest_sha256": entry.get("receipt_sha256"), "packet_id": key}
         if (not isinstance(request_hash, str) or re.fullmatch(r"[a-f0-9]{64}", request_hash) is None
                 or not isinstance(entry, dict) or entry.get("packet_sha256") != request_hash
                 or not isinstance(entry.get("receipt_sha256"), str)
                 or re.fullmatch(r"[a-f0-9]{64}", entry["receipt_sha256"]) is None
                 or not isinstance(entry.get("text"), str) or not entry["text"]
-                or entry.get("origin") not in ("openai-api-reviewed", "protected-verbatim")):
+                or not (group_ok or (entry.get("origin") in ("openai-api-reviewed", "protected-verbatim") and (not mixed or provenance is None)))):
             raise ValueError("Unaccepted or stale AI copy: " + key)
         entries[key] = deepcopy(entry)
 

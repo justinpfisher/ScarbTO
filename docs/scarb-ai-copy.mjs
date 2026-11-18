@@ -4,16 +4,22 @@
  * never from the catalogue being checked. Missing/new inputs hold publication.
  */
 export function createScarbAiResolver(catalogue, expected) {
-  if (catalogue?.version !== 'scarb-ai-voice-1' || !catalogue.entries || !expected ||
-      Object.keys(catalogue.entries).length !== Object.keys(expected).length) {
+  const mixed = catalogue?.version === 'scarb-ai-voice-mixed-1';
+  if (!['scarb-ai-voice-1','scarb-ai-voice-mixed-1'].includes(catalogue?.version) || !catalogue.entries || !expected ||
+      Object.keys(catalogue.entries).length !== Object.keys(expected).length ||
+      (mixed && Object.keys(expected).length !== 736)) {
     throw new Error('AI copy catalogue does not match the qualified request manifest');
   }
   const entries = new Map();
   for (const [id, hash] of Object.entries(expected)) {
     const entry = catalogue.entries[id];
+    const p = entry?.provenance;
+    const groupOk = mixed && entry?.origin === 'scarb-grouped-projection-2' &&
+      p && Object.keys(p).length === 3 && p.version === 'scarb-grouped-run-envelope-2' &&
+      p.manifest_sha256 === entry.receipt_sha256 && p.packet_id === id;
     if (!/^[a-f0-9]{64}$/.test(hash) || entry?.packet_sha256 !== hash ||
         !/^[a-f0-9]{64}$/.test(entry.receipt_sha256) || typeof entry.text !== 'string' || !entry.text ||
-        !['openai-api-reviewed','protected-verbatim'].includes(entry.origin)) {
+        !(groupOk || (['openai-api-reviewed','protected-verbatim'].includes(entry.origin) && (!mixed || p == null)))) {
       throw new Error('Unaccepted or stale AI copy: ' + id);
     }
     entries.set(id, Object.freeze({...entry}));

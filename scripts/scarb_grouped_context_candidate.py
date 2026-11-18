@@ -48,3 +48,31 @@ def compile_admitted_mixed_draft(bundle,config):
    entries[identity]={'text':text,'packet_sha256':v.digest(packet),'receipt_sha256':digest,'origin':'scarb-grouped-projection-2'}
  v.need(set(entries)==set(current),'Missing full 736-item current catalogue')
  return {'version':'scarb-mixed-production-draft-1','entries':entries}
+
+
+def compile_mixed_catalogue(bundle,config):
+ """Compile only privately admitted receipts; never promote a supplied draft.
+ Public metadata identifies grouped provenance without exposing private records.
+ """
+ draft=compile_admitted_mixed_draft(bundle,config)
+ current=seam.current_canonical_requests()
+ v.need(len(current)==736 and set(draft['entries'])==set(current),'Complete current 736-item catalogue required')
+ entries={}
+ for identity,item in draft['entries'].items():
+  entry=dict(item)
+  if entry['origin']=='scarb-grouped-projection-2':
+   entry['provenance']={'version':'scarb-grouped-run-envelope-2','manifest_sha256':entry['receipt_sha256'],'packet_id':identity}
+  entries[identity]=entry
+ catalogue={'version':'scarb-ai-voice-mixed-1','entries':entries}
+ from scripts.scarb_accepted_copy import accepted_resolver
+ accepted_resolver(catalogue,{i:v.digest(p) for i,p in current.items()})
+ return catalogue
+
+
+def verify_mixed_catalogue(bundle,config,artifact):
+ """Recompile from original admitted evidence; no caller-provided trust claims."""
+ path=Path(artifact)
+ v.need(path.is_file() and path.stat().st_size<=10*1024*1024,'Mixed catalogue missing or oversized')
+ actual=json.loads(path.read_text(encoding='utf8'))
+ v.need(v.encoded(actual)==v.encoded(compile_mixed_catalogue(bundle,config)),'Mixed catalogue differs from admitted receipts')
+ return True
