@@ -27,11 +27,13 @@ def review_diagnostics(packets,answer,requests,raws):
   items[identity]={'packet_sha256':v.digest(packet),'dimensions':dims,'outcome':'malformed' if not dims['schema_valid'] else 'adverse' if adverse else 'favorable-observed'}
  return {'version':'scarb-grouped-review-observations-1','items':items,'request_sha256':{k:v.digest(x) for k,x in requests.items()},'response_sha256':{k:v.digest(x) for k,x in raws.items()},'acceptance_granted':False}
 
-def run_fixture(state,packets,models,funding,prices,*,transport,started_at,completed_at,crash_at=None):
+def _run_sequence(state,packets,models,funding,prices,*,transport,started_at,completed_at,crash_at=None,production=False,approved_manifest_sha256=None):
  state=Path(state)
- from scripts.scarb_grouped_protected_caller_candidate import FixedResponsesInjected
- v.need(type(transport) in (f.FixtureTransport,FixedResponsesInjected),'Only isolated injected transport is supported')
- v.need((state/'SYNTHETIC_GROUPED_ACCOUNTING_ONLY').is_file(),'Synthetic isolated state required')
+ from scripts.scarb_grouped_protected_caller_candidate import FixedResponsesInjected,ProtectedResponses,launcher_preflight
+ if production:
+  launcher_preflight(approved_manifest_sha256);v.need(type(transport) is ProtectedResponses,'Fixed protected transport required')
+ else:v.need(type(transport) in (f.FixtureTransport,FixedResponsesInjected),'Only isolated injected transport is supported')
+ v.need(production or (state/'SYNTHETIC_GROUPED_ACCOUNTING_ONLY').is_file(),'Synthetic isolated state required')
  contexts=c.current_contexts(packets);bindings={x['id']:v.digest(x) for x in packets};scope=v.digest(bindings)
  root=state/'grouped-runs'/scope;v.need(not root.exists(),'Prior attempt cannot be replayed');root.mkdir(parents=True)
  journal={'version':'scarb-grouped-execution-journal-1','status':'preparing','calls':0,'packet_bindings':bindings,'stages':[],'started_at':started_at,'completed_at':completed_at}
@@ -45,7 +47,7 @@ def run_fixture(state,packets,models,funding,prices,*,transport,started_at,compl
  month=started_at[:7];mb=members(state);solo=membership.snapshot(state)
  for name,value in [('funding.json',funding),('prices.json',prices),('membership-before.json',mb),('solo-state.json',solo)]:save(root,name,value)
  try:
-  reservation=accounting.fixture_debit(state,state,bindings,reserve,month,funding['cap_nusd'],funding['cap_nusd'])
+  reservation=accounting._debit_sequence(state,state,bindings,reserve,month,funding['cap_nusd'],funding['cap_nusd'])
   ma=members(state)
   for name,value in [('ledger-before.json',reservation['before']),('ledger-after.json',reservation['after']),('membership-after.json',ma)]:save(root,name,value)
   journal['status']='reserved';save(root,'journal.json',journal)
@@ -73,7 +75,7 @@ def run_fixture(state,packets,models,funding,prices,*,transport,started_at,compl
      elif any(x=='malformed' for x in outcomes):journal['status']='held-uncertain'
      save(root,'journal.json',journal)
      v.need(all(x=='favorable-observed' for x in outcomes),'Grouped review not wholly favorable; no split acceptance')
-   journal['status']='completed';save(root,'journal.json',journal)
+   journal['status']='completed';journal['completed_at']=v.dt.datetime.now(v.dt.timezone.utc).isoformat() if production else completed_at;save(root,'journal.json',journal)
    envelope={'version':'scarb-grouped-run-envelope-2','packets':packets,'models':models,'source_context':contexts,'author_request':requests['author'],'review_request':requests['reviewer'],'author_response':raws['author'],'review_response':raws['reviewer']}
    save(root,'envelope.json',envelope)
    actual=sum(cost(models[x['role']],x['usage']['input_tokens'],x['usage']['output_tokens']) for x in journal['stages'])
@@ -81,9 +83,9 @@ def run_fixture(state,packets,models,funding,prices,*,transport,started_at,compl
    budget.update(funding_sha256=v.digest(funding),prices_sha256=v.digest(prices),input_bounds=bounds,output_bounds=outputs);save(root,'budget.json',budget)
    seal={'version':'scarb-grouped-consumed-seal-1','status':'consumed-completed','packet_bindings':bindings,'envelope_sha256':v.digest(envelope),'journal_sha256':v.digest(journal),'budget_sha256':v.digest(budget),'ledger_after_sha256':v.digest(reservation['after']),'packet_membership_sha256':v.digest(ma),'solo_state_sha256':v.digest(solo)};save(root,'seal.json',seal)
    files=verifier.FILES|{'solo-state.json','membership-before.json','membership-after.json'}
-   manifest={'version':'scarb-grouped-run-manifest-1','purpose':PURPOSE,'runner_sha256':verifier.file_hash(Path(__file__)),'files':{name:verifier.file_hash(root/name) for name in files}};save(root,'manifest.json',manifest)
-   pin={'manifest_sha256':verifier.file_hash(root/'manifest.json'),'runner_sha256':manifest['runner_sha256'],'packet_bindings':bindings,'requested_models':models,'returned_models':models,'funding_sha256':v.digest(funding),'prices_sha256':v.digest(prices),'ledger_before_sha256':v.digest(reservation['before']),'reservation_nusd':reserve,'source_context_sha256':v.digest(contexts),'membership_version':1,'solo_state_sha256':v.digest(solo),'solo_state_root':str(state),'cost_version':2,'month_cap_nusd':funding['cap_nusd'],'membership_before_sha256':v.digest(mb),'expected_purpose':PURPOSE}
-   verified=verifier._verify_pinned(root,pin,packets);save(root,'fixture-pin.json',pin)
+   manifest={'version':'scarb-grouped-run-manifest-1','purpose':'production-grouped-review' if production else PURPOSE,'runner_sha256':verifier.file_hash(Path(__file__)),'files':{name:verifier.file_hash(root/name) for name in files}};save(root,'manifest.json',manifest)
+   pin={'manifest_sha256':verifier.file_hash(root/'manifest.json'),'runner_sha256':manifest['runner_sha256'],'packet_bindings':bindings,'requested_models':models,'returned_models':models,'funding_sha256':v.digest(funding),'prices_sha256':v.digest(prices),'ledger_before_sha256':v.digest(reservation['before']),'reservation_nusd':reserve,'source_context_sha256':v.digest(contexts),'membership_version':1,'solo_state_sha256':v.digest(solo),'solo_state_root':str(state),'cost_version':2,'month_cap_nusd':funding['cap_nusd'],'membership_before_sha256':v.digest(mb),'expected_purpose':'production-grouped-review' if production else PURPOSE}
+   verified=verifier._verify_pinned(root,pin,packets);save(root,'candidate-pin.json' if production else 'fixture-pin.json',pin)
    return {'root':str(root),'pin':pin,'verified':verified,'calls':journal['calls']}
  except (Exception,KeyboardInterrupt) as error:
   journal['status']='held-adverse' if journal['status']=='held-adverse' else 'held-uncertain';save(root,'journal.json',journal)
@@ -93,9 +95,11 @@ def run_fixture(state,packets,models,funding,prices,*,transport,started_at,compl
 def recover_fixture(state,packets):
  root=Path(state)/'grouped-runs'/v.digest({x['id']:v.digest(x) for x in packets});journal=load(root/'journal.json')
  if journal['status']=='completed':
-  pin=load(root/'fixture-pin.json');verifier._verify_pinned(root,pin,packets)
+  pin_paths=[x for x in [root/'fixture-pin.json',root/'candidate-pin.json'] if x.exists()]
+  v.need(len(pin_paths)==1,'Missing or ambiguous completion pin')
+  pin=load(pin_paths[0]);verifier._verify_pinned(root,pin,packets)
  else:
-  v.need(not (root/'fixture-pin.json').exists(),'Incomplete attempt has success pin')
+  v.need(not (root/'fixture-pin.json').exists() and not (root/'candidate-pin.json').exists(),'Incomplete attempt has success pin')
   if (root/'review-diagnostics.json').exists():
    requests={role:load(root/(role+'-request.json')) for role in ['author','reviewer']}
    raws={role:load(root/(role+'-response.json')) for role in ['author','reviewer']}
@@ -113,3 +117,6 @@ def recover_fixture(state,packets):
    outcomes=[x['outcome'] for x in expected['items'].values()]
    v.need(journal['status']==('held-adverse' if 'adverse' in outcomes else 'held-uncertain'),'Recovered batch outcome differs')
  return {'status':journal['status'],'calls':journal['calls'],'validated_stages':len(journal['stages']),'replay_allowed':False}
+
+
+def run_fixture(*args,**kwargs):return _run_sequence(*args,**kwargs)

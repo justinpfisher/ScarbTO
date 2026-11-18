@@ -14,25 +14,27 @@ SOURCES=frozenset('scarb_ai_voice scarb_ai_fact_slots scarb_grouped_runner_candi
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 def source_pins():return {name:sha(ROOT/'scripts'/(name+'.py')) for name in sorted(SOURCES)}|{'launcher_python':sha(ROOT/'scripts/launch_scarb_grouped_candidate.py'),'launcher_powershell':sha(ROOT/'scripts/run-scarb-grouped-candidate.ps1')}
 
-def invoke_fixture(manifest_path,approved_manifest_sha256,*,state,expected_state,env,transport,now,completed_at):
+def _invoke(manifest_path,approved_manifest_sha256,*,state,expected_state,env,transport,now,completed_at,production=False,preflight=False):
  # Same ordering: immutable manifest/code/config/packet/root identity, then
  # funding+credential identity, then shared reservation and bounded dispatch.
- v.need(type(transport) in (f.FixtureTransport,FixedResponsesInjected),'Only isolated injected transport')
- state=Path(state);v.need(state.is_dir() and state.resolve()==Path(expected_state).resolve() and (state/'SYNTHETIC_GROUPED_ACCOUNTING_ONLY').is_file(),'Wrong isolated state root')
+ if not production:v.need(type(transport) in (f.FixtureTransport,FixedResponsesInjected),'Only isolated injected transport')
+ else:launcher_preflight(approved_manifest_sha256)
+ state=Path(state);v.need(state.is_dir() and state.resolve()==Path(expected_state).resolve() and (production or (state/'SYNTHETIC_GROUPED_ACCOUNTING_ONLY').is_file()),'Wrong isolated state root')
  manifest_path=Path(manifest_path);v.need(sha(manifest_path)==approved_manifest_sha256,'Exact manifest changed')
  manifest=json.loads(manifest_path.read_text(encoding='utf8'))
- v.need(set(manifest)=={'version','code_sha256','config_path','config_sha256','requests_path','requests_sha256','packet_bindings','models','maximum_reservation_nusd','prices','state_root','pilot_cap_nusd'} and manifest['version']=='scarb-grouped-wrapper-fixture-1','Wrong wrapper manifest')
+ v.need(set(manifest)=={'version','code_sha256','config_path','config_sha256','requests_path','requests_sha256','packet_bindings','models','maximum_reservation_nusd','prices','state_root','pilot_cap_nusd'} and manifest['version']==('scarb-grouped-wrapper-production-1' if production else 'scarb-grouped-wrapper-fixture-1'),'Wrong wrapper manifest')
  v.need(manifest['code_sha256']==source_pins(),'Imported code changed')
  v.need(Path(manifest['state_root']).resolve()==state.resolve(),'Manifest state root changed')
  config_path=Path(manifest['config_path']);requests_path=Path(manifest['requests_path'])
  v.need(sha(config_path)==manifest['config_sha256'] and sha(requests_path)==manifest['requests_sha256'],'Exact config or requests changed')
  config=json.loads(config_path.read_text());packets=json.loads(requests_path.read_text())
  v.need(len(packets)==2 and {p['id']:v.digest(p) for p in packets}==manifest['packet_bindings'],'Wrong exact two-packet scope')
- models={'author':config['author_model'],'reviewer':config['reviewer_model']};v.need(models==manifest['models'],'Model scope changed')
+ models={'author':config['author_model'],'reviewer':config['reviewer_model']};v.need(models==manifest['models'] and models=={'author':'gpt-6-luna','reviewer':'gpt-6.1-terra'},'Model scope changed')
  v.check_config(config)
  # Only a sentinel, supplied by test, may reach funding_check. Never read os.env.
- v.need(env.get('OPENAI_API_KEY')=='fixture-not-a-key','No real credentials accepted by offline caller')
- credentials=exact_prepaid_funding(config,manifest,now,env)
+ v.need(production or env.get('OPENAI_API_KEY')=='fixture-not-a-key','No real credentials accepted by offline caller')
+ check_env={'SCARB_AI_ENABLE':'1','OPENAI_API_KEY':'fixture-not-a-key','OPENAI_ORG_ID':ORG,'OPENAI_PROJECT_ID':PROJECT} if production else env
+ credentials=exact_prepaid_funding(config,manifest,now,check_env)
  funding=config['funding']
  cap=amounts.amount(funding['pilot_cap_usd']);v.need(cap<=amounts.amount(config['month_cap_usd']),'Pilot exceeds month cap')
  prices={model:{'input_nusd_per_million':amounts.amount(v.MODELS[model][0]),'output_nusd_per_million':amounts.amount(v.MODELS[model][1])} for model in models.values()}
@@ -45,7 +47,11 @@ def invoke_fixture(manifest_path,approved_manifest_sha256,*,state,expected_state
  # The unchanged emitter uses FixtureTransport.exchange. Its requests retain
  # request_body's fixed model, no tools/store/background and bounded output.
  # The actual fixed api_request transport remains uncalled in this adapter.
- return emitter.run_fixture(state,packets,models,observation,prices,transport=transport,started_at=now.isoformat(),completed_at=completed_at)
+ if preflight:return {'ready_for_protected_lookup':True,'manifest_sha256':approved_manifest_sha256}
+ if production:
+  credentials=exact_prepaid_funding(config,manifest,now,env() if callable(env) else env)
+  transport=ProtectedResponses(credentials)
+ return emitter._run_sequence(state,packets,models,observation,prices,transport=transport,started_at=now.isoformat(),completed_at=completed_at,production=production,approved_manifest_sha256=approved_manifest_sha256)
 
 
 def exact_prepaid_funding(config,manifest,now,env):
@@ -78,5 +84,20 @@ class FixedResponsesInjected:
   with patch.object(v.urllib.request,'build_opener',return_value=self.opener):
    return v.api_request(body,self.credentials)
 
-def launcher_preflight():
- v.need(LIVE_GROUPED_ENABLED,'Grouped protected launcher is not activated; no credential lookup allowed')
+def launcher_preflight(manifest_sha256=None):
+ # Exact expected digest is supplied separately by the protected launcher
+ # approval argument. Never embed it in the source bytes the manifest pins.
+ from scripts.scarb_packet_consumption_candidate import HEX
+ v.need(LIVE_GROUPED_ENABLED and isinstance(manifest_sha256,str) and HEX.fullmatch(manifest_sha256),'Grouped protected launcher is not activated; no credential lookup allowed')
+
+
+class ProtectedResponses:
+ def __init__(self,credentials):self.credentials=credentials
+ def exchange(self,body):return v.api_request(body,self.credentials)
+
+def invoke_fixture(*args,**kwargs):return _invoke(*args,**kwargs)
+
+def invoke_protected(manifest_path,approved_manifest_sha256,*,state,env_loader,now,preflight=False):
+ launcher_preflight(approved_manifest_sha256)
+ from scripts.scarb_packet_consumption_candidate import protected_root
+ return _invoke(manifest_path,approved_manifest_sha256,state=state,expected_state=protected_root(),env=env_loader,transport=None,now=now,completed_at=None,production=True,preflight=preflight)

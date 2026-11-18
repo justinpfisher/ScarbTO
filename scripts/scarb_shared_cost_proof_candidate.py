@@ -50,9 +50,9 @@ def validate_proof(value,before,after,membership_before,membership_after):
  expected=proof(before,after,value['month'],value['reservation_nusd'],value['actual_usage_cost_nusd'],value['month_cap_nusd'],value['pilot_cap_nusd'],value['packet_bindings'],membership_before,membership_after)
  v.need(value==expected,'Shared cost proof differs');return True
 
-def fixture_debit(root,expected_root,bindings,reservation_nusd,month,month_cap_nusd,pilot_cap_nusd,*,crash_at=None):
+def _debit_sequence(root,expected_root,bindings,reservation_nusd,month,month_cap_nusd,pilot_cap_nusd,*,crash_at=None):
  """Execute actual debit/claim order on marked disposable state, no transport."""
- root=Path(root);v.need((root/'SYNTHETIC_GROUPED_ACCOUNTING_ONLY').is_file(),'Disposable synthetic accounting marker required')
+ root=Path(root)
  with v.exclusive(root):
   consumption.assert_unconsumed(root,bindings,expected_root=expected_root)
   path=root/'usage.json';v.need(path.is_file(),'Existing shared ledger required')
@@ -70,3 +70,8 @@ def fixture_debit(root,expected_root,bindings,reservation_nusd,month,month_cap_n
   v.need(json.loads(path.read_text())==after and json.loads(pending.read_text())==marker,'Debit changed during reservation')
   pending.unlink()
   return {'before':before,'after':after,'debited_nusd':charged}
+
+
+def fixture_debit(root,*args,**kwargs):
+ v.need((Path(root)/'SYNTHETIC_GROUPED_ACCOUNTING_ONLY').is_file(),'Disposable synthetic accounting marker required')
+ return _debit_sequence(root,*args,**kwargs)
