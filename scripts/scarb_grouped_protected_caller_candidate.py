@@ -22,7 +22,11 @@ def _invoke(manifest_path,approved_manifest_sha256,*,state,expected_state,env,tr
  state=Path(state);v.need(state.is_dir() and state.resolve()==Path(expected_state).resolve() and (production or (state/'SYNTHETIC_GROUPED_ACCOUNTING_ONLY').is_file()),'Wrong isolated state root')
  manifest_path=Path(manifest_path);v.need(sha(manifest_path)==approved_manifest_sha256,'Exact manifest changed')
  manifest=json.loads(manifest_path.read_text(encoding='utf8'))
- v.need(set(manifest)=={'version','code_sha256','config_path','config_sha256','requests_path','requests_sha256','packet_bindings','models','maximum_reservation_nusd','prices','state_root','pilot_cap_nusd'} and manifest['version']==('scarb-grouped-wrapper-production-1' if production else 'scarb-grouped-wrapper-fixture-1'),'Wrong wrapper manifest')
+ prefix='scarb-grouped-wrapper-production-' if production else 'scarb-grouped-wrapper-fixture-'
+ versioned=manifest.get('version')==prefix+'2'
+ prompt_version=emitter.c.contract.CITATION_PROMPT if versioned else emitter.c.contract.LEGACY_PROMPT
+ v.need(set(manifest)=={'version','code_sha256','config_path','config_sha256','requests_path','requests_sha256','packet_bindings','models','maximum_reservation_nusd','prices','state_root','pilot_cap_nusd'}|({'prompt_version'} if versioned else set()) and manifest['version'] in (prefix+'1',prefix+'2'),'Wrong wrapper manifest')
+ if versioned:v.need(manifest['prompt_version']==prompt_version,'Wrong wrapper prompt version')
  v.need(manifest['code_sha256']==source_pins(),'Imported code changed')
  v.need(Path(manifest['state_root']).resolve()==state.resolve(),'Manifest state root changed')
  config_path=Path(manifest['config_path']);requests_path=Path(manifest['requests_path'])
@@ -41,7 +45,7 @@ def _invoke(manifest_path,approved_manifest_sha256,*,state,expected_state,env,tr
  cap=amounts.amount(funding['pilot_cap_usd']);v.need(cap<=amounts.amount(config['month_cap_usd']),'Pilot exceeds month cap')
  prices={model:{'input_nusd_per_million':amounts.amount(v.MODELS[model][0]),'output_nusd_per_million':amounts.amount(v.MODELS[model][1])} for model in models.values()}
  v.need(prices==manifest['prices'],'Pinned model prices differ')
- contexts=emitter.c.current_contexts(packets);body=emitter.c.context_prompts(packets,models,contexts)
+ contexts=emitter.c.current_contexts(packets);body=emitter.c.context_prompts(packets,models,contexts,prompt_version=prompt_version)
  def cost(model,i,o):return (i*prices[model]['input_nusd_per_million']+o*prices[model]['output_nusd_per_million']+999999)//1000000
  reserve=cost(models['author'],len(v.encoded(body)),2000)+cost(models['reviewer'],48000,2000)
  v.need(type(manifest['maximum_reservation_nusd']) is int and reserve<=manifest['maximum_reservation_nusd']<=60000000,'Exact reservation exceeded')
@@ -53,7 +57,7 @@ def _invoke(manifest_path,approved_manifest_sha256,*,state,expected_state,env,tr
  if production:
   credentials=exact_prepaid_funding(config,manifest,now,env() if callable(env) else env)
   transport=ProtectedResponses(credentials)
- return emitter._run_sequence(state,packets,models,observation,prices,transport=transport,started_at=now.isoformat(),completed_at=completed_at,production=production,approved_manifest_sha256=approved_manifest_sha256)
+ return emitter._run_sequence(state,packets,models,observation,prices,transport=transport,started_at=now.isoformat(),completed_at=completed_at,production=production,approved_manifest_sha256=approved_manifest_sha256,prompt_version=prompt_version)
 
 
 def exact_prepaid_funding(config,manifest,now,env):

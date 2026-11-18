@@ -27,7 +27,8 @@ def review_diagnostics(packets,answer,requests,raws):
   items[identity]={'packet_sha256':v.digest(packet),'dimensions':dims,'outcome':'malformed' if not dims['schema_valid'] else 'adverse' if adverse else 'favorable-observed'}
  return {'version':'scarb-grouped-review-observations-1','items':items,'request_sha256':{k:v.digest(x) for k,x in requests.items()},'response_sha256':{k:v.digest(x) for k,x in raws.items()},'acceptance_granted':False}
 
-def _run_sequence(state,packets,models,funding,prices,*,transport,started_at,completed_at,crash_at=None,production=False,approved_manifest_sha256=None):
+def _run_sequence(state,packets,models,funding,prices,*,transport,started_at,completed_at,crash_at=None,production=False,approved_manifest_sha256=None,prompt_version=c.contract.LEGACY_PROMPT):
+ c.contract.author_instruction(prompt_version)
  state=Path(state)
  from scripts.scarb_grouped_protected_caller_candidate import FixedResponsesInjected,ProtectedResponses,launcher_preflight
  if production:
@@ -38,7 +39,8 @@ def _run_sequence(state,packets,models,funding,prices,*,transport,started_at,com
  root=state/'grouped-runs'/scope;v.need(not root.exists(),'Prior attempt cannot be replayed');root.mkdir(parents=True)
  journal={'version':'scarb-grouped-execution-journal-1','status':'preparing','calls':0,'packet_bindings':bindings,'stages':[],'started_at':started_at,'completed_at':completed_at}
  save(root,'journal.json',journal)
- author=c.context_prompts(packets,models,contexts);bounds={'author':len(v.encoded(author)),'reviewer':48000};outputs={'author':2000,'reviewer':2000}
+ if prompt_version!=c.contract.LEGACY_PROMPT:journal['prompt_version']=prompt_version;save(root,'journal.json',journal)
+ author=c.context_prompts(packets,models,contexts,prompt_version=prompt_version);bounds={'author':len(v.encoded(author)),'reviewer':48000};outputs={'author':2000,'reviewer':2000}
  def cost(model,i,o):
   rate=prices[model];v.need(set(rate)=={'input_nusd_per_million','output_nusd_per_million'} and all(type(x) is int and x>=0 for x in rate.values()),'Invalid price pin')
   return (i*rate['input_nusd_per_million']+o*rate['output_nusd_per_million']+999999)//1000000
@@ -55,7 +57,7 @@ def _run_sequence(state,packets,models,funding,prices,*,transport,started_at,com
   raws={};requests={};authors=None
   with v.exclusive(state):
    for role in ['author','reviewer']:
-    request=author if role=='author' else c.context_prompts(packets,models,contexts,authors)[1]
+    request=author if role=='author' else c.context_prompts(packets,models,contexts,authors,prompt_version=prompt_version)[1]
     requests[role]=request;save(root,role+'-request.json',request)
     journal['calls']+=1;journal['status']=role+'-dispatched';save(root,'journal.json',journal)
     raw=transport.exchange(request);save(root,role+'-response.json',raw);raws[role]=raw
@@ -66,7 +68,7 @@ def _run_sequence(state,packets,models,funding,prices,*,transport,started_at,com
     journal['stages'].append({'role':role,'request_sha256':v.digest(request),'response_sha256':v.digest(raw),'response_id':raw['id'],'model':raw['model'],'usage':usage})
     save(root,'journal.json',journal)
     if role=='author':
-     authors=answer;c.context_prompts(packets,models,contexts,authors)
+     authors=answer;c.context_prompts(packets,models,contexts,authors,prompt_version=prompt_version)
     else:
      diagnostics=review_diagnostics(packets,answer,requests,raws)
      save(root,'review-diagnostics.json',diagnostics)
@@ -77,6 +79,7 @@ def _run_sequence(state,packets,models,funding,prices,*,transport,started_at,com
      v.need(all(x=='favorable-observed' for x in outcomes),'Grouped review not wholly favorable; no split acceptance')
    journal['status']='completed';journal['completed_at']=v.dt.datetime.now(v.dt.timezone.utc).isoformat() if production else completed_at;save(root,'journal.json',journal)
    envelope={'version':'scarb-grouped-run-envelope-2','packets':packets,'models':models,'source_context':contexts,'author_request':requests['author'],'review_request':requests['reviewer'],'author_response':raws['author'],'review_response':raws['reviewer']}
+   if prompt_version!=c.contract.LEGACY_PROMPT:envelope.update(version='scarb-grouped-run-envelope-3',prompt_version=prompt_version)
    save(root,'envelope.json',envelope)
    actual=sum(cost(models[x['role']],x['usage']['input_tokens'],x['usage']['output_tokens']) for x in journal['stages'])
    budget=accounting.proof(reservation['before'],reservation['after'],month,reserve,actual,funding['cap_nusd'],funding['cap_nusd'],bindings,mb,ma)
@@ -85,6 +88,7 @@ def _run_sequence(state,packets,models,funding,prices,*,transport,started_at,com
    files=verifier.FILES|{'solo-state.json','membership-before.json','membership-after.json'}
    manifest={'version':'scarb-grouped-run-manifest-1','purpose':'production-grouped-review' if production else PURPOSE,'runner_sha256':verifier.file_hash(Path(__file__)),'files':{name:verifier.file_hash(root/name) for name in files}};save(root,'manifest.json',manifest)
    pin={'manifest_sha256':verifier.file_hash(root/'manifest.json'),'runner_sha256':manifest['runner_sha256'],'packet_bindings':bindings,'requested_models':models,'returned_models':models,'funding_sha256':v.digest(funding),'prices_sha256':v.digest(prices),'ledger_before_sha256':v.digest(reservation['before']),'reservation_nusd':reserve,'source_context_sha256':v.digest(contexts),'membership_version':1,'solo_state_sha256':v.digest(solo),'solo_state_root':str(state),'cost_version':2,'month_cap_nusd':funding['cap_nusd'],'membership_before_sha256':v.digest(mb),'expected_purpose':'production-grouped-review' if production else PURPOSE}
+   if prompt_version!=c.contract.LEGACY_PROMPT:pin['prompt_version']=prompt_version
    verified=verifier._verify_pinned(root,pin,packets);save(root,'candidate-pin.json' if production else 'fixture-pin.json',pin)
    return {'root':str(root),'pin':pin,'verified':verified,'calls':journal['calls']}
  except (Exception,KeyboardInterrupt) as error:
@@ -105,7 +109,7 @@ def recover_fixture(state,packets):
    raws={role:load(root/(role+'-response.json')) for role in ['author','reviewer']}
    models={role:requests[role]['model'] for role in requests}
    authors,_=v.unpack(raws['author']);answer,_=v.unpack(raws['reviewer'])
-   a,b=c.context_prompts(packets,models,c.current_contexts(packets),authors)
+   a,b=c.context_prompts(packets,models,c.current_contexts(packets),authors,prompt_version=journal.get('prompt_version',c.contract.LEGACY_PROMPT))
    v.need(requests=={'author':a,'reviewer':b},'Recovered review request mismatch')
    expected_stages=[]
    for role in ['author','reviewer']:

@@ -4,6 +4,12 @@ from scripts import scarb_ai_fact_slots as f,scarb_ai_voice as v
 VERSION='scarb-grouped-envelope-prototype-1'
 ORIGIN='test-fixture-grouped-envelope'
 AUTHOR=f.AUTHOR+'\nReturn an independent result for each exact ID. Evidence and meaning may not cross items.'
+LEGACY_PROMPT='legacy-1'
+CITATION_PROMPT='numeric-citation-2'
+CITATION_RULE='\nNumeric citations in evidence (including section, regulation and clause numbers) are not permission to add their digits to prose. Include them only through an existing authorized protected slot; never invent a slot or reproduce its value. Preserve supported meaning without adding citation numbers. Never omit a material condition to make output pass; when safe representation is impossible, the existing fail-closed hold applies. Keep the output schema unchanged.'
+def author_instruction(version):
+ v.need(version in (LEGACY_PROMPT,CITATION_PROMPT),'Unknown grouped prompt version')
+ return AUTHOR if version==LEGACY_PROMPT else AUTHOR+CITATION_RULE
 REVIEWER=f.REVIEWER+'\nReturn an independent verdict for each exact ID. Evaluate each only against its evidence.'
 def identities(packets):
  v.need(isinstance(packets,list) and 1<=len(packets)<=3,'Invalid batch size')
@@ -11,10 +17,10 @@ def identities(packets):
  ids=[p['id'] for p in packets];v.need(len(set(ids))==len(ids),'Duplicate IDs');return ids
 def check_membership(result,ids):
  v.need(isinstance(result,dict) and set(result)==set(ids),'Missing or extra ID')
-def prompts(packets,models,authors=None):
+def prompts(packets,models,authors=None,*,prompt_version=LEGACY_PROMPT):
  ids=identities(packets)
  v.need(set(models)=={'author','reviewer'} and models['author']!=models['reviewer'] and all(x in v.MODELS for x in models.values()),'Independent qualified models required')
- a=v.request_body(models['author'],AUTHOR,{'requests':packets},v.object_schema({p['id']:f.schema(p) for p in packets}))
+ a=v.request_body(models['author'],author_instruction(prompt_version),{'requests':packets},v.object_schema({p['id']:f.schema(p) for p in packets}))
  if authors is None:return a
  check_membership(authors,ids);items=[]
  for p in packets:

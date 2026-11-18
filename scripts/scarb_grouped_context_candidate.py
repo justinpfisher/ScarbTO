@@ -76,9 +76,9 @@ def current_contexts(packets):
   contexts[identity]={'path':'docs/index.html','source_sha256':hashlib.sha256(raw).hexdigest(),'anchor_html':anchor,'destination':destination,'meaning':'Existing navigation label only; preserve its destination and unambiguous function; no new claims.'}
  return contexts
 
-def context_prompts(packets,models,contexts,authors=None):
+def context_prompts(packets,models,contexts,authors=None,*,prompt_version=contract.LEGACY_PROMPT):
  v.need(isinstance(contexts,dict) and set(contexts)==set(contract.identities(packets)),'Missing or extra source context')
- bodies=contract.prompts(packets,models,authors)
+ bodies=contract.prompts(packets,models,authors,prompt_version=prompt_version)
  def bind(body):
   payload=json.loads(body['input'][0]['content'][0]['text']);payload['source_context']=contexts
   body['input'][0]['content'][0]['text']=json.dumps(payload,sort_keys=True,separators=(',',':'))

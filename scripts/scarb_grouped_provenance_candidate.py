@@ -28,9 +28,15 @@ def _verify_pinned(root,pin,current_packets):
         path=root/name;v.need(path.is_file() and not path.is_symlink() and file_hash(path)==digest,'Record bytes differ')
         records[name]=json.loads(path.read_text(encoding='utf-8'))
     env=records['envelope.json'];journal=records['journal.json'];seal=records['seal.json']
-    contextual=env.get('version')=='scarb-grouped-run-envelope-2'
+    versioned=env.get('version')=='scarb-grouped-run-envelope-3'
+    contextual=env.get('version') in {'scarb-grouped-run-envelope-2','scarb-grouped-run-envelope-3'}
+    prompt_version=contract.CITATION_PROMPT if versioned else contract.LEGACY_PROMPT
+    if versioned:
+        v.need(env.get('prompt_version')==pin.get('prompt_version')==journal.get('prompt_version')==prompt_version,'Prompt version binding mismatch')
+    else:
+        v.need(all('prompt_version' not in x for x in (env,pin,journal)),'Legacy prompt version substitution')
     fields={'version','packets','models','author_request','review_request','author_response','review_response'}
-    v.need(set(env)==fields|({'source_context'} if contextual else set()) and env['version'] in {'scarb-grouped-run-envelope-1','scarb-grouped-run-envelope-2'},'Not a production grouped envelope')
+    v.need(set(env)==fields|({'source_context'} if contextual else set())|({'prompt_version'} if versioned else set()) and env['version'] in {'scarb-grouped-run-envelope-1','scarb-grouped-run-envelope-2','scarb-grouped-run-envelope-3'},'Not a production grouped envelope')
     expected={p['id']:v.digest(p) for p in current_packets}
     v.need(len(expected)==len(current_packets) and expected==pin['packet_bindings'] and env['packets']==current_packets
            and env['models']==pin['requested_models'],'Current packet/model eligibility differs')
@@ -44,14 +50,14 @@ def _verify_pinned(root,pin,current_packets):
         v.need(membership,'Contextual admission requires packet membership')
         contexts=current_contexts(current_packets)
         v.need(env['source_context']==contexts and pin.get('source_context_sha256')==v.digest(contexts),'Current source context mismatch')
-        a,r=context_prompts(current_packets,pin['requested_models'],contexts,authors)
+        a,r=context_prompts(current_packets,pin['requested_models'],contexts,authors,prompt_version=prompt_version)
     else:
         a,r=contract.prompts(current_packets,pin['requested_models'],authors)
     v.need(env['author_request']==a and env['review_request']==r,'Prompt/schema/candidate provenance mismatch')
     contract.check_membership(reviews,list(expected));texts={}
     for packet in current_packets:
         identity=packet['id'];w=f.assemble(packet,authors[identity]);v.review_check(reviews[identity]);texts[identity]=v.text_check(packet,w)
-    v.need(set(journal)=={'version','status','calls','packet_bindings','stages','started_at','completed_at'} and journal['version']=='scarb-grouped-execution-journal-1'
+    v.need(set(journal)=={'version','status','calls','packet_bindings','stages','started_at','completed_at'}|({'prompt_version'} if versioned else set()) and journal['version']=='scarb-grouped-execution-journal-1'
            and journal['status']=='completed' and journal['calls']==2 and journal['packet_bindings']==expected,'Incomplete or ineligible execution journal')
     stages=[]
     for role,request,response,usage in [('author',a,ar,author_usage),('reviewer',r,rr,review_usage)]:
