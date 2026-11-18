@@ -8,10 +8,55 @@ from scripts import scarb_grouped_provenance_candidate as provenance
 ROOT=Path(__file__).resolve().parents[1]
 ANCHORS={'shell.shell-b04b38d4-007':('/neighbourhoods/','Neighbourhoods'),'shell.shell-b04b38d4-008':('/briefs/','Weekly briefs')}
 
+AREA_CONTROLS={
+ '060':('area-reopen','Open selected area information',True),
+ '061':('area-clear','Clear area',False),
+ '078':('area-panel-expand','Expand area information',True),
+ '079':('area-panel-expand','Expand',False),
+ '080':('area-panel-close','Close area information',True),
+ '081':('area-panel-close','Close',False),
+ '082':('area-panel-fit','View boundary',False),
+}
+AREA_BUTTONS={
+ 'area-reopen':'<button type="button" id="area-reopen" aria-label="Open selected area information"><span id="area-selection-name"></span></button>',
+ 'area-clear':'<button type="button" id="area-clear">Clear area</button>',
+ 'area-panel-expand':'<button type="button" id="area-panel-expand" aria-expanded="false" aria-label="Expand area information">Expand</button>',
+ 'area-panel-close':'<button type="button" id="area-panel-close" aria-label="Close area information">Close</button>',
+ 'area-panel-fit':'<button type="button" id="area-panel-fit">View boundary</button>',
+}
+AREA_MEANINGS={
+ 'area-reopen':'Reopen information for the already selected area; do not select or clear another area.',
+ 'area-clear':'Clear the selected area and close its panel; not delete a saved area.',
+ 'area-panel-expand':'Toggle the selected area information panel expanded state; do not zoom map or change selection.',
+ 'area-panel-close':'Close information panel and return focus to reopen control; do not clear selected area.',
+ 'area-panel-fit':'Fit the map to selected area boundary; unavailable without map; no electoral-address determination.',
+}
+AREA_BEHAVIOR_SHA256='98e8ad4e1537dbf9a8d244e69e2f0e76b0929de76e383346ca75c18a32d474de'
+
+def area_context(packet,raw,text):
+ from scripts.scarb_static_materialize import discover
+ suffix=packet['id'].removeprefix('shell.shell-b04b38d4-')
+ v.need(packet['id']=='shell.shell-b04b38d4-'+suffix and suffix in AREA_CONTROLS,'Unsupported area control')
+ dom,label,attribute=AREA_CONTROLS[suffix];anchor=AREA_BUTTONS[dom]
+ v.need(text.count(anchor)==1 and text.count('id="'+dom+'"')==1 and packet['draft']==label and packet['kind']=='functional','Exact area control changed')
+ behavior=(ROOT/'docs/area-explorer.mjs').read_bytes()
+ v.need(hashlib.sha256(behavior).hexdigest()==AREA_BEHAVIOR_SHA256,'Area control behavior changed')
+ shell=json.loads((ROOT/'config/scarb-static-shells.json').read_text(encoding='utf8'))['docs/index.html']
+ v.need(discover(shell['source'])==[{k:v for k,v in s.items() if k not in ('id','fields')} for s in shell['slots']],'Area source slot inventory changed')
+ slots=[s for s in shell['slots'] if s['id']==packet['id']]
+ v.need(len(slots)==1 and slots[0]['draft']==label and slots[0]['attribute']==attribute and shell['source'].count(anchor)==1,'Area canonical slot changed')
+ slot=slots[0];start=shell['source'].index(anchor)
+ v.need(start<=slot['start']<slot['end']<=start+len(anchor),'Area slot belongs to different control')
+ return {'path':'docs/index.html','source_sha256':hashlib.sha256(raw).hexdigest(),'anchor_html':anchor,
+ 'behavior_path':'docs/area-explorer.mjs','behavior_sha256':AREA_BEHAVIOR_SHA256,
+ 'meaning':AREA_MEANINGS[dom]+' Keep visible and accessible names aligned; no new findings or changes to source facts.'}
+
 def current_contexts(packets):
  current=seam.current_canonical_requests();path=ROOT/'docs/index.html';raw=path.read_bytes();text=raw.decode('utf8');contexts={}
  for packet in packets:
-  identity=packet['id'];v.need(identity in ANCHORS and current.get(identity)==packet,'Unsupported or stale context producer')
+  identity=packet['id'];v.need(current.get(identity)==packet,'Unsupported or stale context producer')
+  if identity not in ANCHORS:
+   contexts[identity]=area_context(packet,raw,text);continue
   destination,label=ANCHORS[identity];anchor=f'<a href="{destination}" class="about-link">{label}</a>'
   v.need(text.count(anchor)==1 and packet['draft']==label,'Exact unique source anchor missing')
   contexts[identity]={'path':'docs/index.html','source_sha256':hashlib.sha256(raw).hexdigest(),'anchor_html':anchor,'destination':destination,'meaning':'Existing navigation label only; preserve its destination and unambiguous function; no new claims.'}

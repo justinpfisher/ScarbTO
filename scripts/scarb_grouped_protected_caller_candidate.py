@@ -28,7 +28,7 @@ def _invoke(manifest_path,approved_manifest_sha256,*,state,expected_state,env,tr
  config_path=Path(manifest['config_path']);requests_path=Path(manifest['requests_path'])
  v.need(sha(config_path)==manifest['config_sha256'] and sha(requests_path)==manifest['requests_sha256'],'Exact config or requests changed')
  config=json.loads(config_path.read_text());packets=json.loads(requests_path.read_text())
- v.need(len(packets)==2 and {p['id']:v.digest(p) for p in packets}==manifest['packet_bindings'],'Wrong exact two-packet scope')
+ v.need(len(packets) in (2,3) and {p['id']:v.digest(p) for p in packets}==manifest['packet_bindings'],'Wrong exact two-or-three-packet scope')
  models={'author':config['author_model'],'reviewer':config['reviewer_model']};v.need(models==manifest['models'] and models=={'author':'gpt-6-luna','reviewer':'gpt-6.1-terra'},'Model scope changed')
  # Common validation is shared; this pinned route validates its exact cumulative
  # funding cap below rather than the generic initial-pilot cap. No fallback.
