@@ -75,3 +75,34 @@ class MixedReleaseBridgeTests(unittest.TestCase):
     with self.assertRaises(c.v.VoiceError):stage.stage_inputs(packets,{},state,candidate,state/'tampered',authoring_version='v3',mixed_bundle=bundle)
     self.assertFalse((state/'incomplete').exists());self.assertFalse((state/'tampered').exists())
    self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
+
+ def test_external_private_registry_binding_and_restoration(self):
+  import hashlib
+  from scripts import stage_scarb_ai_inputs as stage
+  with tempfile.TemporaryDirectory() as d:
+   state=Path(d);path=state/'synthetic-registry.json'
+   pin={k:'a'*64 for k in ['funding_sha256','ledger_before_sha256','manifest_sha256','membership_before_sha256','prices_sha256','runner_sha256','solo_state_sha256','source_context_sha256']}
+   pin.update(cost_version=2,expected_purpose='production-grouped-review',membership_version=1,month_cap_nusd=1,packet_bindings={},requested_models={},reservation_nusd=1,returned_models={},solo_state_root=str(state))
+   value={'version':'scarb-private-grouped-registry-1','runs':{'a'*64:pin}}
+   def save(x):
+    path.write_text(json.dumps(x),encoding='utf8');return hashlib.sha256(path.read_bytes()).hexdigest()
+   approved=save(value)
+   with stage.private_grouped_registry(state,path,approved):
+    self.assertEqual(set(c.provenance.TRUSTED_GROUPED_RUNS),{'a'*64})
+    # Pin binding alone is not provenance proof or catalogue acceptance.
+    with self.assertRaises(c.v.VoiceError):c.compile_mixed_catalogue({'solo_v1':{},'solo_v2':{},'grouped':[]},{})
+   self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
+   for kind in ['missing-pin','wrong-pin','tamper','multiple','fixture','extra-field']:
+    changed=copy.deepcopy(value);digest=approved
+    if kind=='missing-pin':digest=None
+    elif kind=='wrong-pin':digest='b'*64
+    elif kind=='tamper':changed['version']='tampered'
+    elif kind=='multiple':changed['runs']['b'*64]=copy.deepcopy(pin)
+    elif kind=='fixture':changed['runs']['a'*64]['expected_purpose']='synthetic-grouped-run'
+    else:changed['runs']['a'*64]['unexpected']=True
+    actual=save(changed)
+    if kind in ['multiple','fixture','extra-field']:digest=actual
+    with self.subTest(kind=kind),self.assertRaises(c.v.VoiceError):
+     with stage.private_grouped_registry(state,path,digest):self.fail('untrusted grant')
+    self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
+   self.assertEqual(set(p.name for p in state.iterdir()),{'synthetic-registry.json'})
