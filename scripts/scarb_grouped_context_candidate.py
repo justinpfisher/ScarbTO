@@ -62,6 +62,9 @@ def current_contexts(packets):
   selected_calls=json.loads(subprocess.run(['node',str(ROOT/'scripts/scarb_selected_calls_contexts.mjs')],cwd=ROOT,check=True,capture_output=True,text=True,encoding='utf8').stdout)
  for packet in packets:
   identity=packet['id'];v.need(current.get(identity)==packet,'Unsupported or stale context producer')
+  if identity.startswith('python.rss-'):
+   from scripts.scarb_rss_contexts import contexts as rss_contexts
+   contexts.update(rss_contexts([packet]));continue
   if identity.startswith('static.selected-calls-'):
    v.need(identity in selected_calls,'Unbound selected-call context');contexts[identity]=selected_calls[identity];continue
   if identity.startswith('static.finding-explanation-'):
