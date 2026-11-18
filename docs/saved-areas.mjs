@@ -1,3 +1,4 @@
+import {staticCopy} from './scarb-voice.mjs';
 import {areaFor, NEIGHBOURHOODS, WARDS} from './area-selection.mjs';
 
 export const SAVED_AREAS_KEY = 'scarbto-public-areas-v1';
@@ -24,9 +25,9 @@ export function mountSavedAreas(document, storage) {
   const status=document.getElementById('saved-areas-status');
   let areas=[];
   try { areas=validatedAreas(JSON.parse(storage.getItem(SAVED_AREAS_KEY)||'[]')); }
-  catch { status.textContent='Saved areas could not be read. You can still explore any area.'; }
+  catch { status.textContent=staticCopy('saved-unreadable'); }
   for (const [kind, records] of [['neighbourhood',NEIGHBOURHOODS],['ward',WARDS]]) {
-    const group=document.createElement('optgroup');group.label=kind==='ward'?'City wards':'Neighbourhoods';
+    const group=document.createElement('optgroup');group.label=kind==='ward'?staticCopy('saved-wards'):staticCopy('saved-neighbourhoods');
     for (const [code, area] of Object.entries(records)) {
       const option=document.createElement('option');option.value=`${kind}:${code}`;option.textContent=area.name;group.append(option);
     }
@@ -34,7 +35,7 @@ export function mountSavedAreas(document, storage) {
   }
   function persist(next) {
     try { storage.setItem(SAVED_AREAS_KEY, JSON.stringify(next)); areas=next; return true; }
-    catch { status.textContent='This browser could not save the change. Your list has not changed.'; return false; }
+    catch { status.textContent=staticCopy('saved-write-failed'); return false; }
   }
   function render() {
     list.replaceChildren();
@@ -42,10 +43,10 @@ export function mountSavedAreas(document, storage) {
       const area=areaFor(identity.kind,identity.code);
       const row=document.createElement('li'), link=document.createElement('a'), remove=document.createElement('button');
       link.href=publicAreaHref(area);link.textContent=area.name;
-      remove.type='button';remove.textContent='Remove';remove.setAttribute('aria-label',`Remove ${area.name} from saved areas`);
+      remove.type='button';remove.textContent=staticCopy('saved-remove');remove.setAttribute('aria-label',staticCopy('saved-remove-label',{NAME:area.name}));
       remove.addEventListener('click',()=>{
         if (!persist(areas.filter(item=>item.kind!==area.kind||item.code!==area.code))) return;
-        render();status.textContent=`Removed ${area.name} from this browser.`;choice.focus();
+        render();status.textContent=staticCopy('saved-removed',{NAME:area.name});choice.focus();
       });
       row.append(link,remove);list.append(row);
     }
@@ -55,9 +56,9 @@ export function mountSavedAreas(document, storage) {
   save.addEventListener('click',()=>{
     const [kind,code]=choice.value.split(':');const area=areaFor(kind,code);
     if (!area) return;
-    if (areas.some(item=>item.kind===kind&&item.code===code)) {status.textContent=`${area.name} is already saved.`;return;}
+    if (areas.some(item=>item.kind===kind&&item.code===code)) {status.textContent=staticCopy('saved-duplicate',{NAME:area.name});return;}
     if (!persist(validatedAreas([...areas,area]))) return;
-    render();status.textContent=`Saved ${area.name} on this browser.`;
+    render();status.textContent=staticCopy('saved-added',{NAME:area.name});
   });
   render();
 }

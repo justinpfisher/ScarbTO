@@ -77,9 +77,17 @@ class BrandWeeklyRenderTests(unittest.TestCase):
         )
         self.assertEqual(revised["render_version"], 2)
 
+    def test_voice_render_is_future_only_and_preserves_source_facts(self):
+        old = brief._render_edition(PAYLOAD, {**RECORD, "render_version": 3})
+        current = brief._render_edition(PAYLOAD, {**RECORD, "render_version": 4}).decode("utf-8")
+        self.assertNotEqual(old, current.encode("utf-8"))
+        for text in ('Fixture Cafe', 'DineSafe result when added: Pass.', 'Previous status: Conditional.', '2026-11-10', '2026-11-12T15:00:00+00:00', '#establishment/123', 'href="/west-rouge/"', 'AI-assisted', 'class="brand-name">Scarb.TO'):
+            self.assertIn(text, current)
+        self.assertEqual(brief._render_edition(PAYLOAD, {**RECORD, "render_version": 3}), old)
+
     def test_unknown_render_version_fails_closed(self):
         with self.assertRaisesRegex(brief.BriefError, "Unsupported weekly-brief render version"):
-            brief._render_edition(PAYLOAD, {**RECORD, "render_version": 4})
+            brief._render_edition(PAYLOAD, {**RECORD, "render_version": 5})
         edition = {
             **RECORD,
             "period_start": "2026-11-09",
@@ -87,7 +95,7 @@ class BrandWeeklyRenderTests(unittest.TestCase):
             "path": "briefs/2026-11-09/",
             "content_sha256": "a" * 64,
             "html_sha256": "b" * 64,
-            "render_version": 4,
+            "render_version": 5,
         }
         with self.assertRaisesRegex(brief.BriefError, "Unsupported weekly-brief render version"):
             brief._validate_manifest({"editions": [edition]})

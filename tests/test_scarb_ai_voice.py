@@ -98,6 +98,16 @@ class AiVoiceTests(unittest.TestCase):
         p["locks"]["PLACE"] = "{{LOCK:COUNT}}"
         with self.assertRaises(v.VoiceError): v.packet_check(p)
 
+    def test_required_concatenation_whitespace_cannot_move(self):
+        packet = {**copy.deepcopy(PACKET), "draft": "{{LOCK:LAYOUT_PREFIX}}" + PACKET["draft"] + "{{LOCK:LAYOUT_SUFFIX}}",
+                  "locks": {**PACKET["locks"], "LAYOUT_PREFIX": "\n", "LAYOUT_SUFFIX": " "}}
+        v.packet_check(packet)
+        self.assertTrue(v.text_check(packet, writer(packet)).startswith("\n"))
+        moved = writer(packet)
+        moved["body"] = moved["body"].replace("{{LOCK:LAYOUT_PREFIX}}", "") + "{{LOCK:LAYOUT_PREFIX}}"
+        with self.assertRaisesRegex(v.VoiceError, "whitespace moved"):
+            v.text_check(packet, moved)
+
     def test_limits_measured_after_expansion(self):
         p = copy.deepcopy(PACKET)
         p["locks"]["PLACE"] = "Long Name " * 40

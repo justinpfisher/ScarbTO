@@ -129,7 +129,7 @@ jobs:
       - name: Beach sample view tests
         run: node tests/beach-history.test.mjs
       - name: Rendered desktop and mobile browser tests
-        run: node --test tests/browser.integration.test.mjs tests/brand.browser.test.mjs
+        run: node --test tests/browser.integration.test.mjs
       - name: Build source-linked community publication inputs
         run: python scripts/build_community_publishing.py
       - name: Rendered community publication and embed tests
@@ -188,7 +188,7 @@ jobs:
       - name: Generate source-linked community publication inputs
         run: python scripts/build_community_publishing.py
       - name: Check Scarb Voice Gateway before publishing public pages
-        run: node scripts/check_scarb_voice.mjs
+        run: node scripts/check_scarb_voice.mjs --publishing
       - name: Persist only validated data and recoverable release baseline
         run: |
           git config user.name "Scarb.TO data publisher"

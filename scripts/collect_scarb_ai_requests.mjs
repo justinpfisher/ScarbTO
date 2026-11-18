@@ -20,35 +20,63 @@ const LICENCE = 'https://open.toronto.ca/open-data-licence/';
 export function protect(text) {
   requireValue(typeof text === 'string' && text.length > 0 && !text.includes('{{LOCK:'), 'Invalid public copy');
   const locks = {};
-  const pattern = /\{\{[A-Z][A-Z0-9_]*\}\}|https:\/\/[^\s<>]+|Open Government Licence[ –-]+Toronto|Conditional Pass|Scarb\.TO|DineSafe|Scarborough|\bPass\b|\bClosed\b|\d+(?:[.,]\d+)*/g;
-  const draft = text.replace(pattern, match => {
+  const prefix=text.match(/^\s*/)[0],suffix=text.slice(prefix.length).match(/\s*$/)[0];
+  const content=text.slice(prefix.length,text.length-suffix.length);
+  const pattern = /\{\{[A-Z][A-Z0-9_]*\}\}|https:\/\/[^\s<>]+|Open Government Licence[ –-]+(?:Toronto|Ontario)|Conditional Pass|Scarb\.TO|DineSafe|Scarborough|\bPass\b|\bClosed\b|\d+(?:[.,]\d+)*/g;
+  let draft = content.replace(pattern, match => {
     const key = 'VALUE_' + Object.keys(locks).length;
     locks[key] = match;
     return '{{LOCK:' + key + '}}';
   });
+  if(prefix){locks.LAYOUT_PREFIX=prefix;draft='{{LOCK:LAYOUT_PREFIX}}'+draft;}
+  if(suffix){locks.LAYOUT_SUFFIX=suffix;draft+='{{LOCK:LAYOUT_SUFFIX}}';}
   return {draft, locks};
 }
 
-const STATIC = Object.freeze({
-  'home-title': ['home','editorial'], 'home-intro': ['home','editorial'],
-  'home-boundaries': ['source-note','editorial'], 'neighbourhood-intro': ['neighbourhood','editorial'],
-  'directory-intro': ['neighbourhood','editorial'], 'community-title': ['community','editorial'],
-  'community-intro': ['community','editorial'], 'community-coverage': ['source-note','editorial'],
-  'community-core': ['filters','functional'], 'evidence-title': ['evidence','editorial'],
-  'evidence-intro': ['evidence','editorial'], 'embed-title': ['embed','editorial'],
-  'embed-intro': ['embed','editorial'], 'editor-start': ['community','functional'],
-  'missing-pdf-tools': ['error','functional'], 'briefs-title': ['brief','editorial'],
-  'briefs-intro': ['brief','editorial']
-});
+const STATIC = Object.freeze(JSON.parse(readFileSync(new URL('../config/scarb-copy-classifications.json',import.meta.url),'utf8')));
+const FINDING_SOURCE=Object.freeze(JSON.parse(readFileSync(new URL('../config/scarb-finding-source-drafts.json',import.meta.url),'utf8')));
 
 export function catalogueRequests(catalogue, classifications = STATIC) {
   return Object.entries(catalogue).sort(([a],[b]) => a.localeCompare(b, 'en')).map(([key, text]) => {
     requireValue(Object.hasOwn(classifications, key) && IDS.test('static.' + key), 'Classify new copy before sending: ' + key);
+    requireValue(Array.isArray(classifications[key]) && classifications[key].length === 2, "Invalid copy classification: " + key);
     const [surface, kind] = classifications[key];
     return {id: 'static.' + key, surface, kind, ...protect(text),
       evidence: [{id: 'house-copy.' + key, source: 'repo:docs/scarb-voice.mjs#' + key,
-        sha256: sha(text), fact: text}], limits: {words: 150, characters: 1500}};
+        sha256: sha(text), fact: text},...(FINDING_SOURCE[key]?[{id:'official-finding.'+key,source:SOURCE,sha256:sha(FINDING_SOURCE[key]),fact:FINDING_SOURCE[key]}]:[])], limits: {words: 150, characters: 1500}};
   });
+}
+
+
+/** Offline input constructor only; deliberately not enrolled in main/manifest/publication.
+ * A distinct evidence namespace preserves all existing house-copy and held identities.
+ */
+export function retainedIonviewRequest(sourceBytes) {
+  const pins = {"research/phase1b-csi/fixtures/official-source-contract/scarbto-neighbourhood158-source-contract-2026-10-27.json":"0f16bf16cde47f382f21003050a978251f71c258581746d64c9a8c9f5ae8564e","docs/area-selection.mjs":["7f6ac42ebe9c174d28f02d97244267b2baa9efd6f538bd98cecb4d57bcc18313","b1616d798b2d9867e9e37cd880a5d2cbd3e12398312afa4b5ca86bdadebc9e33"],"docs/community-data/releases/887085d7e735b7e9f8484013abe2fa0193ae812f421cc9bca3b16f17003e4655.json":"2c6e46f138d569d5a4033330a2c55cdc50dc1d4228dee5f8706c59b663a8e923","docs/community-data/boundaries/9412f1c2737d7b0165867c7e6a38dd5e7549b834d0184cb9923c4241a85dd3f7.json":"9412f1c2737d7b0165867c7e6a38dd5e7549b834d0184cb9923c4241a85dd3f7","docs/data/scarborough-neighbourhoods.geojson":"f649e4df4c6033081ba4dcd40a610ee275e80891e6fc695ec3d4fdda1772d288"};
+  requireValue(sourceBytes && Object.keys(sourceBytes).sort().join('|')===Object.keys(pins).sort().join('|'), 'Exact retained geography source set required');
+  // The code mapping has two exact byte pins: Git LF and its Windows CRLF checkout.
+  // Source-data artifacts remain single-pin; no arbitrary normalization is accepted.
+  for (const [path,hash] of Object.entries(pins)) {
+    requireValue(Buffer.isBuffer(sourceBytes[path]) && [hash].flat().includes(createHash('sha256').update(sourceBytes[path]).digest('hex')),'Retained geography evidence changed: '+path);
+  }
+  // Exact byte identities bind the previously reconciled source projection, not
+  // an arbitrary caller-supplied geographic claim or a replacement scientific review.
+  const packet = {"draft":"Here is a map detail worth following: {{LOCK:NAME}} overlaps wards {{LOCK:WARD_A}} and {{LOCK:WARD_B}}. {{LOCK:LIMIT}}","evidence":[{"fact":"{\"basis\":\"retained City-source native EPSG:2952 intersection contract; each listed overlap exceeds existing one-percent display threshold\",\"city_code\":\"125\",\"contract_created_at\":\"2026-10-27T17:56:20.174497+00:00\",\"coverage_note\":\"Only records inside the qualified six Scarborough wards are included. City neighbourhoods can cross those wards; this is not necessarily a whole-neighbourhood total.\",\"licence\":\"https://open.toronto.ca/open-data-licence/\",\"name\":\"Ionview\",\"neighbourhood_source\":\"https://open.toronto.ca/dataset/neighbourhoods/\",\"relation\":\"positive_area_overlap\",\"ward_codes\":[\"20\",\"21\"]}","id":"retained-geography.125","sha256":"c0a1d07ba470efdecdfbe7fde3fd6b4ed531d002699836dfcb1f9a716f00b2cd","source":"repo:research/phase1b-csi/fixtures/official-source-contract/scarbto-neighbourhood158-source-contract-2026-10-27.json#spatial_crosswalk/125"}],"id":"geography.home-ionview-boundaries","kind":"editorial","limits":{"characters":1800,"words":150},"locks":{"LIMIT":"Only records inside the qualified six Scarborough wards are included. City neighbourhoods can cross those wards; this is not necessarily a whole-neighbourhood total.","NAME":"Ionview","WARD_A":"20","WARD_B":"21"},"surface":"home"};
+  return packet;
+}
+
+export function pythonCatalogueRequests() {
+  const drafts=JSON.parse(readFileSync(new URL('../config/scarb-python-copy-drafts.json',import.meta.url),'utf8'));
+  const classifications=JSON.parse(readFileSync(new URL('../config/scarb-python-copy-classifications.json',import.meta.url),'utf8'));
+  return catalogueRequests(drafts,classifications).map(packet=>({...packet,id:packet.id.replace(/^static\./,'python.'),evidence:packet.evidence.map(e=>({...e,id:e.id.replace('house-copy.','python-copy.'),source:e.source.replace('repo:docs/scarb-voice.mjs#','repo:config/scarb-python-copy-drafts.json#')}))}));
+}
+export function shellCatalogueRequests() {
+  const drafts=JSON.parse(readFileSync(new URL('../config/scarb-shell-copy-drafts.json',import.meta.url),'utf8'));
+  const classifications=JSON.parse(readFileSync(new URL('../config/scarb-shell-copy-classifications.json',import.meta.url),'utf8'));
+  return catalogueRequests(drafts,classifications).map(packet=>({...packet,id:packet.id.replace(/^static\./,'shell.'),evidence:packet.evidence.map(e=>({...e,id:e.id.replace('house-copy.','shell-copy.'),source:e.source.replace('repo:docs/scarb-voice.mjs#','repo:config/scarb-shell-copy-drafts.json#')}))}));
+}
+export function requestManifest(packets) {
+  const result={};for(const packet of packets){requireValue(!Object.hasOwn(result,packet.id),'Duplicate current request');result[packet.id]=sha(packet);}return result;
 }
 
 function date(value, zoned) {
@@ -105,7 +133,7 @@ async function main() {
   const output = take('--output');
   requireValue(output && !resolve(output).split(/[\\/]/).includes('docs'), 'Write requests outside public docs');
   const {SCARB_COPY} = await import('../docs/scarb-voice.mjs');
-  let packets = catalogueRequests(SCARB_COPY);
+  let packets = [...catalogueRequests(SCARB_COPY),...pythonCatalogueRequests(),...shellCatalogueRequests()];
   const file = take('--release'), expected = take('--release-sha256');
   requireValue(Boolean(file) === Boolean(expected), 'Supply release and independently qualified byte hash together');
   if (file) {

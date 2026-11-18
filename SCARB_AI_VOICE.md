@@ -236,3 +236,145 @@ charge are genuine protected prerequisites, not permission to weaken checks.
 `store:false` is not a promise of zero provider retention; abuse-monitoring/data
 controls still apply. Only qualified **public** data is sent by the supplied
 collector. Private publisher settings and family/account material are excluded.
+
+
+## Owner-authorized bounded existing-paid pilot (offline implementation)
+
+The owner subsequently authorized existing paid API funds for Scarb within a
+temporary C$20/month ceiling. This does not authorize a purchase, top-up, new
+payment method, automatic recharge, postpaid exposure or credential changes.
+The original promotional path above remains unchanged. The separate
+`existing_paid_api_credits` variant requires verified existing organization and
+Scarb project identity, a current sufficient balance receipt, and verified
+`auto_recharge_disabled` and `postpaid_disabled` attestations. Setting those
+fields is not itself verification of provider billing settings.
+
+The bounded implementation retains the existing US$5 monthly application fuse
+and adds a cumulative, non-monthly US$0.25 initial pilot ceiling. It permits only
+GPT-6 Luna as author and GPT-6.1 Terra as the independent reviewer. Both calls
+are reserved under the same exclusive private-state lock before transmission.
+An uncertain or failed attempt retains its reservation and held-attempt marker;
+it is not automatically retried. Accepted unchanged cache entries require no
+new calls. A reported token overrun closes both fuses. These application controls
+are not provider-enforced billing controls and do not cover unrelated callers.
+
+This variant has synthetic positive and negative tests only. No live activation,
+API call, account/billing modification or credential discovery is implied.
+Real qualification still requires the verified project/key custody and funding
+receipt plus the bounded pilot execution coordinated by the existing owner.
+
+
+### Bounded prepaid pilot when provider cutoff is not guaranteed
+
+A separately reviewed offline variant records `billing_mode` as
+`prepaid_cutoff_not_guaranteed`; it must not claim `postpaid_disabled`. It is
+restricted to the two exact approved public packet hashes and the dedicated
+Scarb project. It requires a balance receipt no older than one hour, at least
+US$5.25 prepaid balance (US$5 buffer plus the whole US$0.25 pilot), and verified
+automatic recharge off. The same held-attempt, cumulative pilot and monthly
+fuses apply. This is not authorization for ongoing paid automation. Provider
+cutoff may lag and unrelated account usage is outside the application fuse;
+these facts must remain explicit in the execution decision. No real funding
+receipt or API activation is created by this implementation.
+
+
+## Offline fact-slot contract v2 (not activated)
+
+`scripts/scarb_ai_fact_slots.py` is an offline-only, separately versioned authoring
+contract. It has no live transport, credential loader or generation CLI. The
+explicit `generate_fixture` simulator uses only canned responses and disposable
+fixture state, marked `test-fixture`. V1 prompts, schema,
+cache keys, historical receipts and held attempts remain unchanged. No v2 receipt
+is accepted by the publisher or installed by this prototype.
+
+A strict per-packet schema requires every protected name as an object key. The
+writer chooses each slot's unique integer rank and preceding connective prose,
+plus a final prose tail and the unchanged evidence IDs. The assembler inserts the
+original protected token after each preceding fragment. This removes token
+spelling/copying from prose output without fixing sentence order or supplying a
+creative template. Required keys, unknown keys, duplicate/out-of-range ranks,
+model-supplied tokens, new number/URL/markup markers, evidence IDs and expanded
+length remain fail-closed. Existing whitespace-lock rules still apply.
+
+The separate reviewer receives the original packet, FULL reconstructed tokenized
+paragraph and materialised final text. Meaning, omissions, relationship/order,
+source prominence, safety and 2x voice must all pass; valid structural output alone
+is not semantic or stylistic qualification. Source values are unchanged. The
+original whole-official-value verbatim lane is not broadened.
+
+V2 version, exact prompts, per-packet schema and models bind its distinct cache
+identity. The fixture helper always labels output `test-fixture`; it is not a
+production receipt. Future dispatch integration must separately bind raw slot
+output, deterministic assembly and independent review in the receipt; preserve the
+same cumulative reservations and first-attempt holds; and prohibit interpreting a
+new schema as permission to retry a held packet. It must reserve the new schema,
+full reconstructed reviewer input and output caps before any call. Existing v1
+cost estimates are NOT a qualified v2 budget. No model calls are enabled here.
+
+Prospective qualification cases are distinct synthetic public-source contracts:
+a source-note with two exact facts plus one safety caveat; a no-fact functional
+control; and an accessibility phrase with required leading/trailing whitespace.
+They are not either previously held packet or a renamed replay. Live use requires
+separate exact-case funding/scope approval, schema review and actual writer/reviewer
+plus accepted-output rendering. These offline fixtures claim none of that.
+
+
+Offline v2 handoff simulation now reserves both calls before exchanging canned
+responses, checks explicit funding/config/schema envelopes, uses a separate
+versioned fixture receipt directory and refuses an existing exact v1 or v2 hold.
+It revalidates raw slots, reconstructed writer, final text, evidence, reviewer and
+receipt digest on cache reuse. No real environment/key is read. Its synthetic
+funding identity is provided solely to exercise the existing checks. No production
+receipt is minted. Fixture reservations remain conservatively charged in the
+throwaway ledger even after success. Tests separately exercise valid-draft /
+oversized-candidate word and character limits, empty-lock controls, and mandatory
+boundary whitespace. The live transport/production receipt route remains absent.
+
+
+### Disabled production handoff implementation (supersedes prototype absence above)
+
+V2 now exposes `generate(..., enable_v2=False, approved_packet_sha256=(), env=None)`.
+There is no CLI/default activation: exact packet approval, explicit protected env,
+existing config funding checks and its private paid packet whitelist all remain
+required. It calls only the existing bounded v1 HTTP implementation, never a new
+endpoint. Both calls are conservatively reserved in the SAME ledger/exclusive lock;
+failures retain the reservation and hold, and an original exact v1 hold prevents
+this version becoming a replay route. Success also retains the conservative
+reservation (rather than refunding it). Reported usage overrun exhausts the existing
+fuses. No private state or approval whitelist was changed during implementation.
+
+Immutable accepted-v2 receipts bind packet hash, exact version/prompts/schema/models,
+raw slot output, reconstructed writer, final text, independent verdict and measured
+usage. `compile_catalogue` verifies all of these and rejects fixture origins; its
+public result uses the unchanged existing reader schema. The private staging,
+comparison and byte-attestation bridge accepts explicit `authoring_version="v2"`
+(default v1) and revalidates private v2 receipts before deriving JSON/MJS. This is
+not permission to install or publish a catalogue. Mocked production-route tests
+use temporary state and patched transport only, never real credentials or requests.
+Provider schema acceptance and a real accepted writer/reviewer result remain unproven.
+
+
+The next v2 qualification eligibility is separately fixed in source to packet
+`d17d1dc701dfaf10f04144afab0b7f2cfe2c61d549a2e9036220a9a20c10de1a`.
+V1 funding validation and its original two-packet list are unchanged; v2 uses that
+same funding receipt for truthful prepaid identity/freshness/no-reload checks,
+while its own exact eligibility replaces the v1 packet-selection rule only in the
+v2 entry point. Both original held packet hashes and all other packets are refused
+in this bounded prepaid variant. The explicit live-default-off and approval gates
+still apply. No funding configuration has been rewritten or new call authorised by
+this code. The prospective two-call reserve is US$0.088814, combined US$0.154281
+with existing held US$0.065467; a later funded invocation needs exact hashes and
+fresh provider receipt verification. Finite journals preserve request/validation
+stages, response presence and measured token counts only, not raw response text.
+
+
+After the once-only v2 qualification was independently rejected, all three actual
+packet digests are sealed in the v2 dispatch entry point before cache lookup,
+funding, reservation or transport. These content-addressed refusals survive prompt,
+schema and version changes. The prior v2 eligible digest is now also refused; no
+new packet has been authorised. V1 historical implementation remains unchanged:
+its own hold key includes prompts/schema, so the stable digest seal described here
+is a V2 entry-point guarantee, not a claim of retrofitting v1. No earlier journal
+or ledger was changed. Future v2 reviewer failures preserve only schema-valid flag,
+approve/meaning/limitations/voice booleans and an issues-present boolean, never
+free-form issue text. Existing held results are not retroactively interpreted.

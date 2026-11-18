@@ -34,7 +34,7 @@ test('the generated West Rouge route and alias match their reusable source templ
   const template=readFileSync(new URL('../docs/neighbourhood-page.template.html',import.meta.url),'utf8');
   const pages=buildPageFiles(NEIGHBOURHOODS,template);
   assert.equal(pages.get('docs/west-rouge/index.html').includes('<h1 id="page-title">West Rouge</h1>'),true);
-  assert.match(pages.get('docs/west-rouge/index.html'),/Let's explore West Rouge/);
+  assert.match(pages.get('docs/west-rouge/index.html'),/food inspection records and City neighbourhood boundaries for West Rouge side by side/);
   assert.match(pages.get('docs/west-rouge/index.html'),/I match each DineSafe record's source coordinates to the City's neighbourhood boundaries/);
   assert.match(pages.get('docs/west-rouge/index.html'),/not a neighbourhood label supplied by DineSafe/);
   assert.match(pages.get('docs/west-rouge/index.html'),/not a confirmed count of distinct businesses/);

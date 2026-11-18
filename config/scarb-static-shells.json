@@ -1,0 +1,1995 @@
+{
+  "docs/index.html": {
+    "source": "<!doctype html>\n<html lang=\"en-CA\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">\n  <meta name=\"theme-color\" content=\"#0A3D2A\">\n  <link rel=\"icon\" type=\"image/svg+xml\" href=\"./assets/brand/scarbto-icon.svg\">\n  <meta name=\"description\" content=\"Scarborough. I looked into it. Follow the data trails around Scarborough. Explore places, food inspections and neighbourhood boundaries, with sources and dates to guide the way.\">\n  <title>Scarb.TO - Scarborough. I looked into it.</title>\n  <link rel=\"alternate\" type=\"application/rss+xml\" title=\"Scarb.TO food inspection updates\" href=\"/feed.xml\">\n  <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.css\">\n  <link rel=\"stylesheet\" href=\"./styles.css\">\n</head>\n<body>\n  <a class=\"skip-link\" href=\"#results\">Skip to results</a>\n  <div class=\"site-shell\">\n    <header class=\"site-header\">\n      <a class=\"identity\" href=\"/\" aria-label=\"Scarb.TO home\">\n        <picture>\n          <source media=\"(max-width: 420px)\" srcset=\"./assets/brand/scarbto-mark.svg\">\n          <img class=\"brand-lockup\" src=\"./assets/brand/scarbto-connected.svg\" alt=\"\">\n        </picture>\n        <span class=\"brand-name\">Scarb.TO</span>\n      </a>\n      <div class=\"header-right\"><span class=\"header-place\">Scarborough, Toronto</span><a href=\"/neighbourhoods/\" class=\"about-link\">Neighbourhoods</a><a href=\"/briefs/\" class=\"about-link\">Weekly briefs</a><a href=\"#about\" class=\"about-link\">About & sources</a></div>\n    </header>\n    <div class=\"intro-row\">\n      <div><p class=\"intro-tagline\">Scarborough. I looked into it.</p><h1 data-scarb-voice=\"home-title\">Scarborough has a lot of stories hiding in its data.</h1><p data-scarb-voice=\"home-intro\">Scarborough's maps and public records give me plenty to get curious about. I've brought the places, inspection results and neighbourhood boundaries together here, with their dates and sources. Pick a thread. Let's see where it leads.</p></div>\n    </div>\n    <div class=\"app-wrap\">\n      <aside class=\"filters\" aria-label=\"Map filters\">\n        <div class=\"filter-topline\"><span class=\"eyebrow\">Explore the area</span><button class=\"mobile-filter-toggle\" id=\"toggle-filters\" type=\"button\" aria-expanded=\"false\" aria-controls=\"filter-options\">Filters</button></div>\n        <div class=\"area-boundary-controls\" role=\"group\" aria-label=\"Optional map boundary overlays\">\n          <span class=\"area-controls-label\">Boundaries</span>\n          <div class=\"area-toggle-list\">\n            <button type=\"button\" class=\"area-toggle selected\" data-area-overlay=\"off\" aria-pressed=\"true\">Off</button>\n            <button type=\"button\" class=\"area-toggle\" data-area-overlay=\"neighbourhood\" aria-pressed=\"false\">Neighbourhoods</button>\n            <button type=\"button\" class=\"area-toggle\" data-area-overlay=\"ward\" aria-pressed=\"false\">City wards</button>\n          </div>\n          <div class=\"area-choice-wrap\" id=\"area-choice-wrap\" hidden><label for=\"area-choice\">Choose an area</label><select id=\"area-choice\"><option value=\"\">Choose an area</option></select></div>\n          <p class=\"area-overlay-note\" data-scarb-voice=\"home-boundaries\">Here's a favourite Scarborough map quirk: City wards and neighbourhoods don't always line up. Try either boundary to narrow the food inspection map and list. Beach samples and police division totals use different areas.</p>\n        </div>\n        <section class=\"saved-public-areas\" aria-labelledby=\"saved-areas-title\">\n          <h2 id=\"saved-areas-title\">Your saved areas</h2>\n          <p>Keep a few public areas handy on this browser. No account or alerts.</p>\n          <label for=\"saved-area-choice\">Choose a public area to save</label>\n          <select id=\"saved-area-choice\" disabled><option value=\"\">Choose an area</option></select>\n          <button id=\"save-public-area\" type=\"button\" disabled>Save area</button>\n          <p id=\"saved-areas-status\" role=\"status\"></p>\n          <ul id=\"saved-areas-list\"></ul>\n          <noscript>Saving areas needs JavaScript. You can still browse the <a href=\"/neighbourhoods/\">neighbourhood directory</a>.</noscript>\n        </section>\n        <div id=\"filter-options\" class=\"filter-options\"><div class=\"view-tabs\" role=\"group\" aria-label=\"Browse mode\">\n          <button class=\"tab active\" data-mode=\"recent\" type=\"button\" aria-pressed=\"true\">Browse updates</button>\n          <button class=\"tab\" data-mode=\"all\" type=\"button\" aria-pressed=\"false\">All places</button>\n          <button class=\"tab\" data-mode=\"beach\" type=\"button\" aria-pressed=\"false\">Beach samples</button>\n          <button class=\"tab\" data-mode=\"selected-calls\" type=\"button\" aria-pressed=\"false\">Police calls by division</button>\n        </div>\n        <p id=\"beach-filter-note\" class=\"filter-note\" hidden>These are historical beach samples, not today's swimming advice. Choose Browse updates or All places to search food inspection records.</p>\n        <p id=\"selected-calls-filter-note\" class=\"filter-note\" hidden>When you open this view, I request totals from Toronto Police Service's Esri service. They stay only in this tab's memory until they expire. I don't request individual calls or their locations.</p>\n        <div id=\"food-filters\">\n        <label for=\"search\">Find a place</label>\n        <input id=\"search\" type=\"search\" placeholder=\"Name or address\" autocomplete=\"off\" spellcheck=\"false\">\n        <div class=\"control-grid\">\n          <div><label for=\"neighbourhood\">Neighbourhood</label><select id=\"neighbourhood\"><option value=\"\">All Scarborough</option></select></div>\n          <div><label for=\"window\">Time period</label><select id=\"window\">\n            <option value=\"7\">Past 7 days</option><option value=\"30\" selected>Past 30 days</option>\n            <option value=\"90\">Past 90 days</option><option value=\"all\">Any date</option>\n          </select></div>\n        </div>\n        <fieldset class=\"outcomes\"><legend>Latest recorded outcome</legend>\n          <div class=\"outcome-group\" role=\"group\" aria-label=\"DineSafe outcome\">\n            <button class=\"chip selected\" data-status=\"all\" aria-pressed=\"true\" type=\"button\">All</button>\n            <button class=\"chip\" data-status=\"Pass\" aria-pressed=\"false\" type=\"button\"><span class=\"dot pass\"></span> Pass</button>\n            <button class=\"chip\" data-status=\"Conditional Pass\" aria-pressed=\"false\" type=\"button\"><span class=\"dot conditional\"></span> Conditional</button>\n            <button class=\"chip\" data-status=\"Closed\" aria-pressed=\"false\" type=\"button\"><span class=\"dot closed\"></span> Closed</button>\n          </div>\n        </fieldset>\n        <div class=\"mobile-hint\">Your filters narrow both the map and the list.</div></div>\n        <div class=\"filter-footer\"><button id=\"reset\" class=\"text-action\" type=\"button\">Clear filters</button><span>Food inspection filters saved on this device</span></div></div>\n      </aside>\n      <main class=\"map-results\">\n        <div class=\"map-panel\">\n          <div id=\"map\" role=\"region\" aria-label=\"Food inspection map. Marker shapes and letters show the outcome as well as colour. The list gives each result in words.\"></div><p id=\"selected-calls-map-note\" class=\"map-mode-note\" hidden>The list shows police division totals, not individual calls or dots on the map.</p><p id=\"map-fallback\" class=\"map-fallback\" role=\"status\" aria-live=\"polite\" hidden>The map isn't available. You can still search and filter the list below, and open the source links.</p>\n          <div id=\"area-selection\" class=\"area-selection\" hidden>\n            <button type=\"button\" id=\"area-reopen\" aria-label=\"Open selected area information\"><span id=\"area-selection-name\"></span></button>\n            <button type=\"button\" id=\"area-clear\">Clear area</button>\n          </div>\n          <p id=\"area-note\" class=\"area-note\" role=\"status\" aria-live=\"polite\" hidden></p>\n          <div class=\"map-legend\" id=\"map-legend\" role=\"group\" aria-label=\"Map key\">\n            <button id=\"map-legend-toggle\" class=\"map-legend-toggle\" type=\"button\" aria-expanded=\"true\" aria-controls=\"map-legend-items\">Map key <span aria-hidden=\"true\">−</span></button>\n            <div id=\"map-legend-items\" class=\"map-legend-items\">\n              <span data-legend-mode=\"dinesafe\"><i class=\"dot pass\" aria-hidden=\"true\"></i>Pass</span><span data-legend-mode=\"dinesafe\"><i class=\"dot conditional\" aria-hidden=\"true\"></i>Conditional</span><span data-legend-mode=\"dinesafe\"><i class=\"dot closed\" aria-hidden=\"true\"></i>Closed</span>\n              <span data-legend-mode=\"beach\"><i class=\"dot beach\" aria-hidden=\"true\"></i>Beach sample</span><span data-legend-mode=\"boundary\"><i class=\"dot boundary\" aria-hidden=\"true\"></i>Community Council boundary</span><span data-legend-mode=\"boundary\"><i class=\"dot outside\" aria-hidden=\"true\"></i>Outside area</span>\n            </div>\n          </div>\n          <button class=\"map-fit\" id=\"fit\" type=\"button\" title=\"Show all Scarborough\">Show all Scarborough</button>\n        </div>\n        <section class=\"results\" id=\"results\" aria-labelledby=\"results-title\">\n          <div class=\"results-header\"><div><p class=\"eyebrow\" id=\"results-kicker\">Food inspection results</p><h2 id=\"results-title\">Places to explore</h2></div><span id=\"results-count\" aria-live=\"polite\"></span></div>\n          <p class=\"results-caption\" id=\"results-caption\">Explore the map or browse the list. Your filters work in both.</p>\n          <p class=\"data-status\" id=\"data-status\" role=\"status\" aria-live=\"polite\">Getting the saved food inspection records ready to explore.</p>\n          <details class=\"source-provenance\" id=\"source-provenance\"><summary>About these records</summary><div id=\"source-provenance-content\"></div></details>\n          <aside id=\"area-panel\" class=\"area-panel\" aria-labelledby=\"area-title\" hidden>\n            <div class=\"area-panel-header\">\n              <div class=\"area-panel-heading\"><p class=\"area-eyebrow\">Explore area</p><h3 id=\"area-title\" tabindex=\"-1\"></h3><p id=\"area-subtitle\"></p></div>\n              <div class=\"area-panel-actions\"><button type=\"button\" id=\"area-panel-expand\" aria-expanded=\"false\" aria-label=\"Expand area information\">Expand</button><button type=\"button\" id=\"area-panel-close\" aria-label=\"Close area information\">Close</button></div>\n            </div>\n            <div id=\"area-content\" class=\"area-content\"></div>\n            <div class=\"area-panel-footer\"><button type=\"button\" id=\"area-panel-fit\">View boundary</button><span>Official sources linked above</span></div>\n          </aside>\n          <div class=\"record-list\" id=\"record-list\" tabindex=\"-1\" aria-live=\"polite\"><p class=\"empty\">Getting the saved City of Toronto food inspection records ready. Each result includes its inspection date and a link to explore further.</p></div>\n        </section>\n      </main>\n    </div>\n    <footer id=\"about\">\n      <div><strong>Scarborough. I looked into it.</strong> I’m an AI-assisted guide who loves exploring Scarborough’s records and sharing the discoveries. This is where I bring them together for anyone who shares that curiosity. I’m independent of the City of Toronto; I work from public sources, not visits or interviews. A DineSafe result describes the inspection on the date shown, not conditions today. Check the City’s record for anything newer.</div>\n      <div>DineSafe records come from the City's <a href=\"https://open.toronto.ca/dataset/dinesafe/\" rel=\"noopener noreferrer\" target=\"_blank\">City of Toronto DineSafe Open Data</a> and are provided under the <a href=\"https://open.toronto.ca/open-data-licence/\" rel=\"noopener noreferrer\" target=\"_blank\">Open Government Licence - Toronto</a>. Want to follow the trail yourself? Explore the <a id=\"download\" href=\"data/establishments.csv\" download>Download Scarb.TO CSV</a> and <a href=\"https://github.com/justinpfisher/ScarbTO/actions\" target=\"_blank\" rel=\"noopener noreferrer\">Update history</a> for the records behind this view. You can also read the <a href=\"/briefs/\">Weekly DineSafe briefs</a>, follow <a href=\"/feed.xml\">DineSafe RSS</a>, or <a href=\"/community/\">create a community publication</a> from qualified records.</div>\n      <div>The <a href=\"https://open.toronto.ca/dataset/neighbourhoods/\" target=\"_blank\" rel=\"noopener noreferrer\">City neighbourhoods (effective April 2022)</a> and <a href=\"https://open.toronto.ca/dataset/city-wards/\" target=\"_blank\" rel=\"noopener noreferrer\">City wards (effective December 2018)</a> boundaries are licensed under the Open Government Licence - Toronto. Here’s something worth exploring: neighbourhoods can cross ward lines! I’ve included both maps so you can see how they fit together. These shapes provide context, not electoral address lookups. The dates identify the boundary versions.</div>\n      <div>I use the <a href=\"https://open.toronto.ca/dataset/community-council-boundaries/\" target=\"_blank\" rel=\"noopener noreferrer\">City of Toronto Open Data</a> Scarborough Community Council boundary as a visual reference; it doesn't filter records. The boundary file is licensed under the <a href=\"https://open.toronto.ca/open-data-licence/\" target=\"_blank\" rel=\"noopener noreferrer\">Open Government Licence - Toronto</a>. The map credits OpenFreeMap and OpenStreetMap contributors in its attribution control. I compare successfully collected DineSafe records to find changes worth exploring. An inspection may be older than the date its record first appears here. Each view names the source it uses; the City isn’t the only source you’ll find on Scarb.TO.</div>\n    </footer>\n  </div>\n  <script type=\"module\" src=\"./saved-areas.mjs\"></script>\n  <script type=\"module\">\n    try {\n      window.maplibregl = await import('https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs');\n    } catch (error) {\n      console.warn('Map library unavailable:', error?.message || error);\n    }\n    await import('./app.mjs');\n  </script>\n</body>\n</html>\n\n",
+    "slots": [
+      {
+        "start": 319,
+        "end": 496,
+        "draft": "Scarborough. I looked into it. Follow the data trails around Scarborough. Explore places, food inspections and neighbourhood boundaries, with sources and dates to guide the way.",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-000"
+      },
+      {
+        "start": 508,
+        "end": 549,
+        "draft": "Scarb.TO - Scarborough. I looked into it.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-001"
+      },
+      {
+        "start": 616,
+        "end": 648,
+        "draft": "Scarb.TO food inspection updates",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-002"
+      },
+      {
+        "start": 869,
+        "end": 884,
+        "draft": "Skip to results",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-003"
+      },
+      {
+        "start": 996,
+        "end": 1009,
+        "draft": "Scarb.TO home",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-004"
+      },
+      {
+        "start": 1256,
+        "end": 1264,
+        "draft": "Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-005"
+      },
+      {
+        "start": 1342,
+        "end": 1362,
+        "draft": "Scarborough, Toronto",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-006"
+      },
+      {
+        "start": 1415,
+        "end": 1429,
+        "draft": "Neighbourhoods",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-007"
+      },
+      {
+        "start": 1471,
+        "end": 1484,
+        "draft": "Weekly briefs",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-008"
+      },
+      {
+        "start": 1524,
+        "end": 1530,
+        "draft": "About ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-009"
+      },
+      {
+        "start": 1531,
+        "end": 1539,
+        "draft": " sources",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-010"
+      },
+      {
+        "start": 1628,
+        "end": 1658,
+        "draft": "Scarborough. I looked into it.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-011"
+      },
+      {
+        "start": 1696,
+        "end": 1748,
+        "draft": "Scarborough has a lot of stories hiding in its data.",
+        "attribute": false,
+        "id": "static.home-title",
+        "fields": {}
+      },
+      {
+        "start": 1786,
+        "end": 2019,
+        "draft": "Scarborough's maps and public records give me plenty to get curious about. I've brought the places, inspection results and neighbourhood boundaries together here, with their dates and sources. Pick a thread. Let's see where it leads.",
+        "attribute": false,
+        "id": "static.home-intro",
+        "fields": {}
+      },
+      {
+        "start": 2109,
+        "end": 2120,
+        "draft": "Map filters",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-014"
+      },
+      {
+        "start": 2181,
+        "end": 2197,
+        "draft": "Explore the area",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-015"
+      },
+      {
+        "start": 2328,
+        "end": 2335,
+        "draft": "Filters",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-016"
+      },
+      {
+        "start": 2420,
+        "end": 2450,
+        "draft": "Optional map boundary overlays",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-017"
+      },
+      {
+        "start": 2497,
+        "end": 2507,
+        "draft": "Boundaries",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-018"
+      },
+      {
+        "start": 2663,
+        "end": 2666,
+        "draft": "Off",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-019"
+      },
+      {
+        "start": 2785,
+        "end": 2799,
+        "draft": "Neighbourhoods",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-020"
+      },
+      {
+        "start": 2909,
+        "end": 2919,
+        "draft": "City wards",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-021"
+      },
+      {
+        "start": 3040,
+        "end": 3054,
+        "draft": "Choose an area",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-022"
+      },
+      {
+        "start": 3104,
+        "end": 3118,
+        "draft": "Choose an area",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-023"
+      },
+      {
+        "start": 3217,
+        "end": 3436,
+        "draft": "Here's a favourite Scarborough map quirk: City wards and neighbourhoods don't always line up. Try either boundary to narrow the food inspection map and list. Beach samples and police division totals use different areas.",
+        "attribute": false,
+        "id": "static.home-boundaries",
+        "fields": {}
+      },
+      {
+        "start": 3574,
+        "end": 3590,
+        "draft": "Your saved areas",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-025"
+      },
+      {
+        "start": 3609,
+        "end": 3677,
+        "draft": "Keep a few public areas handy on this browser. No account or alerts.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-026"
+      },
+      {
+        "start": 3723,
+        "end": 3751,
+        "draft": "Choose a public area to save",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-027"
+      },
+      {
+        "start": 3827,
+        "end": 3841,
+        "draft": "Choose an area",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-028"
+      },
+      {
+        "start": 3923,
+        "end": 3932,
+        "draft": "Save area",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-029"
+      },
+      {
+        "start": 4060,
+        "end": 4116,
+        "draft": "Saving areas needs JavaScript. You can still browse the ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-030"
+      },
+      {
+        "start": 4143,
+        "end": 4166,
+        "draft": "neighbourhood directory",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-031"
+      },
+      {
+        "start": 4306,
+        "end": 4317,
+        "draft": "Browse mode",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-032"
+      },
+      {
+        "start": 4410,
+        "end": 4424,
+        "draft": "Browse updates",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-033"
+      },
+      {
+        "start": 4515,
+        "end": 4525,
+        "draft": "All places",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-034"
+      },
+      {
+        "start": 4618,
+        "end": 4631,
+        "draft": "Beach samples",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-035"
+      },
+      {
+        "start": 4733,
+        "end": 4757,
+        "draft": "Police calls by division",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-036"
+      },
+      {
+        "start": 4843,
+        "end": 4978,
+        "draft": "These are historical beach samples, not today's swimming advice. Choose Browse updates or All places to search food inspection records.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-037"
+      },
+      {
+        "start": 5053,
+        "end": 5246,
+        "draft": "When you open this view, I request totals from Toronto Police Service's Esri service. They stay only in this tab's memory until they expire. I don't request individual calls or their locations.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-038"
+      },
+      {
+        "start": 5311,
+        "end": 5323,
+        "draft": "Find a place",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-039"
+      },
+      {
+        "start": 5386,
+        "end": 5401,
+        "draft": "Name or address",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-040"
+      },
+      {
+        "start": 5519,
+        "end": 5532,
+        "draft": "Neighbourhood",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-041"
+      },
+      {
+        "start": 5584,
+        "end": 5599,
+        "draft": "All Scarborough",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-042"
+      },
+      {
+        "start": 5659,
+        "end": 5670,
+        "draft": "Time period",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-043"
+      },
+      {
+        "start": 5729,
+        "end": 5740,
+        "draft": "Past 7 days",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-044"
+      },
+      {
+        "start": 5777,
+        "end": 5789,
+        "draft": "Past 30 days",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-045"
+      },
+      {
+        "start": 5830,
+        "end": 5842,
+        "draft": "Past 90 days",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-046"
+      },
+      {
+        "start": 5871,
+        "end": 5879,
+        "draft": "Any date",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-047"
+      },
+      {
+        "start": 5973,
+        "end": 5996,
+        "draft": "Latest recorded outcome",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-048"
+      },
+      {
+        "start": 6068,
+        "end": 6084,
+        "draft": "DineSafe outcome",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-049"
+      },
+      {
+        "start": 6181,
+        "end": 6184,
+        "draft": "All",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-050"
+      },
+      {
+        "start": 6311,
+        "end": 6316,
+        "draft": " Pass",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-051"
+      },
+      {
+        "start": 6462,
+        "end": 6474,
+        "draft": " Conditional",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-052"
+      },
+      {
+        "start": 6605,
+        "end": 6612,
+        "draft": " Closed",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-053"
+      },
+      {
+        "start": 6692,
+        "end": 6738,
+        "draft": "Your filters narrow both the map and the list.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-054"
+      },
+      {
+        "start": 6839,
+        "end": 6852,
+        "draft": "Clear filters",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-055"
+      },
+      {
+        "start": 6867,
+        "end": 6911,
+        "draft": "Food inspection filters saved on this device",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-056"
+      },
+      {
+        "start": 7061,
+        "end": 7180,
+        "draft": "Food inspection map. Marker shapes and letters show the outcome as well as colour. The list gives each result in words.",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-057"
+      },
+      {
+        "start": 7249,
+        "end": 7328,
+        "draft": "The list shows police division totals, not individual calls or dots on the map.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-058"
+      },
+      {
+        "start": 7414,
+        "end": 7513,
+        "draft": "The map isn't available. You can still search and filter the list below, and open the source links.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-059"
+      },
+      {
+        "start": 7647,
+        "end": 7677,
+        "draft": "Open selected area information",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-060"
+      },
+      {
+        "start": 7777,
+        "end": 7787,
+        "draft": "Clear area",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-061"
+      },
+      {
+        "start": 7980,
+        "end": 7987,
+        "draft": "Map key",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-062"
+      },
+      {
+        "start": 8127,
+        "end": 8135,
+        "draft": "Map key ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-063"
+      },
+      {
+        "start": 8334,
+        "end": 8338,
+        "draft": "Pass",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-064"
+      },
+      {
+        "start": 8429,
+        "end": 8440,
+        "draft": "Conditional",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-065"
+      },
+      {
+        "start": 8526,
+        "end": 8532,
+        "draft": "Closed",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-066"
+      },
+      {
+        "start": 8629,
+        "end": 8641,
+        "draft": "Beach sample",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-067"
+      },
+      {
+        "start": 8729,
+        "end": 8755,
+        "draft": "Community Council boundary",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-068"
+      },
+      {
+        "start": 8842,
+        "end": 8854,
+        "draft": "Outside area",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-069"
+      },
+      {
+        "start": 8962,
+        "end": 8982,
+        "draft": "Show all Scarborough",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-070"
+      },
+      {
+        "start": 8984,
+        "end": 9004,
+        "draft": "Show all Scarborough",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-071"
+      },
+      {
+        "start": 9190,
+        "end": 9213,
+        "draft": "Food inspection results",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-072"
+      },
+      {
+        "start": 9240,
+        "end": 9257,
+        "draft": "Places to explore",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-073"
+      },
+      {
+        "start": 9384,
+        "end": 9446,
+        "draft": "Explore the map or browse the list. Your filters work in both.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-074"
+      },
+      {
+        "start": 9534,
+        "end": 9593,
+        "draft": "Getting the saved food inspection records ready to explore.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-075"
+      },
+      {
+        "start": 9675,
+        "end": 9694,
+        "draft": "About these records",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-076"
+      },
+      {
+        "start": 9960,
+        "end": 9972,
+        "draft": "Explore area",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-077"
+      },
+      {
+        "start": 10173,
+        "end": 10196,
+        "draft": "Expand area information",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-078"
+      },
+      {
+        "start": 10198,
+        "end": 10204,
+        "draft": "Expand",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-079"
+      },
+      {
+        "start": 10269,
+        "end": 10291,
+        "draft": "Close area information",
+        "attribute": true,
+        "id": "shell.shell-b04b38d4-080"
+      },
+      {
+        "start": 10293,
+        "end": 10298,
+        "draft": "Close",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-081"
+      },
+      {
+        "start": 10481,
+        "end": 10494,
+        "draft": "View boundary",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-082"
+      },
+      {
+        "start": 10509,
+        "end": 10538,
+        "draft": "Official sources linked above",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-083"
+      },
+      {
+        "start": 10673,
+        "end": 10809,
+        "draft": "Getting the saved City of Toronto food inspection records ready. Each result includes its inspection date and a link to explore further.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-084"
+      },
+      {
+        "start": 10907,
+        "end": 10937,
+        "draft": "Scarborough. I looked into it.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-085"
+      },
+      {
+        "start": 10946,
+        "end": 11338,
+        "draft": " I’m an AI-assisted guide who loves exploring Scarborough’s records and sharing the discoveries. This is where I bring them together for anyone who shares that curiosity. I’m independent of the City of Toronto; I work from public sources, not visits or interviews. A DineSafe result describes the inspection on the date shown, not conditions today. Check the City’s record for anything newer.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-086"
+      },
+      {
+        "start": 11356,
+        "end": 11394,
+        "draft": "DineSafe records come from the City's ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-087"
+      },
+      {
+        "start": 11488,
+        "end": 11522,
+        "draft": "City of Toronto DineSafe Open Data",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-088"
+      },
+      {
+        "start": 11526,
+        "end": 11554,
+        "draft": " and are provided under the ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-089"
+      },
+      {
+        "start": 11649,
+        "end": 11682,
+        "draft": "Open Government Licence - Toronto",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-090"
+      },
+      {
+        "start": 11686,
+        "end": 11735,
+        "draft": ". Want to follow the trail yourself? Explore the ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-091"
+      },
+      {
+        "start": 11792,
+        "end": 11813,
+        "draft": "Download Scarb.TO CSV",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-092"
+      },
+      {
+        "start": 11817,
+        "end": 11822,
+        "draft": " and ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-093"
+      },
+      {
+        "start": 11923,
+        "end": 11937,
+        "draft": "Update history",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-094"
+      },
+      {
+        "start": 11941,
+        "end": 11998,
+        "draft": " for the records behind this view. You can also read the ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-095"
+      },
+      {
+        "start": 12017,
+        "end": 12039,
+        "draft": "Weekly DineSafe briefs",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-096"
+      },
+      {
+        "start": 12043,
+        "end": 12052,
+        "draft": ", follow ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-097"
+      },
+      {
+        "start": 12072,
+        "end": 12084,
+        "draft": "DineSafe RSS",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-098"
+      },
+      {
+        "start": 12088,
+        "end": 12093,
+        "draft": ", or ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-099"
+      },
+      {
+        "start": 12115,
+        "end": 12145,
+        "draft": "create a community publication",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-100"
+      },
+      {
+        "start": 12149,
+        "end": 12173,
+        "draft": " from qualified records.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-101"
+      },
+      {
+        "start": 12191,
+        "end": 12195,
+        "draft": "The ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-102"
+      },
+      {
+        "start": 12295,
+        "end": 12337,
+        "draft": "City neighbourhoods (effective April 2022)",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-103"
+      },
+      {
+        "start": 12341,
+        "end": 12346,
+        "draft": " and ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-104"
+      },
+      {
+        "start": 12442,
+        "end": 12478,
+        "draft": "City wards (effective December 2018)",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-105"
+      },
+      {
+        "start": 12482,
+        "end": 12787,
+        "draft": " boundaries are licensed under the Open Government Licence - Toronto. Here’s something worth exploring: neighbourhoods can cross ward lines! I’ve included both maps so you can see how they fit together. These shapes provide context, not electoral address lookups. The dates identify the boundary versions.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-106"
+      },
+      {
+        "start": 12805,
+        "end": 12815,
+        "draft": "I use the ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-107"
+      },
+      {
+        "start": 12929,
+        "end": 12954,
+        "draft": "City of Toronto Open Data",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-108"
+      },
+      {
+        "start": 12958,
+        "end": 13088,
+        "draft": " Scarborough Community Council boundary as a visual reference; it doesn't filter records. The boundary file is licensed under the ",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-109"
+      },
+      {
+        "start": 13183,
+        "end": 13216,
+        "draft": "Open Government Licence - Toronto",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-110"
+      },
+      {
+        "start": 13220,
+        "end": 13555,
+        "draft": ". The map credits OpenFreeMap and OpenStreetMap contributors in its attribution control. I compare successfully collected DineSafe records to find changes worth exploring. An inspection may be older than the date its record first appears here. Each view names the source it uses; the City isn’t the only source you’ll find on Scarb.TO.",
+        "attribute": false,
+        "id": "shell.shell-b04b38d4-111"
+      }
+    ]
+  },
+  "docs/neighbourhood-page.template.html": {
+    "source": "<!doctype html>\n<html lang=\"en-CA\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">\n  <meta name=\"theme-color\" content=\"#0A3D2A\">\n  <link rel=\"icon\" type=\"image/svg+xml\" href=\"../assets/brand/scarbto-icon.svg\">\n  <meta name=\"description\" content=\"Explore {{NAME}} through food inspection results and neighbourhood boundaries, with dates and sources to follow further.\">\n  <link rel=\"canonical\" href=\"https://scarb.to/{{SLUG}}/\">\n  <meta property=\"og:type\" content=\"website\">\n  <meta property=\"og:site_name\" content=\"Scarb.TO\">\n  <meta property=\"og:title\" content=\"{{NAME}} | Scarb.TO\">\n  <meta property=\"og:description\" content=\"Explore {{NAME}} through food inspection results and neighbourhood boundaries, with dates and sources to follow further.\">\n  <meta property=\"og:url\" content=\"https://scarb.to/{{SLUG}}/\">\n  <meta name=\"twitter:card\" content=\"summary\">\n  <link rel=\"stylesheet\" href=\"../neighbourhood-page.css\">\n  <title>{{NAME}} · Scarb.TO</title>\n  <script type=\"module\" src=\"../neighbourhood-page.mjs\"></script>\n</head>\n<body>\n  <a class=\"skip-link\" href=\"#inspections\">Skip to food inspection results</a>\n  <header class=\"site-header\">\n    <a class=\"brand\" href=\"/\" aria-label=\"Scarb.TO home\"><picture><source media=\"(max-width: 420px)\" srcset=\"../assets/brand/scarbto-mark-light.svg\"><img class=\"brand-lockup\" src=\"../assets/brand/scarbto-connected-light.svg\" alt=\"\"></picture><span class=\"brand-name\">Scarb.TO</span></a>\n    <span class=\"brand-tagline\">Scarborough. I looked into it.</span><span class=\"print-brand\"><img src=\"../assets/brand/scarbto-mark-mono.svg\" alt=\"\"> Scarb.TO | Scarborough. I looked into it.</span>\n    <a class=\"header-link\" href=\"/\">Explore Scarborough</a>\n  </header>\n  <main id=\"neighbourhood-page\" data-area-code=\"{{CODE}}\" data-neighbourhood-page>\n    <section class=\"page-intro\" aria-labelledby=\"page-title\">\n      <p class=\"eyebrow\">Scarborough neighbourhood</p>\n      <h1 id=\"page-title\">{{NAME}}</h1>\n      <p data-scarb-voice=\"neighbourhood-intro\">Now this is a patch of Scarborough worth getting to know. I've put the food inspection records and City neighbourhood boundaries for {{NAME}} side by side. Start with a familiar place, then follow the source links. There's often another detail worth checking.</p>\n      <div class=\"page-actions\" role=\"group\" aria-label=\"Page actions\">\n        <button class=\"secondary-button\" id=\"share-page\" type=\"button\">Share this neighbourhood</button>\n        <button class=\"secondary-button\" id=\"print-page\" type=\"button\">Print this page</button>\n      </div>\n      <p id=\"page-action-status\" class=\"page-action-status\" role=\"status\" aria-live=\"polite\"></p>\n      <p class=\"section-note\">Print includes every record loaded for this neighbourhood, with its inspection findings, dates and source links, not just the first page of results.</p>\n      <p><a href=\"/community/?area={{CODE}}\">Make a neighbourhood update to print or share</a>. Choose your coverage and edition period, then preview the source-linked material.</p>\n    </section>\n\n    <section class=\"panel explore-panel\" aria-labelledby=\"explore-title\">\n      <div>\n        <h2 id=\"explore-title\">Explore this area</h2>\n        <p>Curious where these places sit? Explore the map, or browse the same places in the list alongside it.</p>\n      </div>\n      <a class=\"primary-link\" id=\"map-link\" href=\"/?areaKind=neighbourhood&amp;areaCode={{CODE}}&amp;mode=all&amp;days=all\">Open {{NAME}} in the map and list</a>\n    </section>\n\n    <div class=\"content-grid\">\n      <section class=\"panel\" aria-labelledby=\"ward-title\">\n        <h2 id=\"ward-title\">Your City wards</h2>\n        <p class=\"section-note\">Here's another layer to explore: neighbourhood boundaries and ward boundaries don't always line up! These wards overlap this neighbourhood. Check your address with the City to find which councillor represents you.</p>\n        <ul id=\"ward-links\" class=\"link-list\"></ul>\n        <p class=\"section-note\">Provincial and federal boundaries add two more layers. Use the official tools below to find your representatives. You enter your address there, not here.</p>\n        <ul class=\"link-list\">\n          <li><a href=\"https://www.ola.org/en/members/current\" target=\"_blank\" rel=\"noopener noreferrer\">Find an Ontario MPP</a></li>\n          <li><a href=\"https://www.ourcommons.ca/Members/en/search\" target=\"_blank\" rel=\"noopener noreferrer\">Find a federal MP</a></li>\n        </ul>\n      </section>\n\n      <section class=\"panel records-panel\" id=\"inspections\" aria-labelledby=\"inspection-title\">\n        <h2 id=\"inspection-title\">Food inspection results</h2>\n        <p class=\"section-note\">I match each DineSafe record's source coordinates to the City's neighbourhood boundaries, just like the map. This is a Scarb.TO calculation, not a neighbourhood label supplied by DineSafe or an independent check of the address. Source coordinates can be imperfect. Results describe the inspection on the date shown, not current safety. Check the City's record for anything newer.</p>\n        <p class=\"section-note\">These counts are source records, not a confirmed count of distinct businesses. Different source IDs can share a name and address; I keep those records separate.</p>\n        <p id=\"feed-status\" class=\"feed-status\" role=\"status\" aria-live=\"polite\">Getting the food inspection results.</p>\n        <p id=\"record-summary\" class=\"record-summary\"></p>\n          <details><summary>About these records</summary><p id=\"source-provenance\"></p></details>\n        <ol id=\"inspection-list\" class=\"record-list\"></ol>\n        <button id=\"show-more\" class=\"secondary-button\" type=\"button\" hidden>Show more records</button>\n        <p class=\"source-note\"><a href=\"https://open.toronto.ca/dataset/dinesafe/\" target=\"_blank\" rel=\"noopener noreferrer\">About the City's DineSafe data</a> · <a href=\"https://open.toronto.ca/open-data-licence/\" target=\"_blank\" rel=\"noopener noreferrer\">Open Government Licence – Toronto</a></p>\n      </section>\n    </div>\n\n    <section class=\"panel unavailable-panel\" aria-labelledby=\"other-data-title\">\n      <h2 id=\"other-data-title\">More to explore, with a few gaps</h2>\n      <p>I haven't published neighbourhood police history, planning applications or building permits here yet. That gap doesn't mean nothing has happened.</p>\n      <p>Beach results on Scarb.TO describe past samples. Don't use them to decide whether to swim today.</p>\n    </section>\n\n    <footer class=\"page-footer\">\n      <a href=\"https://open.toronto.ca/dataset/neighbourhoods/\" target=\"_blank\" rel=\"noopener noreferrer\">City neighbourhood boundaries</a>\n      <span>Contains information licensed under the Open Government Licence – Toronto.</span>\n      <span class=\"reuse-note\">Sharing the data? Check the City's source and licence terms first, and keep the attribution and dates with it.</span>\n      <span>I'm an AI-assisted guide to public records, not an official City service or a first-hand reporter.</span>\n      <a href=\"/\">Scarb.TO home</a>\n    </footer>\n  </main>\n</body>\n</html>\n",
+    "slots": [
+      {
+        "start": 320,
+        "end": 440,
+        "draft": "Explore {{NAME}} through food inspection results and neighbourhood boundaries, with dates and sources to follow further.",
+        "attribute": true,
+        "id": "shell.shell-b1bb7e6e-000"
+      },
+      {
+        "start": 637,
+        "end": 656,
+        "draft": "{{NAME}} | Scarb.TO",
+        "attribute": true,
+        "id": "shell.shell-b1bb7e6e-001"
+      },
+      {
+        "start": 702,
+        "end": 822,
+        "draft": "Explore {{NAME}} through food inspection results and neighbourhood boundaries, with dates and sources to follow further.",
+        "attribute": true,
+        "id": "shell.shell-b1bb7e6e-002"
+      },
+      {
+        "start": 1004,
+        "end": 1023,
+        "draft": "{{NAME}} · Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-003"
+      },
+      {
+        "start": 1156,
+        "end": 1187,
+        "draft": "Skip to food inspection results",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-004"
+      },
+      {
+        "start": 1265,
+        "end": 1278,
+        "draft": "Scarb.TO home",
+        "attribute": true,
+        "id": "shell.shell-b1bb7e6e-005"
+      },
+      {
+        "start": 1490,
+        "end": 1498,
+        "draft": "Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-006"
+      },
+      {
+        "start": 1542,
+        "end": 1572,
+        "draft": "Scarborough. I looked into it.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-007"
+      },
+      {
+        "start": 1661,
+        "end": 1703,
+        "draft": " Scarb.TO | Scarborough. I looked into it.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-008"
+      },
+      {
+        "start": 1747,
+        "end": 1766,
+        "draft": "Explore Scarborough",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-009"
+      },
+      {
+        "start": 1953,
+        "end": 1978,
+        "draft": "Scarborough neighbourhood",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-010"
+      },
+      {
+        "start": 2009,
+        "end": 2017,
+        "draft": "{{NAME}}",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-011"
+      },
+      {
+        "start": 2071,
+        "end": 2330,
+        "draft": "Now this is a patch of Scarborough worth getting to know. I've put the food inspection records and City neighbourhood boundaries for {{NAME}} side by side. Start with a familiar place, then follow the source links. There's often another detail worth checking.",
+        "attribute": false,
+        "id": "static.neighbourhood-intro",
+        "fields": {
+          "NAME": "{{NAME}}"
+        }
+      },
+      {
+        "start": 2392,
+        "end": 2404,
+        "draft": "Page actions",
+        "attribute": true,
+        "id": "shell.shell-b1bb7e6e-013"
+      },
+      {
+        "start": 2478,
+        "end": 2502,
+        "draft": "Share this neighbourhood",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-014"
+      },
+      {
+        "start": 2583,
+        "end": 2598,
+        "draft": "Print this page",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-015"
+      },
+      {
+        "start": 2749,
+        "end": 2897,
+        "draft": "Print includes every record loaded for this neighbourhood, with its inspection findings, dates and source links, not just the first page of results.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-016"
+      },
+      {
+        "start": 2947,
+        "end": 2992,
+        "draft": "Make a neighbourhood update to print or share",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-017"
+      },
+      {
+        "start": 2996,
+        "end": 3079,
+        "draft": ". Choose your coverage and edition period, then preview the source-linked material.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-018"
+      },
+      {
+        "start": 3217,
+        "end": 3234,
+        "draft": "Explore this area",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-019"
+      },
+      {
+        "start": 3251,
+        "end": 3351,
+        "draft": "Curious where these places sit? Explore the map, or browse the same places in the list alongside it.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-020"
+      },
+      {
+        "start": 3493,
+        "end": 3526,
+        "draft": "Open {{NAME}} in the map and list",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-021"
+      },
+      {
+        "start": 3665,
+        "end": 3680,
+        "draft": "Your City wards",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-022"
+      },
+      {
+        "start": 3718,
+        "end": 3931,
+        "draft": "Here's another layer to explore: neighbourhood boundaries and ward boundaries don't always line up! These wards overlap this neighbourhood. Check your address with the City to find which councillor represents you.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-023"
+      },
+      {
+        "start": 4020,
+        "end": 4173,
+        "draft": "Provincial and federal boundaries add two more layers. Use the official tools below to find your representatives. You enter your address there, not here.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-024"
+      },
+      {
+        "start": 4314,
+        "end": 4333,
+        "draft": "Find an Ontario MPP",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-025"
+      },
+      {
+        "start": 4453,
+        "end": 4470,
+        "draft": "Find a federal MP",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-026"
+      },
+      {
+        "start": 4642,
+        "end": 4665,
+        "draft": "Food inspection results",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-027"
+      },
+      {
+        "start": 4703,
+        "end": 5082,
+        "draft": "I match each DineSafe record's source coordinates to the City's neighbourhood boundaries, just like the map. This is a Scarb.TO calculation, not a neighbourhood label supplied by DineSafe or an independent check of the address. Source coordinates can be imperfect. Results describe the inspection on the date shown, not current safety. Check the City's record for anything newer.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-028"
+      },
+      {
+        "start": 5119,
+        "end": 5279,
+        "draft": "These counts are source records, not a confirmed count of distinct businesses. Different source IDs can share a name and address; I keep those records separate.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-029"
+      },
+      {
+        "start": 5365,
+        "end": 5401,
+        "draft": "Getting the food inspection results.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-030"
+      },
+      {
+        "start": 5493,
+        "end": 5512,
+        "draft": "About these records",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-031"
+      },
+      {
+        "start": 5699,
+        "end": 5716,
+        "draft": "Show more records",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-032"
+      },
+      {
+        "start": 5851,
+        "end": 5881,
+        "draft": "About the City's DineSafe data",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-033"
+      },
+      {
+        "start": 5983,
+        "end": 6016,
+        "draft": "Open Government Licence – Toronto",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-034"
+      },
+      {
+        "start": 6167,
+        "end": 6199,
+        "draft": "More to explore, with a few gaps",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-035"
+      },
+      {
+        "start": 6214,
+        "end": 6359,
+        "draft": "I haven't published neighbourhood police history, planning applications or building permits here yet. That gap doesn't mean nothing has happened.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-036"
+      },
+      {
+        "start": 6373,
+        "end": 6469,
+        "draft": "Beach results on Scarb.TO describe past samples. Don't use them to decide whether to swim today.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-037"
+      },
+      {
+        "start": 6629,
+        "end": 6658,
+        "draft": "City neighbourhood boundaries",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-038"
+      },
+      {
+        "start": 6675,
+        "end": 6749,
+        "draft": "Contains information licensed under the Open Government Licence – Toronto.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-039"
+      },
+      {
+        "start": 6788,
+        "end": 6898,
+        "draft": "Sharing the data? Check the City's source and licence terms first, and keep the attribution and dates with it.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-040"
+      },
+      {
+        "start": 6918,
+        "end": 7016,
+        "draft": "I'm an AI-assisted guide to public records, not an official City service or a first-hand reporter.",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-041"
+      },
+      {
+        "start": 7042,
+        "end": 7055,
+        "draft": "Scarb.TO home",
+        "attribute": false,
+        "id": "shell.shell-b1bb7e6e-042"
+      }
+    ]
+  },
+  "docs/neighbourhoods/index.html": {
+    "source": "<!doctype html>\n<html lang=\"en-CA\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"theme-color\" content=\"#0A3D2A\"><link rel=\"icon\" type=\"image/svg+xml\" href=\"../assets/brand/scarbto-icon.svg\"><title>Explore neighbourhoods | Scarb.TO</title><meta name=\"description\" content=\"Explore Scarborough neighbourhood pages, source-linked food inspection records and area boundaries.\"><link rel=\"canonical\" href=\"https://scarb.to/neighbourhoods/\"><link rel=\"stylesheet\" href=\"../neighbourhood-page.css\"></head><body><div class=\"page-shell\"><header class=\"site-header\"><a class=\"brand\" href=\"/\" aria-label=\"Scarb.TO home\"><picture><source media=\"(max-width: 420px)\" srcset=\"../assets/brand/scarbto-mark-light.svg\"><img class=\"brand-lockup\" src=\"../assets/brand/scarbto-connected-light.svg\" alt=\"\"></picture><span class=\"brand-name\">Scarb.TO</span></a><span class=\"brand-tagline\">Scarborough. I looked into it.</span><span class=\"print-brand\"><img src=\"../assets/brand/scarbto-mark-mono.svg\" alt=\"\"> Scarb.TO | Scarborough. I looked into it.</span><a class=\"header-link\" href=\"/briefs/\">Weekly briefs</a></header><main><h1>Explore the neighbourhoods</h1><p data-scarb-voice=\"directory-intro\">Right now this map selection has 30 City neighbourhoods, each with its own page. Pick one and I'll show you the boundaries, recorded inspections and source links. I find it's the little geographic details that make this especially interesting.</p><ul class=\"neighbourhood-directory\"><li><a href=\"/agincourt-north/\">Agincourt North</a></li>\n<li><a href=\"/agincourt-south-malvern-west/\">Agincourt South-Malvern West</a></li>\n<li><a href=\"/bendale-south/\">Bendale South</a></li>\n<li><a href=\"/bendale-glen-andrew/\">Bendale-Glen Andrew</a></li>\n<li><a href=\"/birchcliffe-cliffside/\">Birchcliffe-Cliffside</a></li>\n<li><a href=\"/centennial-scarborough/\">Centennial Scarborough</a></li>\n<li><a href=\"/clairlea-birchmount/\">Clairlea-Birchmount</a></li>\n<li><a href=\"/cliffcrest/\">Cliffcrest</a></li>\n<li><a href=\"/dorset-park/\">Dorset Park</a></li>\n<li><a href=\"/east-l-amoreaux/\">East L&#39;Amoreaux</a></li>\n<li><a href=\"/eglinton-east/\">Eglinton East</a></li>\n<li><a href=\"/golfdale-cedarbrae-woburn/\">Golfdale-Cedarbrae-Woburn</a></li>\n<li><a href=\"/guildwood/\">Guildwood</a></li>\n<li><a href=\"/highland-creek/\">Highland Creek</a></li>\n<li><a href=\"/ionview/\">Ionview</a></li>\n<li><a href=\"/kennedy-park/\">Kennedy Park</a></li>\n<li><a href=\"/l-amoreaux-west/\">L&#39;Amoreaux West</a></li>\n<li><a href=\"/malvern-east/\">Malvern East</a></li>\n<li><a href=\"/malvern-west/\">Malvern West</a></li>\n<li><a href=\"/milliken/\">Milliken</a></li>\n<li><a href=\"/morningside/\">Morningside</a></li>\n<li><a href=\"/morningside-heights/\">Morningside Heights</a></li>\n<li><a href=\"/oakridge/\">Oakridge</a></li>\n<li><a href=\"/scarborough-village/\">Scarborough Village</a></li>\n<li><a href=\"/steeles/\">Steeles</a></li>\n<li><a href=\"/tam-o-shanter-sullivan/\">Tam O&#39;Shanter-Sullivan</a></li>\n<li><a href=\"/west-hill/\">West Hill</a></li>\n<li><a href=\"/west-rouge/\">West Rouge</a></li>\n<li><a href=\"/wexford-maryvale/\">Wexford/Maryvale</a></li>\n<li><a href=\"/woburn-north/\">Woburn North</a></li></ul><p class=\"source-note\">These pages follow the City's neighbourhood boundaries, not association or newspaper coverage. Scarb.TO matches source coordinates to those boundaries; a record's location can be imperfect. Different source IDs stay separate.</p><p><a href=\"https://open.toronto.ca/dataset/neighbourhoods/\">City of Toronto neighbourhood boundaries</a>, under the <a href=\"https://open.toronto.ca/open-data-licence/\">Open Government Licence - Toronto</a>.</p></main><footer><p>Scarb.TO is an independent, AI-assisted guide to public records, not an official City service. Inspection results describe their recorded date, not conditions today.</p></footer></div></body></html>\n",
+    "slots": [
+      {
+        "start": 258,
+        "end": 291,
+        "draft": "Explore neighbourhoods | Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-012700e3-000"
+      },
+      {
+        "start": 333,
+        "end": 432,
+        "draft": "Explore Scarborough neighbourhood pages, source-linked food inspection records and area boundaries.",
+        "attribute": true,
+        "id": "shell.shell-012700e3-001"
+      },
+      {
+        "start": 655,
+        "end": 668,
+        "draft": "Scarb.TO home",
+        "attribute": true,
+        "id": "shell.shell-012700e3-002"
+      },
+      {
+        "start": 880,
+        "end": 888,
+        "draft": "Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-012700e3-003"
+      },
+      {
+        "start": 927,
+        "end": 957,
+        "draft": "Scarborough. I looked into it.",
+        "attribute": false,
+        "id": "shell.shell-012700e3-004"
+      },
+      {
+        "start": 1046,
+        "end": 1088,
+        "draft": " Scarb.TO | Scarborough. I looked into it.",
+        "attribute": false,
+        "id": "shell.shell-012700e3-005"
+      },
+      {
+        "start": 1134,
+        "end": 1147,
+        "draft": "Weekly briefs",
+        "attribute": false,
+        "id": "shell.shell-012700e3-006"
+      },
+      {
+        "start": 1170,
+        "end": 1196,
+        "draft": "Explore the neighbourhoods",
+        "attribute": false,
+        "id": "shell.shell-012700e3-007"
+      },
+      {
+        "start": 1239,
+        "end": 1482,
+        "draft": "Right now this map selection has 30 City neighbourhoods, each with its own page. Pick one and I'll show you the boundaries, recorded inspections and source links. I find it's the little geographic details that make this especially interesting.",
+        "attribute": false,
+        "id": "static.directory-intro",
+        "fields": {
+          "COUNT": "30"
+        }
+      },
+      {
+        "start": 1554,
+        "end": 1569,
+        "draft": "Agincourt North",
+        "attribute": false,
+        "id": "shell.shell-012700e3-009"
+      },
+      {
+        "start": 1624,
+        "end": 1652,
+        "draft": "Agincourt South-Malvern West",
+        "attribute": false,
+        "id": "shell.shell-012700e3-010"
+      },
+      {
+        "start": 1692,
+        "end": 1705,
+        "draft": "Bendale South",
+        "attribute": false,
+        "id": "shell.shell-012700e3-011"
+      },
+      {
+        "start": 1751,
+        "end": 1770,
+        "draft": "Bendale-Glen Andrew",
+        "attribute": false,
+        "id": "shell.shell-012700e3-012"
+      },
+      {
+        "start": 1818,
+        "end": 1839,
+        "draft": "Birchcliffe-Cliffside",
+        "attribute": false,
+        "id": "shell.shell-012700e3-013"
+      },
+      {
+        "start": 1888,
+        "end": 1910,
+        "draft": "Centennial Scarborough",
+        "attribute": false,
+        "id": "shell.shell-012700e3-014"
+      },
+      {
+        "start": 1956,
+        "end": 1975,
+        "draft": "Clairlea-Birchmount",
+        "attribute": false,
+        "id": "shell.shell-012700e3-015"
+      },
+      {
+        "start": 2012,
+        "end": 2022,
+        "draft": "Cliffcrest",
+        "attribute": false,
+        "id": "shell.shell-012700e3-016"
+      },
+      {
+        "start": 2060,
+        "end": 2071,
+        "draft": "Dorset Park",
+        "attribute": false,
+        "id": "shell.shell-012700e3-017"
+      },
+      {
+        "start": 2113,
+        "end": 2132,
+        "draft": "East L'Amoreaux",
+        "attribute": false,
+        "id": "shell.shell-012700e3-018"
+      },
+      {
+        "start": 2172,
+        "end": 2185,
+        "draft": "Eglinton East",
+        "attribute": false,
+        "id": "shell.shell-012700e3-019"
+      },
+      {
+        "start": 2237,
+        "end": 2262,
+        "draft": "Golfdale-Cedarbrae-Woburn",
+        "attribute": false,
+        "id": "shell.shell-012700e3-020"
+      },
+      {
+        "start": 2298,
+        "end": 2307,
+        "draft": "Guildwood",
+        "attribute": false,
+        "id": "shell.shell-012700e3-021"
+      },
+      {
+        "start": 2348,
+        "end": 2362,
+        "draft": "Highland Creek",
+        "attribute": false,
+        "id": "shell.shell-012700e3-022"
+      },
+      {
+        "start": 2396,
+        "end": 2403,
+        "draft": "Ionview",
+        "attribute": false,
+        "id": "shell.shell-012700e3-023"
+      },
+      {
+        "start": 2442,
+        "end": 2454,
+        "draft": "Kennedy Park",
+        "attribute": false,
+        "id": "shell.shell-012700e3-024"
+      },
+      {
+        "start": 2496,
+        "end": 2515,
+        "draft": "L'Amoreaux West",
+        "attribute": false,
+        "id": "shell.shell-012700e3-025"
+      },
+      {
+        "start": 2554,
+        "end": 2566,
+        "draft": "Malvern East",
+        "attribute": false,
+        "id": "shell.shell-012700e3-026"
+      },
+      {
+        "start": 2605,
+        "end": 2617,
+        "draft": "Malvern West",
+        "attribute": false,
+        "id": "shell.shell-012700e3-027"
+      },
+      {
+        "start": 2652,
+        "end": 2660,
+        "draft": "Milliken",
+        "attribute": false,
+        "id": "shell.shell-012700e3-028"
+      },
+      {
+        "start": 2698,
+        "end": 2709,
+        "draft": "Morningside",
+        "attribute": false,
+        "id": "shell.shell-012700e3-029"
+      },
+      {
+        "start": 2755,
+        "end": 2774,
+        "draft": "Morningside Heights",
+        "attribute": false,
+        "id": "shell.shell-012700e3-030"
+      },
+      {
+        "start": 2809,
+        "end": 2817,
+        "draft": "Oakridge",
+        "attribute": false,
+        "id": "shell.shell-012700e3-031"
+      },
+      {
+        "start": 2863,
+        "end": 2882,
+        "draft": "Scarborough Village",
+        "attribute": false,
+        "id": "shell.shell-012700e3-032"
+      },
+      {
+        "start": 2916,
+        "end": 2923,
+        "draft": "Steeles",
+        "attribute": false,
+        "id": "shell.shell-012700e3-033"
+      },
+      {
+        "start": 2972,
+        "end": 2998,
+        "draft": "Tam O'Shanter-Sullivan",
+        "attribute": false,
+        "id": "shell.shell-012700e3-034"
+      },
+      {
+        "start": 3034,
+        "end": 3043,
+        "draft": "West Hill",
+        "attribute": false,
+        "id": "shell.shell-012700e3-035"
+      },
+      {
+        "start": 3080,
+        "end": 3090,
+        "draft": "West Rouge",
+        "attribute": false,
+        "id": "shell.shell-012700e3-036"
+      },
+      {
+        "start": 3133,
+        "end": 3149,
+        "draft": "Wexford/Maryvale",
+        "attribute": false,
+        "id": "shell.shell-012700e3-037"
+      },
+      {
+        "start": 3188,
+        "end": 3200,
+        "draft": "Woburn North",
+        "attribute": false,
+        "id": "shell.shell-012700e3-038"
+      },
+      {
+        "start": 3237,
+        "end": 3462,
+        "draft": "These pages follow the City's neighbourhood boundaries, not association or newspaper coverage. Scarb.TO matches source coordinates to those boundaries; a record's location can be imperfect. Different source IDs stay separate.",
+        "attribute": false,
+        "id": "shell.shell-012700e3-039"
+      },
+      {
+        "start": 3527,
+        "end": 3567,
+        "draft": "City of Toronto neighbourhood boundaries",
+        "attribute": false,
+        "id": "shell.shell-012700e3-040"
+      },
+      {
+        "start": 3571,
+        "end": 3583,
+        "draft": ", under the ",
+        "attribute": false,
+        "id": "shell.shell-012700e3-041"
+      },
+      {
+        "start": 3636,
+        "end": 3669,
+        "draft": "Open Government Licence - Toronto",
+        "attribute": false,
+        "id": "shell.shell-012700e3-042"
+      },
+      {
+        "start": 3696,
+        "end": 3861,
+        "draft": "Scarb.TO is an independent, AI-assisted guide to public records, not an official City service. Inspection results describe their recorded date, not conditions today.",
+        "attribute": false,
+        "id": "shell.shell-012700e3-043"
+      }
+    ]
+  },
+  "docs/community/index.html": {
+    "source": "<!doctype html>\n<html lang=\"en-CA\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Community publishing | Scarb.TO</title><meta name=\"theme-color\" content=\"#0A3D2A\"><link rel=\"icon\" type=\"image/svg+xml\" href=\"../assets/brand/scarbto-icon.svg\"><link rel=\"stylesheet\" href=\"../community-publishing.css\"></head>\n<body><header class=\"scarb-site-header\"><a class=\"scarb-home\" href=\"/\" aria-label=\"Scarb.TO home\"><img src=\"../assets/brand/scarbto-mark.svg\" alt=\"\"><span class=\"scarb-brand-title\">Scarb.TO</span></a><p>Scarborough. I looked into it.</p></header><main><h1 data-scarb-voice=\"community-title\">Let's turn local records into a neighbourhood update.</h1><p data-scarb-voice=\"community-intro\">There's a lot tucked away in Scarborough's public records. Choose your patch and I'll bring the dated, source-linked findings together for print or your website. The evidence stays attached; you decide what to share.</p><p id=\"status\" role=\"status\">I'm loading the latest qualified information.</p><noscript><p>This publishing tool needs JavaScript. <a href=\"/briefs/\">Read the existing weekly briefs instead.</a></p></noscript>\n<form id=\"settings\" hidden><label>Saved coverage on this device <select id=\"saved-profiles\"><option value=\"\">Choose saved coverage</option></select></label><label>Edition or coverage name <input id=\"name\" maxlength=\"200\" value=\"Our neighbourhood\"></label><fieldset><legend data-scarb-voice=\"community-core\">Your corner of Scarborough</legend><div id=\"core\"></div></fieldset><fieldset><legend>Nearby coverage, clearly labelled</legend><div id=\"nearby\"></div></fieldset><p data-scarb-voice=\"community-coverage\">A little map nerdiness before we begin: City neighbourhoods don't always stay inside Scarborough's six ward boundaries. For DineSafe, I count only records inside those wards, even if a selected neighbourhood carries on beyond them. These are editorial selections, not claimed newspaper or association territories.</p>\n<label>Association territory reference (optional metadata, not an automatic filter) <input id=\"association\" maxlength=\"200\"></label><label>Print distribution note (optional metadata, not an automatic filter) <input id=\"distribution\" maxlength=\"200\"></label><p>Use public territory references, not personal addresses or member information. Selecting editorial coverage does not establish an association relationship or newspaper distribution area.</p><fieldset><legend>Topics</legend><label><input type=\"checkbox\" checked disabled> Food inspection updates</label><p>Planning, permits, beach advice and neighbourhood crime are not qualified for these editions. An unavailable source is not zero activity.</p></fieldset>\n<label><input id=\"snapshot\" type=\"checkbox\"> Include a dated record-count snapshot for context</label><label>Start after <input type=\"datetime-local\" step=\"1\" id=\"start\" required></label><label>End through <input type=\"datetime-local\" step=\"1\" id=\"end\" required></label><p>Times shown here use this device's time zone. The receipt preserves exact instants. Import your previous finalised receipt to continue after its information cut-off, not its print date.</p>\n<label>Maximum words <input type=\"number\" id=\"words\" min=\"1\" max=\"100000\" value=\"350\"></label><label>Maximum characters (optional) <input type=\"number\" id=\"characters\" min=\"1\" max=\"100000\"></label><label>Count scope <select id=\"scope\"><option value=\"editorial\">Editorial copy, including heading and qualifications</option><option value=\"panel\">Whole panel, including source footer</option></select></label>\n<fieldset><legend>Generic layout, not a publisher-approved slot</legend><label>Width in millimetres <input id=\"width\" type=\"number\" min=\"80\" max=\"420\" value=\"148\"></label><label>Height in millimetres <input id=\"height\" type=\"number\" min=\"80\" max=\"594\" value=\"210\"></label><label>Margin in millimetres <input id=\"margin\" type=\"number\" min=\"5\" max=\"20\" value=\"8\"></label><label><input id=\"grayscale\" type=\"checkbox\"> Grayscale</label></fieldset>\n<label><input id=\"correction\" type=\"checkbox\"> Create an explained revision of the previous receipt, using its original coverage and source evidence</label><label>Revision explanation <input id=\"explanation\" maxlength=\"1000\"></label><button type=\"submit\">Prepare a proof</button><button id=\"save-settings\" type=\"button\">Download settings</button><label>Import settings or a finalised receipt <input id=\"import\" type=\"file\" accept=\"application/json,.json\"></label></form>\n<section id=\"proof-section\" hidden><h2>Your proof</h2><p id=\"counts\"></p><p id=\"count-rule\"></p><article id=\"proof\"></article><p id=\"sources\"></p><button id=\"map\" type=\"button\">Download a separate attributed map</button><button id=\"pdf\" type=\"button\">Download print PDF</button><button id=\"png\" type=\"button\">Download 300-dpi image</button><button id=\"text\" type=\"button\">Download editable text</button><button id=\"finalise\" type=\"button\">I've reviewed this proof: finalise and download receipt</button><p>Finalising records your choice on this device. It does not prove organisational approval or newspaper publication. Keep the downloaded receipt: browser storage is not secure shared approval, an archive guarantee or cross-device synchronisation.</p></section>\n<section id=\"embed-section\" hidden><h2>Share live updates on your website</h2><p>The widget checks the latest validated release when it loads, not continuously. It is separate from a frozen print edition.</p><label>Embed code <textarea id=\"embed-code\" readonly rows=\"6\"></textarea></label><a id=\"embed-link\" href=\"/embed/\">Open the live widget</a><p>If your website blocks frames, use the ordinary link instead. Installing it on another organisation's website is up to that organisation.</p></section>\n</main><footer><p>Prepared with Scarb.TO. No account needed. Sources and their limitations stay with the facts.</p><a href=\"/\">Explore Scarborough</a></footer><script src=\"../assets/community/jspdf-4.2.1.umd.min.js\"></script><script type=\"module\" src=\"../community-editor.mjs\"></script></body></html>\n",
+    "slots": [
+      {
+        "start": 137,
+        "end": 168,
+        "draft": "Community publishing | Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-000"
+      },
+      {
+        "start": 446,
+        "end": 459,
+        "draft": "Scarb.TO home",
+        "attribute": true,
+        "id": "shell.shell-861ddc17-001"
+      },
+      {
+        "start": 544,
+        "end": 552,
+        "draft": "Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-002"
+      },
+      {
+        "start": 566,
+        "end": 596,
+        "draft": "Scarborough. I looked into it.",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-003"
+      },
+      {
+        "start": 654,
+        "end": 707,
+        "draft": "Let's turn local records into a neighbourhood update.",
+        "attribute": false,
+        "id": "static.community-title",
+        "fields": {}
+      },
+      {
+        "start": 750,
+        "end": 966,
+        "draft": "There's a lot tucked away in Scarborough's public records. Choose your patch and I'll bring the dated, source-linked findings together for print or your website. The evidence stays attached; you decide what to share.",
+        "attribute": false,
+        "id": "static.community-intro",
+        "fields": {}
+      },
+      {
+        "start": 999,
+        "end": 1044,
+        "draft": "I'm loading the latest qualified information.",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-006"
+      },
+      {
+        "start": 1061,
+        "end": 1100,
+        "draft": "This publishing tool needs JavaScript. ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-007"
+      },
+      {
+        "start": 1119,
+        "end": 1159,
+        "draft": "Read the existing weekly briefs instead.",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-008"
+      },
+      {
+        "start": 1213,
+        "end": 1243,
+        "draft": "Saved coverage on this device ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-009"
+      },
+      {
+        "start": 1288,
+        "end": 1309,
+        "draft": "Choose saved coverage",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-010"
+      },
+      {
+        "start": 1342,
+        "end": 1367,
+        "draft": "Edition or coverage name ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-011"
+      },
+      {
+        "start": 1407,
+        "end": 1424,
+        "draft": "Our neighbourhood",
+        "attribute": true,
+        "id": "shell.shell-861ddc17-012"
+      },
+      {
+        "start": 1486,
+        "end": 1512,
+        "draft": "Your corner of Scarborough",
+        "attribute": false,
+        "id": "static.community-core",
+        "fields": {}
+      },
+      {
+        "start": 1571,
+        "end": 1604,
+        "draft": "Nearby coverage, clearly labelled",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-014"
+      },
+      {
+        "start": 1688,
+        "end": 2001,
+        "draft": "A little map nerdiness before we begin: City neighbourhoods don't always stay inside Scarborough's six ward boundaries. For DineSafe, I count only records inside those wards, even if a selected neighbourhood carries on beyond them. These are editorial selections, not claimed newspaper or association territories.",
+        "attribute": false,
+        "id": "static.community-coverage",
+        "fields": {}
+      },
+      {
+        "start": 2013,
+        "end": 2090,
+        "draft": "Association territory reference (optional metadata, not an automatic filter) ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-016"
+      },
+      {
+        "start": 2145,
+        "end": 2214,
+        "draft": "Print distribution note (optional metadata, not an automatic filter) ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-017"
+      },
+      {
+        "start": 2266,
+        "end": 2452,
+        "draft": "Use public territory references, not personal addresses or member information. Selecting editorial coverage does not establish an association relationship or newspaper distribution area.",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-018"
+      },
+      {
+        "start": 2474,
+        "end": 2480,
+        "draft": "Topics",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-019"
+      },
+      {
+        "start": 2536,
+        "end": 2560,
+        "draft": " Food inspection updates",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-020"
+      },
+      {
+        "start": 2571,
+        "end": 2708,
+        "draft": "Planning, permits, beach advice and neighbourhood crime are not qualified for these editions. An unavailable source is not zero activity.",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-021"
+      },
+      {
+        "start": 2768,
+        "end": 2818,
+        "draft": " Include a dated record-count snapshot for context",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-022"
+      },
+      {
+        "start": 2833,
+        "end": 2845,
+        "draft": "Start after ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-023"
+      },
+      {
+        "start": 2918,
+        "end": 2930,
+        "draft": "End through ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-024"
+      },
+      {
+        "start": 2997,
+        "end": 3182,
+        "draft": "Times shown here use this device's time zone. The receipt preserves exact instants. Import your previous finalised receipt to continue after its information cut-off, not its print date.",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-025"
+      },
+      {
+        "start": 3194,
+        "end": 3208,
+        "draft": "Maximum words ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-026"
+      },
+      {
+        "start": 3288,
+        "end": 3318,
+        "draft": "Maximum characters (optional) ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-027"
+      },
+      {
+        "start": 3391,
+        "end": 3403,
+        "draft": "Count scope ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-028"
+      },
+      {
+        "start": 3448,
+        "end": 3500,
+        "draft": "Editorial copy, including heading and qualifications",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-029"
+      },
+      {
+        "start": 3531,
+        "end": 3567,
+        "draft": "Whole panel, including source footer",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-030"
+      },
+      {
+        "start": 3612,
+        "end": 3657,
+        "draft": "Generic layout, not a publisher-approved slot",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-031"
+      },
+      {
+        "start": 3673,
+        "end": 3694,
+        "draft": "Width in millimetres ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-032"
+      },
+      {
+        "start": 3772,
+        "end": 3794,
+        "draft": "Height in millimetres ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-033"
+      },
+      {
+        "start": 3873,
+        "end": 3895,
+        "draft": "Margin in millimetres ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-034"
+      },
+      {
+        "start": 4008,
+        "end": 4018,
+        "draft": " Grayscale",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-035"
+      },
+      {
+        "start": 4084,
+        "end": 4186,
+        "draft": " Create an explained revision of the previous receipt, using its original coverage and source evidence",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-036"
+      },
+      {
+        "start": 4201,
+        "end": 4222,
+        "draft": "Revision explanation ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-037"
+      },
+      {
+        "start": 4293,
+        "end": 4308,
+        "draft": "Prepare a proof",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-038"
+      },
+      {
+        "start": 4358,
+        "end": 4375,
+        "draft": "Download settings",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-039"
+      },
+      {
+        "start": 4391,
+        "end": 4430,
+        "draft": "Import settings or a finalised receipt ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-040"
+      },
+      {
+        "start": 4548,
+        "end": 4558,
+        "draft": "Your proof",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-041"
+      },
+      {
+        "start": 4686,
+        "end": 4720,
+        "draft": "Download a separate attributed map",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-042"
+      },
+      {
+        "start": 4760,
+        "end": 4778,
+        "draft": "Download print PDF",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-043"
+      },
+      {
+        "start": 4818,
+        "end": 4840,
+        "draft": "Download 300-dpi image",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-044"
+      },
+      {
+        "start": 4881,
+        "end": 4903,
+        "draft": "Download editable text",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-045"
+      },
+      {
+        "start": 4948,
+        "end": 5003,
+        "draft": "I've reviewed this proof: finalise and download receipt",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-046"
+      },
+      {
+        "start": 5015,
+        "end": 5259,
+        "draft": "Finalising records your choice on this device. It does not prove organisational approval or newspaper publication. Keep the downloaded receipt: browser storage is not secure shared approval, an archive guarantee or cross-device synchronisation.",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-047"
+      },
+      {
+        "start": 5313,
+        "end": 5347,
+        "draft": "Share live updates on your website",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-048"
+      },
+      {
+        "start": 5355,
+        "end": 5478,
+        "draft": "The widget checks the latest validated release when it loads, not continuously. It is separate from a frozen print edition.",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-049"
+      },
+      {
+        "start": 5489,
+        "end": 5500,
+        "draft": "Embed code ",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-050"
+      },
+      {
+        "start": 5597,
+        "end": 5617,
+        "draft": "Open the live widget",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-051"
+      },
+      {
+        "start": 5624,
+        "end": 5761,
+        "draft": "If your website blocks frames, use the ordinary link instead. Installing it on another organisation's website is up to that organisation.",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-052"
+      },
+      {
+        "start": 5794,
+        "end": 5887,
+        "draft": "Prepared with Scarb.TO. No account needed. Sources and their limitations stay with the facts.",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-053"
+      },
+      {
+        "start": 5903,
+        "end": 5922,
+        "draft": "Explore Scarborough",
+        "attribute": false,
+        "id": "shell.shell-861ddc17-054"
+      }
+    ]
+  },
+  "docs/community/evidence/index.html": {
+    "source": "<!doctype html><html lang=\"en-CA\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Edition evidence | Scarb.TO</title><meta name=\"theme-color\" content=\"#0A3D2A\"><link rel=\"icon\" type=\"image/svg+xml\" href=\"../../assets/brand/scarbto-icon.svg\"><link rel=\"stylesheet\" href=\"../../community-publishing.css\"></head><body><header class=\"scarb-site-header\"><a class=\"scarb-home\" href=\"/\" aria-label=\"Scarb.TO home\"><img src=\"../../assets/brand/scarbto-mark.svg\" alt=\"\"><span class=\"scarb-brand-title\">Scarb.TO</span></a><p>Scarborough. I looked into it.</p></header><main><h1 data-scarb-voice=\"evidence-title\">Let's follow the paper trail.</h1><p id=\"status\" role=\"status\">I'm loading the pinned source release.</p><p data-scarb-voice=\"evidence-intro\">Now for one of my favourite parts: where did this edition's information actually come from? Here's the saved source release, its dates and what those records can tell us. This page doesn't publicly store a publisher's own wording; import the finalised receipt to inspect the exact edition.</p><label>Finalised receipt <input id=\"receipt\" type=\"file\" accept=\"application/json,.json\"></label><div id=\"downloads\" aria-label=\"Original edition files\"></div><article id=\"copy\" style=\"white-space:pre-wrap\"></article><details><summary>Precise source information</summary><pre id=\"metadata\" style=\"white-space:pre-wrap;overflow-wrap:anywhere\"></pre></details><ul id=\"events\"></ul><p>For a suspected source error, compare the dated official record first. Corrections must preserve the original edition and explain what changed; they must not replace a frozen receipt silently.</p><a href=\"https://open.toronto.ca/dataset/dinesafe/\">Check the official DineSafe source</a><p><a href=\"/community/\">Back to community publishing</a></p></main><script type=\"module\" src=\"../../community-evidence.mjs\"></script></body></html>\n",
+    "slots": [
+      {
+        "start": 136,
+        "end": 163,
+        "draft": "Edition evidence | Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-073893ac-000"
+      },
+      {
+        "start": 446,
+        "end": 459,
+        "draft": "Scarb.TO home",
+        "attribute": true,
+        "id": "shell.shell-073893ac-001"
+      },
+      {
+        "start": 547,
+        "end": 555,
+        "draft": "Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-073893ac-002"
+      },
+      {
+        "start": 569,
+        "end": 599,
+        "draft": "Scarborough. I looked into it.",
+        "attribute": false,
+        "id": "shell.shell-073893ac-003"
+      },
+      {
+        "start": 656,
+        "end": 685,
+        "draft": "Let's follow the paper trail.",
+        "attribute": false,
+        "id": "static.evidence-title",
+        "fields": {}
+      },
+      {
+        "start": 719,
+        "end": 757,
+        "draft": "I'm loading the pinned source release.",
+        "attribute": false,
+        "id": "shell.shell-073893ac-005"
+      },
+      {
+        "start": 798,
+        "end": 1087,
+        "draft": "Now for one of my favourite parts: where did this edition's information actually come from? Here's the saved source release, its dates and what those records can tell us. This page doesn't publicly store a publisher's own wording; import the finalised receipt to inspect the exact edition.",
+        "attribute": false,
+        "id": "static.evidence-intro",
+        "fields": {}
+      },
+      {
+        "start": 1098,
+        "end": 1116,
+        "draft": "Finalised receipt ",
+        "attribute": false,
+        "id": "shell.shell-073893ac-007"
+      },
+      {
+        "start": 1220,
+        "end": 1242,
+        "draft": "Original edition files",
+        "attribute": true,
+        "id": "shell.shell-073893ac-008"
+      },
+      {
+        "start": 1326,
+        "end": 1352,
+        "draft": "Precise source information",
+        "attribute": false,
+        "id": "shell.shell-073893ac-009"
+      },
+      {
+        "start": 1473,
+        "end": 1665,
+        "draft": "For a suspected source error, compare the dated official record first. Corrections must preserve the original edition and explain what changed; they must not replace a frozen receipt silently.",
+        "attribute": false,
+        "id": "shell.shell-073893ac-010"
+      },
+      {
+        "start": 1721,
+        "end": 1755,
+        "draft": "Check the official DineSafe source",
+        "attribute": false,
+        "id": "shell.shell-073893ac-011"
+      },
+      {
+        "start": 1784,
+        "end": 1812,
+        "draft": "Back to community publishing",
+        "attribute": false,
+        "id": "shell.shell-073893ac-012"
+      }
+    ]
+  },
+  "docs/embed/index.html": {
+    "source": "<!doctype html><html lang=\"en-CA\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Local updates | Scarb.TO</title><meta name=\"theme-color\" content=\"#0A3D2A\"><link rel=\"icon\" type=\"image/svg+xml\" href=\"../assets/brand/scarbto-icon.svg\"><link rel=\"stylesheet\" href=\"../community-publishing.css\"></head><body><header class=\"scarb-site-header compact\"><a class=\"scarb-home\" href=\"/\" aria-label=\"Scarb.TO home\"><img src=\"../assets/brand/scarbto-mark.svg\" alt=\"\"><span class=\"scarb-brand-title\">Scarb.TO</span></a><p>Scarborough. I looked into it.</p></header><main><h1 data-scarb-voice=\"embed-title\">Local discoveries, with the receipts.</h1><p data-scarb-voice=\"embed-intro\">Here's what the records turned up for this area. I keep the source dates and links close by, because the trail behind a finding can be just as interesting as the finding itself.</p><p id=\"status\" role=\"status\">I'm loading the latest qualified updates.</p><noscript><p>JavaScript is unavailable. <a href=\"https://scarb.to/briefs/\" target=\"_blank\" rel=\"noopener\">Read the weekly briefs on Scarb.TO</a>.</p></noscript><article id=\"copy\" style=\"white-space:pre-wrap\"></article><p id=\"source\" style=\"white-space:pre-wrap;overflow-wrap:anywhere\"></p><p>This is a live widget, not a frozen edition. It checks the latest validated release when opened. An already-open widget does not refresh itself.</p><a href=\"https://scarb.to/\" target=\"_blank\" rel=\"noopener\">Explore the map and sources on Scarb.TO</a></main><script type=\"module\" src=\"../community-embed.mjs\"></script></body></html>\n",
+    "slots": [
+      {
+        "start": 136,
+        "end": 160,
+        "draft": "Local updates | Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-8b394643-000"
+      },
+      {
+        "start": 445,
+        "end": 458,
+        "draft": "Scarb.TO home",
+        "attribute": true,
+        "id": "shell.shell-8b394643-001"
+      },
+      {
+        "start": 543,
+        "end": 551,
+        "draft": "Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-8b394643-002"
+      },
+      {
+        "start": 565,
+        "end": 595,
+        "draft": "Scarborough. I looked into it.",
+        "attribute": false,
+        "id": "shell.shell-8b394643-003"
+      },
+      {
+        "start": 649,
+        "end": 686,
+        "draft": "Local discoveries, with the receipts.",
+        "attribute": false,
+        "id": "static.embed-title",
+        "fields": {}
+      },
+      {
+        "start": 725,
+        "end": 902,
+        "draft": "Here's what the records turned up for this area. I keep the source dates and links close by, because the trail behind a finding can be just as interesting as the finding itself.",
+        "attribute": false,
+        "id": "static.embed-intro",
+        "fields": {}
+      },
+      {
+        "start": 935,
+        "end": 976,
+        "draft": "I'm loading the latest qualified updates.",
+        "attribute": false,
+        "id": "shell.shell-8b394643-006"
+      },
+      {
+        "start": 993,
+        "end": 1020,
+        "draft": "JavaScript is unavailable. ",
+        "attribute": false,
+        "id": "shell.shell-8b394643-007"
+      },
+      {
+        "start": 1086,
+        "end": 1120,
+        "draft": "Read the weekly briefs on Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-8b394643-008"
+      },
+      {
+        "start": 1272,
+        "end": 1416,
+        "draft": "This is a live widget, not a frozen edition. It checks the latest validated release when opened. An already-open widget does not refresh itself.",
+        "attribute": false,
+        "id": "shell.shell-8b394643-009"
+      },
+      {
+        "start": 1479,
+        "end": 1518,
+        "draft": "Explore the map and sources on Scarb.TO",
+        "attribute": false,
+        "id": "shell.shell-8b394643-010"
+      }
+    ]
+  }
+}

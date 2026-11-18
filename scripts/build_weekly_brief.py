@@ -27,6 +27,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from scripts.scarb_voice import weekly_intro, copy as voice_copy, compose_copy
+from scripts.scarb_accepted_copy import event_explanation_or_notice, current_copy
 from scripts.build_rss import EVENT_KINDS, LICENCE_URL, SOURCE_URL, FeedError, load_events, reader_date
 
 SITE_URL = "https://scarb.to/"
@@ -35,6 +37,7 @@ TORONTO = "America/Toronto"
 SCHEMA_VERSION = 1
 BRIEF_RENDER_VERSION = 2
 LINKED_RENDER_VERSION = 3
+VOICE_RENDER_VERSION = 4
 OFFICIAL_RECORD_URL = (
     "https://www.toronto.ca/community-people/health-wellness-care/"
     "health-programs-advice/food-safety/dinesafe/#establishment/"
@@ -168,6 +171,12 @@ def _neighbourhood_url(name: object) -> str | None:
 
 
 def _render_edition(payload: dict, record: dict) -> bytes:
+    if record.get("render_version", 1) == VOICE_RENDER_VERSION:
+        return _render_voice_edition(payload, record)
+    return _render_legacy_edition(payload, record)
+
+
+def _render_legacy_edition(payload: dict, record: dict) -> bytes:
     render_version = record.get("render_version", 1)
     if type(render_version) is not int or render_version not in (1, BRIEF_RENDER_VERSION, LINKED_RENDER_VERSION):
         raise BriefError("Unsupported weekly-brief render version")
@@ -259,21 +268,114 @@ def _render_edition(payload: dict, record: dict) -> bytes:
 '''
     return page.encode("utf-8")
 
+def _render_voice_edition(payload: dict, record: dict) -> bytes:
+    render_version = record.get("render_version", 1)
+    if type(render_version) is not int or render_version not in (VOICE_RENDER_VERSION,):
+        raise BriefError("Unsupported weekly-brief render version")
+    start = date.fromisoformat(payload["period_start"])
+    end = date.fromisoformat(payload["period_end"])
+    events = payload["events"]
+    kind_counts = Counter(event["kind"] for event in events)
+    area_counts = Counter(event["neighbourhood"] for event in events)
+    title = compose_copy("weekly-title", {"START": _fmt_date(start), "END": _fmt_date(end)})
+    esc = html.escape
+    V = lambda key: esc(voice_copy(key))
+    C = lambda key, fields: esc(compose_copy(key, fields))
+    rows = []
+    for event in events:
+        name = esc(event["name"])
+        record_url = _official_record_url(event.get("establishment_id"))
+        if render_version == VOICE_RENDER_VERSION and record_url:
+            name = f'<a href="{esc(record_url)}">{name}</a>'
+        neighbourhood = esc(event["neighbourhood"])
+        area_url = _neighbourhood_url(event.get("neighbourhood"))
+        if render_version == VOICE_RENDER_VERSION and area_url:
+            neighbourhood = f'<a href="{esc(area_url)}">{neighbourhood}</a>'
+        explanation=event_explanation_or_notice({**event, "feed": "dinesafe", "source_url": SOURCE_URL})
+        rows.append(
+            f'<li id="event-{esc(event["id"])}">'
+            f'<strong>{name}: {V(event["kind"])}</strong> '
+            f'<span>({neighbourhood}{V("weekly-match-suffix")})</span> '
+            f'<span>{V("weekly-result-prefix")}{esc(event["status"])}.</span> '
+            + (f'<span>{V("weekly-previous-prefix")}{esc(event["previous_status"])}.</span> ' if event["kind"] == "status_changed" and event["previous_status"] else "")
+            + f'<span>{V("weekly-inspection-prefix")}<time datetime="{esc(event["inspection_date"])}">{reader_date(date.fromisoformat(event["inspection_date"]))}</time>.</span> '
+            + f'<span>{V("weekly-added-prefix")}<time datetime="{esc(event["detected_at"])}">{reader_date(datetime.fromisoformat(event["detected_at"]).astimezone(ZoneInfo(TORONTO)).date())}</time>.</span>'
+            + f'<details><summary>{V("weekly-exact-time-label")}</summary><p>{C("weekly-recorded-at", {"TIME": event["detected_at"]})}</p></details>'
+            + (f"<p>{esc(explanation)}</p>" if explanation else "")
+            + "</li>"
+        )
+    kinds = "".join(
+        f'<li>{V(kind)}: {count}</li>'
+        for kind, count in sorted(kind_counts.items(), key=lambda item: EVENT_KINDS[item[0]])
+    )
+    areas = "".join(
+        f'<li>{esc(area)}: {count}</li>'
+        for area, count in sorted(area_counts.items(), key=lambda item: (item[0].casefold(), item[0]))
+    )
+    correction = ""
+    if record["revision"] > 1:
+        correction = (
+            f'<aside><strong>{C("weekly-correction", {"REVISION": str(record["revision"])})}</strong> '
+            f'{esc(record["correction_explanation"])} '
+            f'<span>{C("weekly-updated", {"DATE": reader_date(datetime.fromisoformat(record["revised_at"]).astimezone(ZoneInfo(TORONTO)).date())})}</span></aside>'
+        )
+    subject_link_note = "<p>" + V("weekly-source-note") + "</p>\n    "
+    first_generated = esc(record["generated_at"])
+    brand_metadata = ""
+    style = "body{font:1rem/1.55 system-ui,sans-serif;max-width:70rem;margin:auto;padding:1rem;color:#163c3c}h1,h2{line-height:1.2}li{margin:.65rem 0}a{color:#075c73}.summary{display:flex;gap:2rem;flex-wrap:wrap}aside{border-left:.25rem solid #a43;padding:.75rem;margin:1rem 0}small{color:#333}"
+    site_nav = f'<nav aria-label="{V("weekly-site-nav")}"><a href="{SITE_URL}">{V("weekly-home")}</a> · <a href="/briefs/">{V("weekly-all-briefs")}</a> · <a href="/feed.xml">{V("weekly-feed-link")}</a></nav>'
+    if render_version in (VOICE_RENDER_VERSION,):
+        brand_metadata = '<meta name="theme-color" content="#0A3D2A"><link rel="icon" type="image/svg+xml" href="/assets/brand/scarbto-icon.svg">'
+        style = "body{font:1rem/1.55 system-ui,sans-serif;max-width:70rem;margin:auto;padding:1rem;color:#0A3D2A;background:#F8F5EA}h1,h2{line-height:1.2}li{margin:.65rem 0}a{color:#0F5132}.summary{display:flex;gap:2rem;flex-wrap:wrap}aside{border-left:.25rem solid #D2683C;padding:.75rem;margin:1rem 0}small{color:#42594E}.brand-header{display:flex;align-items:center;gap:1rem;min-height:72px;border-bottom:1px solid #D5DED2;margin-bottom:1rem}.brand-link{display:block;line-height:0}.brand-lockup{display:block;width:min(304px,45vw);max-height:64px;height:auto}.brand-name{display:none}.brand-tagline{display:block}.brand-link:focus-visible{outline:3px solid #0F5132;outline-offset:4px}@media(max-width:420px){.brand-header{flex-wrap:wrap}.brand-link{display:flex;align-items:center;gap:.5rem;line-height:1.1}.brand-name{display:inline;font-weight:800;font-size:1.45rem}.brand-lockup{width:50px}.brand-tagline{display:block;color:#0A3D2A;font-weight:700}}@media print{body{background:#fff;color:#000}.brand-header{break-after:avoid}}"
+        site_nav = f'<header class="brand-header"><a class="brand-link" href="{SITE_URL}" aria-label="{V("weekly-home")}"><picture><source media="(max-width: 420px)" srcset="/assets/brand/scarbto-mark.svg"><img class="brand-lockup" src="/assets/brand/scarbto-connected.svg" alt=""></picture><span class="brand-name">Scarb.TO</span></a><span class="brand-tagline">{V("weekly-tagline")}</span></header><nav aria-label="{V("weekly-site-nav")}"><a href="{SITE_URL}">{V("weekly-home")}</a> · <a href="/briefs/">{V("weekly-all-briefs")}</a> · <a href="/feed.xml">{V("weekly-feed-link")}</a></nav>'
+    page = f'''<!doctype html>
+<html lang="en-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{V("weekly-description")}">
+  {brand_metadata}<link rel="canonical" href="{BRIEFS_URL}{start.isoformat()}/">
+  <link rel="alternate" type="application/rss+xml" title="{V("rss-title")}" href="/feed.xml">
+  <title>{esc(title)} | Scarb.TO</title>
+  <style>{style}</style>
+</head>
+<body>
+  {site_nav}
+  <main>
+    <h1>{esc(title)}</h1>
+    <p>{esc(weekly_intro(_fmt_date(start), _fmt_date(end)))}</p>
+    <p>{V("weekly-source-limit")}</p>
+    <details><summary>{V("weekly-patterns-title")}</summary><p>{C("weekly-counts", {"COUNT": str(len(events)), "AREAS": str(len(area_counts))})}</p><p>{V("weekly-timezone")}</p>
+    <div class="summary"><section><h2>{V("weekly-kind-heading")}</h2><ul>{kinds}</ul></section><section><h2>{V("weekly-area-heading")}</h2><ul>{areas}</ul></section></div>
+    <p>{V("weekly-geography")}</p></details><p>{V("weekly-safety")}</p>
+    {correction}
+    <h2>{V("weekly-updates-heading")}</h2>
+    <ol>{''.join(rows)}</ol>
+    {subject_link_note}<p>{V("weekly-source-invitation")}<a href="{SOURCE_URL}">{V("weekly-source-name")}</a>{V("weekly-licence-prefix")}<a href="{LICENCE_URL}">Open Government Licence – Toronto</a>.</p>
+    <details><summary>{V("weekly-made-title")}</summary><p><small>{C("weekly-preparation", {"ID": record["id"], "REVISION": str(record["revision"]), "FIRST": record["generated_at"], "REVISED": record["revised_at"] or voice_copy("weekly-not-revised")})}</small></p></details><p>{V("weekly-disclosure")}</p>
+  </main>
+</body>
+</html>
+'''
+    return page.encode("utf-8")
+
 
 def _render_index(manifest: dict, current_start: date, current_end: date, has_current: bool) -> bytes:
+    V = lambda key: html.escape(voice_copy(key))
+    C = lambda key, fields: html.escape(compose_copy(key, fields))
     entries = sorted(manifest["editions"], key=lambda item: item["period_start"], reverse=True)
     links = "".join(
-        f'<li><a href="/{esc_path(item["path"])}">Food inspection updates {_fmt_date(date.fromisoformat(item["period_start"]))}–{_fmt_date(date.fromisoformat(item["period_end"]))}</a>'
-        f' <span>({item["event_count"]} recorded updates; revision {item["revision"]})</span></li>'
+        f'<li><a href="/{esc_path(item["path"])}">{C("index-row-title", {"START": _fmt_date(date.fromisoformat(item["period_start"])), "END": _fmt_date(date.fromisoformat(item["period_end"]))})}</a>'
+        f' <span>{C("index-row-meta", {"COUNT": str(item["event_count"]), "REVISION": str(item["revision"])})}</span></li>'
         for item in entries
     )
     if not has_current:
-        quiet = f'<p>I have no DineSafe updates to share for {_fmt_date(current_start)}–{_fmt_date(current_end)}.</p>'
+        quiet = f'<p>{C("index-quiet", {"START": _fmt_date(current_start), "END": _fmt_date(current_end)})}</p>'
     else:
         quiet = ""
     page = f'''<!doctype html>
-<html lang="en-CA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0A3D2A"><link rel="icon" type="image/svg+xml" href="/assets/brand/scarbto-icon.svg"><title>Weekly briefs | Scarb.TO</title><style>body{{font:1rem/1.55 system-ui,sans-serif;max-width:60rem;margin:auto;padding:1rem;color:#0A3D2A;background:#F8F5EA}}a{{color:#0F5132}}li{{margin:.75rem 0}}.brand-header{{display:flex;align-items:center;gap:1rem;min-height:72px;border-bottom:1px solid #D5DED2;margin-bottom:1rem}}.brand-link{{display:block;line-height:0}}.brand-lockup{{display:block;width:min(304px,45vw);max-height:64px;height:auto}}.brand-tagline{{display:block;color:#0A3D2A;font-weight:700;font-size:.85rem}}.brand-name{{display:none}}.brand-link:focus-visible{{outline:3px solid #0F5132;outline-offset:4px}}@media(max-width:420px){{.brand-header{{flex-wrap:wrap}}.brand-link{{display:flex;align-items:center;gap:.5rem;line-height:1.1}}.brand-lockup{{width:50px}}.brand-name{{display:inline;color:#0A3D2A;font-size:1.45rem;font-weight:800}}.brand-tagline{{flex-basis:100%}}}}</style></head>
-<body><header class="brand-header"><a class="brand-link" href="{SITE_URL}" aria-label="Scarb.TO home"><picture><source media="(max-width: 420px)" srcset="/assets/brand/scarbto-mark.svg"><img class="brand-lockup" src="/assets/brand/scarbto-connected.svg" alt=""></picture><span class="brand-name">Scarb.TO</span></a><span class="brand-tagline">Scarborough. I looked into it.</span></header><nav aria-label="Site"><a href="{SITE_URL}">Scarb.TO home</a> · <a href="/feed.xml">DineSafe RSS</a></nav><main><h1 data-scarb-voice="briefs-title">The week's food inspection paper trail.</h1><p data-scarb-voice="briefs-intro">I love seeing how one week's DineSafe records fit together. Pick an edition and follow the inspection dates, neighbourhood connections and original source links. A quiet week in these records isn't proof that nothing happened, and I only publish a brief when there are updates to share.</p>{quiet}<h2>Choose a week to explore</h2><ul>{links}</ul></main></body></html>
+<html lang="en-CA"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0A3D2A"><link rel="icon" type="image/svg+xml" href="/assets/brand/scarbto-icon.svg"><title>{V("index-title")} | Scarb.TO</title><style>body{{font:1rem/1.55 system-ui,sans-serif;max-width:60rem;margin:auto;padding:1rem;color:#0A3D2A;background:#F8F5EA}}a{{color:#0F5132}}li{{margin:.75rem 0}}.brand-header{{display:flex;align-items:center;gap:1rem;min-height:72px;border-bottom:1px solid #D5DED2;margin-bottom:1rem}}.brand-link{{display:block;line-height:0}}.brand-lockup{{display:block;width:min(304px,45vw);max-height:64px;height:auto}}.brand-tagline{{display:block;color:#0A3D2A;font-weight:700;font-size:.85rem}}.brand-name{{display:none}}.brand-link:focus-visible{{outline:3px solid #0F5132;outline-offset:4px}}@media(max-width:420px){{.brand-header{{flex-wrap:wrap}}.brand-link{{display:flex;align-items:center;gap:.5rem;line-height:1.1}}.brand-lockup{{width:50px}}.brand-name{{display:inline;color:#0A3D2A;font-size:1.45rem;font-weight:800}}.brand-tagline{{flex-basis:100%}}}}</style></head>
+<body><header class="brand-header"><a class="brand-link" href="{SITE_URL}" aria-label="{V("weekly-home")}"><picture><source media="(max-width: 420px)" srcset="/assets/brand/scarbto-mark.svg"><img class="brand-lockup" src="/assets/brand/scarbto-connected.svg" alt=""></picture><span class="brand-name">Scarb.TO</span></a><span class="brand-tagline">{V("weekly-tagline")}</span></header><nav aria-label="{V("weekly-site-nav")}"><a href="{SITE_URL}">{V("weekly-home")}</a> · <a href="/feed.xml">{V("weekly-feed-link")}</a></nav><main data-scarb-period-start="{current_start.isoformat()}" data-scarb-period-end="{current_end.isoformat()}" data-scarb-has-current="{str(has_current).lower()}"><h1 data-scarb-voice="briefs-title">{html.escape(current_copy('static.briefs-title', "The week's food inspection paper trail."))}</h1><p data-scarb-voice="briefs-intro">{html.escape(current_copy('static.briefs-intro', "I love seeing how one week's DineSafe records fit together. Pick an edition and follow the inspection dates, neighbourhood connections and original source links. A quiet week in these records isn't proof that nothing happened, and I only publish a brief when there are updates to share."))}</p>{quiet}<h2>{V("index-choose")}</h2><ul>{links}</ul></main></body></html>
 '''
     return page.encode("utf-8")
 
@@ -293,7 +395,7 @@ def _validate_manifest(value: dict) -> None:
         if not isinstance(item, dict):
             raise BriefError("Invalid weekly-brief edition record")
         render_version = item.get("render_version", 1)
-        if type(render_version) is not int or render_version not in (1, BRIEF_RENDER_VERSION, LINKED_RENDER_VERSION):
+        if type(render_version) is not int or render_version not in (1, BRIEF_RENDER_VERSION, LINKED_RENDER_VERSION, VOICE_RENDER_VERSION):
             raise BriefError("Unsupported weekly-brief render version")
         edition_id = item.get("id")
         path = item.get("path")
@@ -435,7 +537,7 @@ def build_weekly_brief(
                 "period_start": start.isoformat(),
                 "period_end": end.isoformat(),
                 "revision": 1,
-                "render_version": LINKED_RENDER_VERSION,
+                "render_version": VOICE_RENDER_VERSION,
                 "generated_at": generated_at,
                 "revised_at": None,
                 "correction_explanation": None,

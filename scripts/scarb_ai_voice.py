@@ -72,6 +72,22 @@ class VoiceError(ValueError):
     """A closed gate; preserve last-good output instead of publishing a candidate."""
 
 
+class FactValidationFailure(VoiceError):
+    """Finite validation reason, without body, lock names or evidence contents."""
+    CODES = frozenset({"lock-unknown", "lock-repeated", "lock-missing", "unprotected-placeholder", "unprotected-number", "unprotected-url", "unprotected-markup", "copy-word-limit", "copy-character-limit"})
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.outcome = code if code in self.CODES else "protected-facts-validation"
+
+
+class TransportFailure(VoiceError):
+    """Sanitized transport metadata only; no original exception or payload."""
+    def __init__(self, outcome: str, http_status: int | None = None):
+        super().__init__("API request failed; retained output is unchanged; no automatic retry")
+        self.outcome = outcome if outcome in {"http-error", "transport-timeout", "transport-error", "response-json-invalid"} else "transport-error"
+        self.http_status = http_status if type(http_status) is int and 100 <= http_status <= 599 else None
+
+
 def need(condition: bool, message: str) -> None:
     if not condition:
         raise VoiceError(message)
@@ -139,13 +155,25 @@ def text_check(packet: dict, result: dict) -> str:
     body = result["body"]
     need(plain(body, 12000), "Invalid writer text")
     found = TOKEN.findall(body)
-    need(sorted(found) == sorted(packet["locks"]), "Protected facts missing, repeated or altered")
+    if sorted(found) != sorted(packet["locks"]):
+        code = "lock-unknown" if any(x not in packet["locks"] for x in found) else "lock-repeated" if len(found) != len(set(found)) else "lock-missing"
+        raise FactValidationFailure(code, "Protected facts missing, repeated or altered")
+    for name, at_start in (("LAYOUT_PREFIX", True), ("LAYOUT_SUFFIX", False)):
+        if name in packet["locks"]:
+            need(re.fullmatch(r"[\t\n\r ]+", packet["locks"][name]) is not None, "Invalid layout lock")
+            token = "{{LOCK:" + name + "}}"
+            need(body.startswith(token) if at_start else body.endswith(token), "Required layout whitespace moved")
     outside = TOKEN.sub("", body)
-    need(not re.search(r"\{\{|\}\}|\d|https?://|www\.|<|>|\*\*|```", outside, re.I), "Unprotected fact, placeholder, URL or markup")
+    for pattern, code in ((r"\{\{|\}\}", "unprotected-placeholder"), (r"https?://|www\.", "unprotected-url"), (r"\d", "unprotected-number"), (r"<|>|\*\*|```", "unprotected-markup")):
+        if re.search(pattern, outside, re.I):
+            raise FactValidationFailure(code, "Unprotected fact, placeholder, URL or markup")
     expected = [item["id"] for item in packet["evidence"]]
     need(isinstance(result["evidence_ids"], list) and all(isinstance(x, str) for x in result["evidence_ids"]) and sorted(result["evidence_ids"]) == sorted(expected), "Evidence references changed")
     materialised = TOKEN.sub(lambda m: packet["locks"][m[1]], body)
-    need(len(materialised.split()) <= packet["limits"]["words"] and len(materialised) <= packet["limits"]["characters"], "Translated copy exceeds final limits")
+    if len(materialised.split()) > packet["limits"]["words"]:
+        raise FactValidationFailure("copy-word-limit", "Translated copy exceeds final limits")
+    if len(materialised) > packet["limits"]["characters"]:
+        raise FactValidationFailure("copy-character-limit", "Translated copy exceeds final limits")
     return materialised
 
 
@@ -204,8 +232,18 @@ def api_request(body: dict, credentials: dict) -> dict:
             need(len(data) <= 1024 * 1024, "API response too large")
             return json.loads(data)
     except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
-        # Do not expose API errors, headers, tokens or source payloads in public logs.
-        raise VoiceError("API request failed; retained output is unchanged; no automatic retry") from None
+        # Extract finite metadata at the real boundary, then leave the handler before
+        # raising so the sanitized exception retains neither cause nor context.
+        status = None
+        if isinstance(exc, urllib.error.HTTPError):
+            outcome, status = "http-error", exc.code
+        elif isinstance(exc, TimeoutError) or (isinstance(exc, urllib.error.URLError) and isinstance(exc.reason, TimeoutError)):
+            outcome = "transport-timeout"
+        elif isinstance(exc, ValueError):
+            outcome = "response-json-invalid"
+        else:
+            outcome = "transport-error"
+    raise TransportFailure(outcome, status) from None
 
 
 def atomic_json(path: Path, value: object) -> None:
@@ -238,11 +276,31 @@ def exclusive(directory: Path):
         lock.unlink()
 
 
+def paid_pilot_cap(config: dict) -> float | None:
+    funding = config.get("funding")
+    if not isinstance(funding, dict) or funding.get("kind") != "existing_paid_api_credits":
+        return None
+    cap = funding.get("pilot_cap_usd")
+    need(type(cap) in (int, float) and math.isfinite(cap) and 0 < cap <= 0.25,
+         "Initial paid pilot must stay within US$0.25")
+    return cap
+
+
+def reservation_bound(packet: dict, config: dict) -> tuple[int, float]:
+    input_bound = len(encoded(packet)) + len(AUTHOR.encode()) + len(REVIEWER.encode()) + 16000
+    reserve = sum((input_bound * MODELS[model][0] + 2000 * MODELS[model][1]) / 1000000
+                  for model in (config["author_model"], config["reviewer_model"]))
+    return input_bound, reserve
+
+
 def check_config(config: dict) -> None:
     need(isinstance(config, dict) and set(config) == {"enabled", "author_model", "reviewer_model", "month_cap_usd", "funding"}, "Unexpected AI configuration")
     need(type(config["enabled"]) is bool, "Invalid enabled flag")
     need(config["author_model"] in MODELS and config["reviewer_model"] in MODELS, "Model is not qualified for this adapter")
     need(config["author_model"] != config["reviewer_model"], "Use a separate reviewer model")
+    if paid_pilot_cap(config) is not None:
+        need((config["author_model"], config["reviewer_model"]) == ("gpt-6-luna", "gpt-6.1-terra"),
+             "The bounded paid pilot uses Luna author and separate Terra reviewer")
     cap = config["month_cap_usd"]
     need(type(cap) in (int, float) and math.isfinite(cap) and 0 <= cap <= 5, "Local API-value cap must be between zero and US$5")
 
@@ -250,9 +308,35 @@ def check_config(config: dict) -> None:
 def funding_check(config: dict, now: dt.datetime, env: dict) -> dict:
     need(config["enabled"] and env.get("SCARB_AI_ENABLE") == "1", "Live AI generation is disabled")
     f = config["funding"]
-    required = {"kind", "organization", "project", "verified_at", "expires_at", "remaining_usd", "cash_fallback_disabled"}
-    need(isinstance(f, dict) and set(f) == required, "Verified funding receipt required")
-    need(f["kind"] == "promotional_api_credits" and f["cash_fallback_disabled"] is True, "Cash fallback is not authorised")
+    common = {"kind", "organization", "project", "verified_at", "expires_at", "remaining_usd"}
+    need(isinstance(f, dict), "Verified funding receipt required")
+    if f.get("kind") == "existing_paid_api_credits":
+        uncertain = f.get("billing_mode") == "prepaid_cutoff_not_guaranteed"
+        extra = {"billing_mode", "pilot_request_sha256"} if uncertain else {"postpaid_disabled"}
+        need(set(f) == common | {"auto_recharge_disabled", "pilot_cap_usd"} | extra,
+             "Verified existing-paid balance and billing protections required")
+        need(f["auto_recharge_disabled"] is True, "Automatic recharge is not authorised")
+        if uncertain:
+            need(f["organization"] == "org-EIn1HXt0x19rnOSvte7dVrB9" and
+                 f["project"] == "proj_ZiSvyeNLotSbqtH2vDEKqNxx", "Use the dedicated bounded Scarb pilot project")
+            need(f["pilot_request_sha256"] == [
+                "d1ee00949d7848b8046873c82dcd4490ef73f0b64b8bb2b8a204b435131c8fc0",
+                "e8f8d7fda9aa2749b15acaf4450a988b9b29882b04fabd194168bce6f5b6fd18"],
+                "Only the two separately approved public pilot requests are eligible")
+            need(dt.timedelta(0) <= now - instant(f["verified_at"]) <= dt.timedelta(hours=1),
+                 "Bounded prepaid pilot requires balance verification within one hour")
+            need(type(f["remaining_usd"]) in (int, float) and f["remaining_usd"] >= 5.25,
+                 "Verified prepaid balance must cover US$5 buffer plus full US$0.25 pilot")
+        else:
+            need(f["postpaid_disabled"] is True, "Postpaid exposure is not authorised")
+        need(type(f["remaining_usd"]) in (int, float) and math.isfinite(f["remaining_usd"]),
+             "Invalid verified existing-paid balance")
+        paid_pilot_cap(config)
+    else:
+        # Keep the original promotional path and its no-cash boundary intact.
+        need(set(f) == common | {"cash_fallback_disabled"}, "Verified funding receipt required")
+        need(f["kind"] == "promotional_api_credits" and f["cash_fallback_disabled"] is True,
+             "Cash fallback is not authorised")
     need(instant(f["verified_at"]) <= now < instant(f["expires_at"]) and now - instant(f["verified_at"]) <= dt.timedelta(days=35), "Funding evidence expired; verify grant and billing controls")
     need(type(f["remaining_usd"]) in (int, float) and f["remaining_usd"] >= config["month_cap_usd"] > 0, "Insufficient verified credit allocation")
     values = {"key": env.get("OPENAI_API_KEY"), "organization": env.get("OPENAI_ORG_ID"), "project": env.get("OPENAI_PROJECT_ID")}
@@ -280,9 +364,51 @@ def receipt_check(receipt: dict, packet: dict, config: dict, *, test_fixture: bo
     return text
 
 
+def diagnostic_outcome(error: Exception) -> dict:
+    """Finite diagnostic codes only. Never persist exception text or payloads."""
+    if isinstance(error, FactValidationFailure):
+        return {"outcome": error.outcome}
+    if isinstance(error, TransportFailure):
+        result = {"outcome": error.outcome}
+        if error.outcome == "http-error": result["http_status"] = error.http_status
+        return result
+    current=error
+    for _ in range(4):
+        if isinstance(current, urllib.error.HTTPError):
+            code=current.code
+            return {"outcome":"http-error", "http_status":code if type(code) is int and 100 <= code <= 599 else None}
+        if isinstance(current, TimeoutError):return {"outcome":"transport-timeout"}
+        if isinstance(current, urllib.error.URLError):
+            return {"outcome":"transport-timeout" if isinstance(current.reason,TimeoutError) else "transport-error"}
+        if current.__cause__ is None:break
+        current=current.__cause__
+    known={
+        "API response incomplete or refused":"response-incomplete-or-refused",
+        "API refused or returned unsupported content":"response-content-refused",
+        "API did not return structured JSON":"response-json-invalid",
+        "Missing API usage accounting":"usage-accounting-missing",
+        "Unexpected API output":"response-output-shape",
+        "Expected one structured answer":"response-answer-count",
+        "Unexpected writer output":"writer-schema-fields",
+        "Invalid writer text":"writer-text-invalid",
+        "Evidence references changed":"evidence-identities-changed",
+        "Unprotected fact, placeholder, URL or markup":"unprotected-fact-or-markup",
+        "Translated copy exceeds final limits":"copy-size-limit",
+        "Required layout whitespace moved":"layout-lock-moved",
+        "Invalid layout lock":"layout-lock-invalid",
+        "Protected facts missing, repeated or altered":"protected-facts-validation",
+        "Independent model review rejected the draft":"independent-review-rejected",
+        "Provider usage exceeded reservation; further calls are held":"reservation-overrun",
+    }
+    return {"outcome":known.get(str(error),"validation-or-local-error")}
+
+
 def generate(packet: dict, config: dict, state: Path, *, transport: Callable = api_request, env: dict | None = None, now: dt.datetime | None = None) -> dict:
     """Cache same inputs; never fetch sources, alter a prior receipt, or retry an API call."""
     packet_check(packet)
+    funding = config.get("funding") or {}
+    if funding.get("billing_mode") == "prepaid_cutoff_not_guaranteed":
+        need(digest(packet) in funding.get("pilot_request_sha256", []), "Request outside bounded two-packet pilot")
     check_config(config)
     now = now or dt.datetime.now(dt.timezone.utc)
     key = cache_key(packet, config)
@@ -308,37 +434,61 @@ def generate(packet: dict, config: dict, state: Path, *, transport: Callable = a
             # Reserve conservative request bounds before either billable call.
             # UTF-8 bytes + large schema/reasoning overhead exceed expected tokens.
             # No assumption that a provider's balance check is a cash-spend boundary.
-            input_bound = len(encoded(packet)) + len(AUTHOR.encode()) + len(REVIEWER.encode()) + 16000
-            reserve = sum((input_bound * MODELS[m][0] + 2000 * MODELS[m][1]) / 1000000
-                          for m in (config["author_model"], config["reviewer_model"]))
+            input_bound, reserve = reservation_bound(packet, config)
+            pilot_cap = paid_pilot_cap(config)
+            pilot_spent = ledger.get("paid_pilot_usd", 0)
+            if pilot_cap is not None:
+                need(type(pilot_spent) in (int, float) and math.isfinite(pilot_spent) and 0 <= pilot_spent,
+                     "Invalid one-time pilot ledger")
+                need(pilot_spent + reserve <= pilot_cap, "One-time paid pilot ceiling reached")
+                ledger["paid_pilot_usd"] = round(pilot_spent + reserve, 6)
             need(spent + reserve <= config["month_cap_usd"], "Monthly AI generation fuse reached")
             ledger["months"][month] = round(spent + reserve, 6)
             atomic_json(ledger_path, ledger)
             # A crash, refusal or outage must not trigger an unbounded daily loop.
             atomic_json(held, {"key": key, "attempted_at": now.isoformat(), "status": "reserved-or-held"})
-            for stage, model, prompt, data, schema in (
-                ("author", config["author_model"], AUTHOR, {"request": packet}, WRITE_SCHEMA),
-                ("review", config["reviewer_model"], REVIEWER, {}, REVIEW_SCHEMA),
-            ):
-                if stage == "review":
-                    data = {"request": packet, "candidate": writer}
-                body = request_body(model, prompt, data, schema)
-                need(len(encoded(body)) <= 48000, "Request exceeds cost-reservation assumptions")
-                result, tokens = unpack(transport(body, credentials))
-                rates = MODELS[model]
-                estimate = (tokens["input_tokens"] * rates[0] + tokens["output_tokens"] * rates[1]) / 1000000
-                if tokens["input_tokens"] > input_bound or tokens["output_tokens"] > 2000:
-                    ledger["months"][month] = config["month_cap_usd"]
-                    atomic_json(ledger_path, ledger)
-                    raise VoiceError("Provider usage exceeded reservation; further calls are held")
-                usage.append({"stage": stage, "model": model, **tokens, "estimated_usd": estimate})
-                if stage == "author":
-                    text_check(packet, result)
-                    writer = result
-                else:
-                    review_check(result)
-                    review = result
-            ledger["months"][month] = round(spent + sum(x["estimated_usd"] for x in usage), 6)
+            journal={"key":key,"attempted_at":now.isoformat(),"status":"reserved-or-held",
+                     "stage":"request-preparation","transport_attempts":0,"response_received":False}
+            try:
+                for stage, model, prompt, data, schema in (
+                    ("author", config["author_model"], AUTHOR, {"request": packet}, WRITE_SCHEMA),
+                    ("review", config["reviewer_model"], REVIEWER, {}, REVIEW_SCHEMA),
+                ):
+                    if stage == "review":
+                        data = {"request": packet, "candidate": writer}
+                    body = request_body(model, prompt, data, schema)
+                    need(len(encoded(body)) <= 48000, "Request exceeds cost-reservation assumptions")
+                    journal.update(stage=stage+"-request",transport_attempts=journal["transport_attempts"]+1,response_received=False)
+                    atomic_json(held,journal)
+                    response=transport(body, credentials)
+                    journal.update(stage=stage+"-validation",response_received=True)
+                    atomic_json(held,journal)
+                    result, tokens = unpack(response)
+                    rates = MODELS[model]
+                    estimate = (tokens["input_tokens"] * rates[0] + tokens["output_tokens"] * rates[1]) / 1000000
+                    if tokens["input_tokens"] > input_bound or tokens["output_tokens"] > 2000:
+                        ledger["months"][month] = config["month_cap_usd"]
+                        if pilot_cap is not None:
+                            ledger["paid_pilot_usd"] = pilot_cap
+                        atomic_json(ledger_path, ledger)
+                        raise VoiceError("Provider usage exceeded reservation; further calls are held")
+                    usage.append({"stage": stage, "model": model, **tokens, "estimated_usd": estimate})
+                    if stage == "author":
+                        text_check(packet, result)
+                        writer = result
+                    else:
+                        review_check(result)
+                        review = result
+            except (VoiceError, OSError, ValueError, KeyError, TypeError) as error:
+                journal.update(status="held",**diagnostic_outcome(error))
+                journal["completed_usage_stages"]=[{"stage":item["stage"],"model":item["model"],
+                   "input_tokens":item["input_tokens"],"output_tokens":item["output_tokens"]} for item in usage]
+                atomic_json(held,journal)
+                raise
+            actual_cost = sum(x["estimated_usd"] for x in usage)
+            ledger["months"][month] = round(spent + actual_cost, 6)
+            if pilot_cap is not None:
+                ledger["paid_pilot_usd"] = round(pilot_spent + actual_cost, 6)
             atomic_json(ledger_path, ledger)
             origin = "openai-api-reviewed" if transport is api_request else "test-fixture"
         receipt = {"version": VERSION, "key": key, "packet_sha256": digest(packet), "id": packet["id"], "origin": origin,
@@ -403,7 +553,7 @@ def main() -> None:
     if args.command == "plan":
         missing = [p for p in packets if not (args.state / "accepted" / (cache_key(p, config) + ".json")).exists() and p["kind"] != "verbatim"]
         print(json.dumps({"requests": len(packets), "uncached_ai_units": len(missing), "max_api_calls": len(missing)*2,
-                          "network_calls": 0, "note": "Use the configured models and measured tokens; reservations bound concurrency, not a spending quote"}))
+                          "network_calls": 0, "maximum_reserved_usd": round(sum(reservation_bound(p, config)[1] for p in missing), 6), "paid_pilot_cap_usd": paid_pilot_cap(config), "note": "Use the configured models and measured tokens; reservations bound concurrency, not a spending quote"}))
     elif args.command == "generate":
         for packet in packets:
             generate(packet, config, args.state)

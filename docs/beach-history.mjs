@@ -1,3 +1,4 @@
+import {staticCopy} from './scarb-voice.mjs';
 import {readerDate} from './reader-date.mjs';
 const RESOURCE_ID = "8102bd4c-83cd-4354-9788-eecc0c7a09b4";
 const BEACH_ID = 10;
@@ -35,7 +36,7 @@ export function validateBeachSamplePreview(input) {
         || typeof record.siteName !== "string" || !record.siteName.trim()
         || !isCalendarDate(record.collectionDate)
         || (record.eColi !== null && (!Number.isFinite(record.eColi) || record.eColi < 0))) {
-      throw new TypeError("Invalid beach-sample record");
+      throw new TypeError(staticCopy('beach-history-message-01'));
     }
   }
   return input;
@@ -58,7 +59,7 @@ export function renderBeachSamplePreview(document, input) {
   const title = document.createElement("h3");
   title.textContent = preview.beach_name;
   const note = document.createElement("p");
-  note.textContent = "These are older water samples, not today’s swimming conditions. Check the City’s latest advice before swimming.";
+  note.textContent = staticCopy('beach-history-01');
   const grouped = document.createElement("ol");
   grouped.className = "beach-sample-date-list";
   const dates = [...new Set(preview.records.map(record => record.collectionDate))].sort().reverse();
@@ -73,13 +74,13 @@ export function renderBeachSamplePreview(document, input) {
     const summary = document.createElement("p");
     summary.textContent = `${samples.length} sample ${samples.length === 1 ? "record" : "records"}. `
       + (measured.length ? `Recorded E. coli numbers: ${measured.map(record => record.eColi).join(", ")}. ` : "")
-      + (missing ? `${missing === samples.length ? "None includes an E. coli number" : `${missing} ${missing === 1 ? "record has" : "records have"} no E. coli number`}. A missing number is not a zero.` : "");
+      + (missing ? `${missing === samples.length ? staticCopy('beach-history-message-02') : `${missing} ${missing === 1 ? "record has" : "records have"} no E. coli number`}. A missing number is not a zero.` : "");
     item.append(date, summary);
     grouped.append(item);
   }
   const details = document.createElement("details");
   const detailTitle = document.createElement("summary");
-  detailTitle.textContent = "Sample records and sources";
+  detailTitle.textContent = staticCopy('beach-history-message-03');
   const coverage = document.createElement("p");
   coverage.textContent = `These are the latest ${preview.rows_included} sample records available when checked, out of ${preview.total_rows_in_source_filter.toLocaleString("en-CA")} for this beach, not its complete history. The map pin marks the beach, not the sampling spots. Contains information licensed under the Open Government Licence – Toronto.`;
   const records = document.createElement("ol");
@@ -93,7 +94,7 @@ export function renderBeachSamplePreview(document, input) {
     site.textContent = `Site ${record.siteName}`;
     const measurement = document.createElement("span");
     measurement.textContent = record.eColi === null
-      ? "No E. coli number was recorded"
+      ? staticCopy('beach-history-message-04')
       : `E. coli measurement: ${record.eColi}`;
     item.append(date, site, measurement);
     records.append(item);
@@ -105,17 +106,17 @@ export function renderBeachSamplePreview(document, input) {
   source.href = CATALOGUE_URL;
   source.target = "_blank";
   source.rel = "noopener noreferrer";
-  source.textContent = "See the City beach records";
+  source.textContent = staticCopy('beach-history-message-05');
   const licence = document.createElement("a");
   licence.href = LICENCE_URL;
   licence.target = "_blank";
   licence.rel = "noopener noreferrer";
-  licence.textContent = "Open Government Licence - Toronto";
+  licence.textContent = staticCopy('beach-history-message-06');
   const currentInfo = document.createElement("a");
   currentInfo.href = CURRENT_INFO_URL;
   currentInfo.target = "_blank";
   currentInfo.rel = "noopener noreferrer";
-  currentInfo.textContent = "Check current City swimming advice";
+  currentInfo.textContent = staticCopy('beach-history-message-07');
   details.append(detailTitle, coverage, records, captured, source, licence);
   section.append(title, note, currentInfo, grouped, details);
   return section;

@@ -217,7 +217,7 @@ test('homepage uses the Mosaic lockup with an accessible home link and standalon
   ]);
   assert.match(html,/<source media="\(max-width: 420px\)" srcset="\.\/assets\/brand\/scarbto-mark\.svg">/);
   assert.match(html,/<img class="brand-lockup" src="\.\/assets\/brand\/scarbto-connected\.svg" alt="">/);
-  assert.match(html,/<a class="identity" href="\/" aria-label="Scarb\.TO home">\s*<picture>\s*<source media="\(max-width: 420px\)" srcset="\.\/assets\/brand\/scarbto-mark\.svg">\s*<img class="brand-lockup" src="\.\/assets\/brand\/scarbto-connected\.svg" alt="">\s*<\/picture>\s*<\/a>/);
+  assert.match(html,/<a class="identity" href="\/" aria-label="Scarb\.TO home">\s*<picture>\s*<source media="\(max-width: 420px\)" srcset="\.\/assets\/brand\/scarbto-mark\.svg">\s*<img class="brand-lockup" src="\.\/assets\/brand\/scarbto-connected\.svg" alt="">\s*<\/picture>\s*<span class="brand-name">Scarb\.TO<\/span>\s*<\/a>/);
   assert.match(css,/\.brand-lockup\{display:block;width:min\(304px,45vw\);height:auto\}/);
   assert.match(css,/@media\(max-width:420px\)\{\.brand-lockup\{width:64px\}\}/);
   assert.match(lockup,/<title id="title">Scarb\.TO<\/title>/);
@@ -260,7 +260,7 @@ test('recent DineSafe captions distinguish detected changes from inspection date
   const app=await loadApp(snapshot);
   try {
     assert.equal(app.document.getElementById('results-caption').textContent,
-      'Pick a place and explore its latest DineSafe inspection record with me. Each one links back to the City source.');
+      'Pick a familiar name and follow its inspection trail with me. These are the latest DineSafe records in this snapshot, with the original City link beside each one.');
     app.document.tabs.find(tab=>tab.dataset.mode==='recent').click();
     assert.equal(app.document.getElementById('results-caption').textContent,
       'This is where the records get interesting: compare them from day to day and the changes come into view. Here’s what I found in DineSafe. The inspection date may be earlier than when a record first appeared here.');

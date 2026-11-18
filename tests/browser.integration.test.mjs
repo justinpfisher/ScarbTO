@@ -1,3 +1,4 @@
+import {staticCopy} from '../docs/scarb-voice.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -31,8 +32,9 @@ test('UI source text retains intended separators and badge text', async () => {
   assert.ok(html.includes('DineSafe Open Data</a> and are provided under the <a'));
   assert.match(html, /href="https:\/\/open\.toronto\.ca\/dataset\/dinesafe\/"[^>]*>City of Toronto DineSafe Open Data<\/a>/);
   assert.match(html, /href="https:\/\/open\.toronto\.ca\/open-data-licence\/"[^>]*>Open Government Licence - Toronto<\/a>/);
-  assert.ok(app.includes("Toronto Open Data " + String.fromCharCode(0x00b7) + " dated samples"));
-  assert.match(html, /I love following the data trails here/);
+  assert.equal(staticCopy("app-21"), "Toronto Open Data " + String.fromCharCode(0x00b7) + " dated samples");
+  assert.ok(app.includes("staticCopy('app-21')"));
+  assert.ok(html.includes(staticCopy('home-intro')));
   assert.doesNotMatch(html, /I may like the history a little more than most/);
   assert.match(html, /Each view names the source it uses/);
 });
@@ -448,7 +450,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   await beachSurvivesDineSafeError.page.getByText(/I could not load the published records \(HTTP 503\)/).waitFor();
   assert.equal(await beachSurvivesDineSafeError.page.locator('#results-title').textContent(), 'Places to explore');
   assert.equal(await beachSurvivesDineSafeError.page.locator('#results-kicker').textContent(), 'Official inspections');
-  assert.equal(await beachSurvivesDineSafeError.page.locator('#results-caption').textContent(), 'Explore the map or browse the list. Your filters work in both.');
+  assert.equal(await beachSurvivesDineSafeError.page.locator('#results-caption').textContent(), 'Start with a place you know. I have linked its map point and dated records so you can follow the trail either way; your filters work in both.');
   assert.equal(await beachSurvivesDineSafeError.page.locator('#results-count').textContent(), 'Unavailable');
   await beachSurvivesDineSafeError.page.waitForFunction(() => !window.__scarbMap.querySourceFeatures('places').some(feature => feature.properties.id === 'beach:10'));
   assert.deepEqual(beachSurvivesDineSafeError.pageErrors, []);
@@ -468,7 +470,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   await switchingView.page.getByText(/There are no checked DineSafe records here yet/).waitFor();
   assert.equal(await switchingView.page.locator('#results-title').textContent(), 'Places to explore');
   assert.equal(await switchingView.page.locator('#results-kicker').textContent(), 'Official inspections');
-  assert.equal(await switchingView.page.locator('#results-caption').textContent(), 'Explore the map or browse the list. Your filters work in both.');
+  assert.equal(await switchingView.page.locator('#results-caption').textContent(), 'Start with a place you know. I have linked its map point and dated records so you can follow the trail either way; your filters work in both.');
   assert.equal(await switchingView.page.locator('#results-count').textContent(), '0 in view');
   await switchingView.page.waitForFunction(() => !window.__scarbMap.querySourceFeatures('places').some(feature => feature.properties.id === 'beach:10'));
   assert.deepEqual(switchingView.pageErrors, []);
@@ -480,7 +482,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   await rejectedView.page.getByRole('button', {name: 'All places'}).click();
   await rejectedView.page.getByText(/I could not load the published records \(Unsupported schema\)/).waitFor();
   assert.equal(await rejectedView.page.locator('#results-title').textContent(), 'Places to explore');
-  assert.equal(await rejectedView.page.locator('#results-caption').textContent(), 'Explore the map or browse the list. Your filters work in both.');
+  assert.equal(await rejectedView.page.locator('#results-caption').textContent(), 'Start with a place you know. I have linked its map point and dated records so you can follow the trail either way; your filters work in both.');
   assert.equal(await rejectedView.page.locator('.record-item[data-id="should-not-render"]').count(), 0);
   await rejectedView.page.waitForFunction(() => !window.__scarbMap.querySourceFeatures('places').some(feature => feature.properties.id === 'beach:10'));
   assert.deepEqual(rejectedView.pageErrors, []);
