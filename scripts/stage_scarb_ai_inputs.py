@@ -36,7 +36,7 @@ from contextlib import contextmanager
 
 @contextmanager
 def private_grouped_registry(state, path, expected_sha256):
-    """Read an externally pinned single-run grant; never discover or self-enrol."""
+    """Read an externally pinned exact roster; verify every run before granting scope."""
     import re
     from types import MappingProxyType
     from scripts import scarb_grouped_provenance_candidate as provenance
@@ -45,19 +45,37 @@ def private_grouped_registry(state, path, expected_sha256):
     need(state.is_dir() and path.is_file() and not path.is_symlink() and path.resolve().is_relative_to(state)
          and not any((p/".git").exists() for p in (state,*state.parents)), "Use protected private registry inside state")
     raw=path.read_bytes();need(hashlib.sha256(raw).hexdigest()==expected_sha256,"Private registry bytes changed")
-    value=json.loads(raw)
+    def unique_pairs(pairs):
+        result={}
+        for key,value in pairs:
+            need(key not in result,"Duplicate registry JSON identity")
+            result[key]=value
+        return result
+    value=json.loads(raw,object_pairs_hook=unique_pairs)
     need(isinstance(value,dict) and set(value)=={"version","runs"} and value['version']=='scarb-private-grouped-registry-1'
-         and isinstance(value['runs'],dict) and len(value['runs'])==1,"Exact single-run registry required")
+         and isinstance(value['runs'],dict) and bool(value['runs']),"Exact nonempty registry roster required")
     fields={'cost_version','expected_purpose','funding_sha256','ledger_before_sha256','manifest_sha256','membership_before_sha256','membership_version','month_cap_nusd','packet_bindings','prices_sha256','requested_models','reservation_nusd','returned_models','runner_sha256','solo_state_root','solo_state_sha256','source_context_sha256'}
+    members=set();packet_hashes=set()
+    from scripts import scarb_grouped_context_candidate as mixed
+    current=mixed.seam.current_canonical_requests()
+    roots={}
     for identity,pin in value['runs'].items():
         need(isinstance(identity,str) and re.fullmatch(r"[a-f0-9]{64}",identity) and isinstance(pin,dict)
              and set(pin)==fields and pin.get('manifest_sha256')==identity and pin.get('expected_purpose')=='production-grouped-review'
              and pin.get('cost_version')==2 and pin.get('membership_version')==1
              and Path(pin.get('solo_state_root','')).resolve()==state,"Wrong registry identity or provenance scope")
+        bindings=pin['packet_bindings']
+        need(isinstance(bindings,dict) and bool(bindings) and not members.intersection(bindings),"Duplicate or empty registry members")
+        need(all(k in current and isinstance(h,str) and re.fullmatch(r'[a-f0-9]{64}',h) and digest(current[k])==h for k,h in bindings.items()),"Registry member differs from current packet")
+        need(len(set(bindings.values()))==len(bindings) and not packet_hashes.intersection(bindings.values()),"Duplicate registry packet hashes")
+        members.update(bindings);packet_hashes.update(bindings.values())
+        roots[identity]=state/'grouped-runs'/digest(bindings)
     need(not provenance.TRUSTED_GROUPED_RUNS,"Nested or ambient registry grant refused")
     previous=provenance.TRUSTED_GROUPED_RUNS
     try:
         provenance.TRUSTED_GROUPED_RUNS=MappingProxyType(value['runs'])
+        for identity,pin in value['runs'].items():
+            provenance.verify_grouped_provenance(roots[identity],[current[k] for k in pin['packet_bindings']])
         yield
     finally:provenance.TRUSTED_GROUPED_RUNS=previous
 

@@ -82,12 +82,12 @@ class MixedReleaseBridgeTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as d:
    state=Path(d);path=state/'synthetic-registry.json'
    pin={k:'a'*64 for k in ['funding_sha256','ledger_before_sha256','manifest_sha256','membership_before_sha256','prices_sha256','runner_sha256','solo_state_sha256','source_context_sha256']}
-   pin.update(cost_version=2,expected_purpose='production-grouped-review',membership_version=1,month_cap_nusd=1,packet_bindings={},requested_models={},reservation_nusd=1,returned_models={},solo_state_root=str(state))
+   pin.update(cost_version=2,expected_purpose='production-grouped-review',membership_version=1,month_cap_nusd=1,packet_bindings={self.group_ids[0]:self.expected[self.group_ids[0]]},requested_models={},reservation_nusd=1,returned_models={},solo_state_root=str(state))
    value={'version':'scarb-private-grouped-registry-1','runs':{'a'*64:pin}}
    def save(x):
     path.write_text(json.dumps(x),encoding='utf8');return hashlib.sha256(path.read_bytes()).hexdigest()
    approved=save(value)
-   with stage.private_grouped_registry(state,path,approved):
+   with patch.object(c.provenance,'verify_grouped_provenance',return_value={}),stage.private_grouped_registry(state,path,approved):
     self.assertEqual(set(c.provenance.TRUSTED_GROUPED_RUNS),{'a'*64})
     # Pin binding alone is not provenance proof or catalogue acceptance.
     with self.assertRaises(c.v.VoiceError):c.compile_mixed_catalogue({'solo_v1':{},'solo_v2':{},'grouped':[]},{})
@@ -106,3 +106,34 @@ class MixedReleaseBridgeTests(unittest.TestCase):
      with stage.private_grouped_registry(state,path,digest):self.fail('untrusted grant')
     self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
    self.assertEqual(set(p.name for p in state.iterdir()),{'synthetic-registry.json'})
+
+ def test_exact_multiple_registry_roster_verifies_all_and_restores(self):
+  import hashlib
+  from scripts import stage_scarb_ai_inputs as stage
+  with tempfile.TemporaryDirectory() as d:
+   state=Path(d);path=state/'synthetic-roster.json';runs={}
+   for n,identity in enumerate(list(self.current)[:3],1):
+    h=str(n)*64
+    pin={k:'a'*64 for k in ['funding_sha256','ledger_before_sha256','membership_before_sha256','prices_sha256','runner_sha256','solo_state_sha256','source_context_sha256']}
+    pin.update(manifest_sha256=h,cost_version=2,expected_purpose='production-grouped-review',membership_version=1,month_cap_nusd=1,packet_bindings={identity:self.expected[identity]},requested_models={},reservation_nusd=1,returned_models={},solo_state_root=str(state));runs[h]=pin
+   value={'version':'scarb-private-grouped-registry-1','runs':runs}
+   def save(v):
+    path.write_text(json.dumps(v),encoding='utf8');return hashlib.sha256(path.read_bytes()).hexdigest()
+   approved=save(value)
+   with patch.object(c.provenance,'verify_grouped_provenance',return_value={}) as verify:
+    with stage.private_grouped_registry(state,path,approved):self.assertEqual(len(c.provenance.TRUSTED_GROUPED_RUNS),3)
+    self.assertEqual(verify.call_count,3)
+    for call,pin in zip(verify.call_args_list,runs.values()):self.assertEqual(call.args[0],state.resolve()/'grouped-runs'/c.v.digest(pin['packet_bindings']))
+   self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
+   for kind in ['duplicate-member','fixture','unverified','extra','duplicate-json']:
+    v=copy.deepcopy(value);keys=list(v['runs'])
+    if kind=='duplicate-member':v['runs'][keys[1]]['packet_bindings']=v['runs'][keys[0]]['packet_bindings']
+    elif kind=='fixture':v['runs'][keys[1]]['expected_purpose']='synthetic-grouped-run'
+    elif kind=='extra':v['runs']['4'*64]=v['runs'][keys[0]]
+    digest=save(v)
+    if kind=='extra':digest=approved
+    if kind=='duplicate-json':
+     path.write_text('{"version":"scarb-private-grouped-registry-1","runs":{},"runs":'+json.dumps(runs)+'}',encoding='utf8');digest=hashlib.sha256(path.read_bytes()).hexdigest()
+    with self.subTest(kind=kind),patch.object(c.provenance,'verify_grouped_provenance',side_effect=c.v.VoiceError('unverified run')) as verify,self.assertRaises(c.v.VoiceError):
+     with stage.private_grouped_registry(state,path,digest):self.fail('bad roster admitted')
+    self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
