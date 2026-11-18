@@ -1,4 +1,4 @@
-import copy,unittest,subprocess,hashlib
+import copy,unittest,hashlib
 from unittest.mock import patch
 from scripts import scarb_group21_source_compatibility as h
 from scripts import scarb_grouped_context_candidate as c
@@ -10,11 +10,27 @@ class BoundedSourceCompatibilityTests(unittest.TestCase):
   self.pin={'manifest_sha256':h.MANIFEST,'packet_bindings':h.BINDINGS}
  def test_exact_transition_and_unmodified_packets(self):
   # Historical positive proof remains bound to the exact previously qualified bytes.
-  head='bc3026ce85db024a0c299397011e1820c9b8342d'
-  files={path:subprocess.check_output(['git','show',head+':'+path],cwd=c.ROOT) for path in h.TRANSITIONS}
-  # Git stores LF; the pinned Windows source bytes used CRLF. Verify exact hash.
-  files={path:raw.replace(b'\r\n',b'\n').replace(b'\n',b'\r\n') for path,raw in files.items()}
-  for path,raw in files.items():self.assertEqual(hashlib.sha256(raw).hexdigest(),h.TRANSITIONS[path][1])
+  # Reconstruct the bounded previous source version from tracked wording only.
+  # Works in a shallow checkout; the exact historic byte hashes still bind it.
+  replacements={
+   'Utensils being used were not in good repair.':'Utensils were not in good repair.',
+   'Utensils being used were not designed so they could be readily cleaned.':'Utensils were not designed so they could be readily cleaned.',
+   'Food equipment being used was not made of material that could be readily cleaned.':'Food equipment was not made of material that could be readily cleaned.',
+   'Shelves being used were not designed so they could be readily cleaned.':'Shelves were not designed so they could be readily cleaned.',
+   'Food equipment being used was not designed so it could be readily cleaned.':'Food equipment was not designed so it could be readily cleaned.',
+   'Utensils being used were not made of material that could be readily cleaned.':'Utensils were not made of material that could be readily cleaned.',
+   'Food equipment being used was not of sound, tight construction.':'Food equipment was not of sound, tight construction.',
+   'Utensils being used were not of sound, tight construction.':'Utensils were not of sound, tight construction.',
+   'Utensils were sanitized using an agent for which the testing reagent was not readily available.':'The testing chemical needed to check the utensil sanitizer was not readily available.'}
+  files={}
+  for path,(_,expected) in h.TRANSITIONS.items():
+   raw=(c.ROOT/path).read_bytes()
+   for current,prior in replacements.items():
+    self.assertEqual(raw.count(current.encode()),1)
+    raw=raw.replace(current.encode(),prior.encode())
+   raw=raw.replace(b'\r\n',b'\n').replace(b'\n',b'\r\n')
+   self.assertEqual(hashlib.sha256(raw).hexdigest(),expected)
+   files[path]=raw
   context=copy.deepcopy(self.context)
   for item in context.values():
    for path,(_,after) in h.TRANSITIONS.items():item['source_sha256'][path]=after
