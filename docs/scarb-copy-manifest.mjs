@@ -254,7 +254,7 @@ export default {
   "static.composition-period-inclusive": "99c34b42c0a2085d2b1027bdac2722df881bcbf70d6d5d4c413194178db7064b",
   "static.composition-snapshot": "25d82c949bda5e829b8191721652a0852c0f136933ecda9202ac2bdf47f191c9",
   "static.composition-stale": "0cfeed3bf0d2efa7dd0b6ee1ed66cebc4357cb8d37af9e8b422457549314252b",
-  "static.directory-intro": "3953b013498d3035084bcedcf4dc8e10b706bf748bb7e19f07a8a18b7e0dcfeb",
+  "static.directory-intro": "8b7aac42544e4233b26b94fc720337ebb2be32d3f57313b0cea027234b7e3b18",
   "static.editor-start": "436fe9f26f96cec9f1f5d55ef926c09522add416bf88abbb1dd04e7cf435b9fc",
   "static.embed-audit-coverage": "8e9f8bae5637fe82616656d8bcc98336679c47d4b5d56392ca35e15af5c44970",
   "static.embed-intro": "40f5c7b5399918193e75dcb074a10de457fb27ac61c18f695de3d56748321931",

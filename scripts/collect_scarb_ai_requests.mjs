@@ -5,6 +5,7 @@ import {createHash} from 'node:crypto';
 import {readFileSync, writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {directoryEvidence} from './scarb_directory_evidence.mjs';
 
 export const canonical = value => JSON.stringify(value, (_, v) => v && typeof v === 'object' && !Array.isArray(v)
   ? Object.fromEntries(Object.keys(v).sort().map(k => [k, v[k]])) : v);
@@ -43,7 +44,7 @@ export function catalogueRequests(catalogue, classifications = STATIC) {
     const [surface, kind] = classifications[key];
     return {id: 'static.' + key, surface, kind, ...protect(text),
       evidence: [{id: 'house-copy.' + key, source: 'repo:docs/scarb-voice.mjs#' + key,
-        sha256: sha(text), fact: text},...(FINDING_SOURCE[key]?[{id:'official-finding.'+key,source:SOURCE,sha256:sha(FINDING_SOURCE[key]),fact:FINDING_SOURCE[key]}]:[])], limits: {words: 150, characters: 1500}};
+        sha256: sha(text), fact: text},...(key==='directory-intro'?directoryEvidence():[]),...(FINDING_SOURCE[key]?[{id:'official-finding.'+key,source:SOURCE,sha256:sha(FINDING_SOURCE[key]),fact:FINDING_SOURCE[key]}]:[])], limits: {words: 150, characters: 1500}};
   });
 }
 

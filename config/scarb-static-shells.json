@@ -1101,7 +1101,7 @@
     ]
   },
   "docs/neighbourhoods/index.html": {
-    "source": "<!doctype html>\n<html lang=\"en-CA\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"theme-color\" content=\"#0A3D2A\"><link rel=\"icon\" type=\"image/svg+xml\" href=\"../assets/brand/scarbto-icon.svg\"><title>Explore neighbourhoods | Scarb.TO</title><meta name=\"description\" content=\"Explore Scarborough neighbourhood pages, source-linked food inspection records and area boundaries.\"><link rel=\"canonical\" href=\"https://scarb.to/neighbourhoods/\"><link rel=\"stylesheet\" href=\"../neighbourhood-page.css\"></head><body><div class=\"page-shell\"><header class=\"site-header\"><a class=\"brand\" href=\"/\" aria-label=\"Scarb.TO home\"><picture><source media=\"(max-width: 420px)\" srcset=\"../assets/brand/scarbto-mark-light.svg\"><img class=\"brand-lockup\" src=\"../assets/brand/scarbto-connected-light.svg\" alt=\"\"></picture><span class=\"brand-name\">Scarb.TO</span></a><span class=\"brand-tagline\">Scarborough. I looked into it.</span><span class=\"print-brand\"><img src=\"../assets/brand/scarbto-mark-mono.svg\" alt=\"\"> Scarb.TO | Scarborough. I looked into it.</span><a class=\"header-link\" href=\"/briefs/\">Weekly briefs</a></header><main><h1>Explore the neighbourhoods</h1><p data-scarb-voice=\"directory-intro\">Right now this map selection has 30 City neighbourhoods, each with its own page. Pick one and I'll show you the boundaries, recorded inspections and source links. I find it's the little geographic details that make this especially interesting.</p><ul class=\"neighbourhood-directory\"><li><a href=\"/agincourt-north/\">Agincourt North</a></li>\n<li><a href=\"/agincourt-south-malvern-west/\">Agincourt South-Malvern West</a></li>\n<li><a href=\"/bendale-south/\">Bendale South</a></li>\n<li><a href=\"/bendale-glen-andrew/\">Bendale-Glen Andrew</a></li>\n<li><a href=\"/birchcliffe-cliffside/\">Birchcliffe-Cliffside</a></li>\n<li><a href=\"/centennial-scarborough/\">Centennial Scarborough</a></li>\n<li><a href=\"/clairlea-birchmount/\">Clairlea-Birchmount</a></li>\n<li><a href=\"/cliffcrest/\">Cliffcrest</a></li>\n<li><a href=\"/dorset-park/\">Dorset Park</a></li>\n<li><a href=\"/east-l-amoreaux/\">East L&#39;Amoreaux</a></li>\n<li><a href=\"/eglinton-east/\">Eglinton East</a></li>\n<li><a href=\"/golfdale-cedarbrae-woburn/\">Golfdale-Cedarbrae-Woburn</a></li>\n<li><a href=\"/guildwood/\">Guildwood</a></li>\n<li><a href=\"/highland-creek/\">Highland Creek</a></li>\n<li><a href=\"/ionview/\">Ionview</a></li>\n<li><a href=\"/kennedy-park/\">Kennedy Park</a></li>\n<li><a href=\"/l-amoreaux-west/\">L&#39;Amoreaux West</a></li>\n<li><a href=\"/malvern-east/\">Malvern East</a></li>\n<li><a href=\"/malvern-west/\">Malvern West</a></li>\n<li><a href=\"/milliken/\">Milliken</a></li>\n<li><a href=\"/morningside/\">Morningside</a></li>\n<li><a href=\"/morningside-heights/\">Morningside Heights</a></li>\n<li><a href=\"/oakridge/\">Oakridge</a></li>\n<li><a href=\"/scarborough-village/\">Scarborough Village</a></li>\n<li><a href=\"/steeles/\">Steeles</a></li>\n<li><a href=\"/tam-o-shanter-sullivan/\">Tam O&#39;Shanter-Sullivan</a></li>\n<li><a href=\"/west-hill/\">West Hill</a></li>\n<li><a href=\"/west-rouge/\">West Rouge</a></li>\n<li><a href=\"/wexford-maryvale/\">Wexford/Maryvale</a></li>\n<li><a href=\"/woburn-north/\">Woburn North</a></li></ul><p class=\"source-note\">These pages follow the City's neighbourhood boundaries, not association or newspaper coverage. Scarb.TO matches source coordinates to those boundaries; a record's location can be imperfect. Different source IDs stay separate.</p><p><a href=\"https://open.toronto.ca/dataset/neighbourhoods/\">City of Toronto neighbourhood boundaries</a>, under the <a href=\"https://open.toronto.ca/open-data-licence/\">Open Government Licence - Toronto</a>.</p></main><footer><p>Scarb.TO is an independent, AI-assisted guide to public records, not an official City service. Inspection results describe their recorded date, not conditions today.</p></footer></div></body></html>\n",
+    "source": "<!doctype html>\n<html lang=\"en-CA\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"theme-color\" content=\"#0A3D2A\"><link rel=\"icon\" type=\"image/svg+xml\" href=\"../assets/brand/scarbto-icon.svg\"><title>Explore neighbourhoods | Scarb.TO</title><meta name=\"description\" content=\"Explore Scarborough neighbourhood pages, source-linked food inspection records and area boundaries.\"><link rel=\"canonical\" href=\"https://scarb.to/neighbourhoods/\"><link rel=\"stylesheet\" href=\"../neighbourhood-page.css\"></head><body><div class=\"page-shell\"><header class=\"site-header\"><a class=\"brand\" href=\"/\" aria-label=\"Scarb.TO home\"><picture><source media=\"(max-width: 420px)\" srcset=\"../assets/brand/scarbto-mark-light.svg\"><img class=\"brand-lockup\" src=\"../assets/brand/scarbto-connected-light.svg\" alt=\"\"></picture><span class=\"brand-name\">Scarb.TO</span></a><span class=\"brand-tagline\">Scarborough. I looked into it.</span><span class=\"print-brand\"><img src=\"../assets/brand/scarbto-mark-mono.svg\" alt=\"\"> Scarb.TO | Scarborough. I looked into it.</span><a class=\"header-link\" href=\"/briefs/\">Weekly briefs</a></header><main><h1>Explore the neighbourhoods</h1><p data-scarb-voice=\"directory-intro\">Pick a neighbourhood and follow its map. This directory has 30 pages using names from the City of Toronto neighbourhood registry. This is Scarb.TO's retained map selection, not an official City membership list or a claim about current inspection conditions.</p><ul class=\"neighbourhood-directory\"><li><a href=\"/agincourt-north/\">Agincourt North</a></li>\n<li><a href=\"/agincourt-south-malvern-west/\">Agincourt South-Malvern West</a></li>\n<li><a href=\"/bendale-south/\">Bendale South</a></li>\n<li><a href=\"/bendale-glen-andrew/\">Bendale-Glen Andrew</a></li>\n<li><a href=\"/birchcliffe-cliffside/\">Birchcliffe-Cliffside</a></li>\n<li><a href=\"/centennial-scarborough/\">Centennial Scarborough</a></li>\n<li><a href=\"/clairlea-birchmount/\">Clairlea-Birchmount</a></li>\n<li><a href=\"/cliffcrest/\">Cliffcrest</a></li>\n<li><a href=\"/dorset-park/\">Dorset Park</a></li>\n<li><a href=\"/east-l-amoreaux/\">East L&#39;Amoreaux</a></li>\n<li><a href=\"/eglinton-east/\">Eglinton East</a></li>\n<li><a href=\"/golfdale-cedarbrae-woburn/\">Golfdale-Cedarbrae-Woburn</a></li>\n<li><a href=\"/guildwood/\">Guildwood</a></li>\n<li><a href=\"/highland-creek/\">Highland Creek</a></li>\n<li><a href=\"/ionview/\">Ionview</a></li>\n<li><a href=\"/kennedy-park/\">Kennedy Park</a></li>\n<li><a href=\"/l-amoreaux-west/\">L&#39;Amoreaux West</a></li>\n<li><a href=\"/malvern-east/\">Malvern East</a></li>\n<li><a href=\"/malvern-west/\">Malvern West</a></li>\n<li><a href=\"/milliken/\">Milliken</a></li>\n<li><a href=\"/morningside/\">Morningside</a></li>\n<li><a href=\"/morningside-heights/\">Morningside Heights</a></li>\n<li><a href=\"/oakridge/\">Oakridge</a></li>\n<li><a href=\"/scarborough-village/\">Scarborough Village</a></li>\n<li><a href=\"/steeles/\">Steeles</a></li>\n<li><a href=\"/tam-o-shanter-sullivan/\">Tam O&#39;Shanter-Sullivan</a></li>\n<li><a href=\"/west-hill/\">West Hill</a></li>\n<li><a href=\"/west-rouge/\">West Rouge</a></li>\n<li><a href=\"/wexford-maryvale/\">Wexford/Maryvale</a></li>\n<li><a href=\"/woburn-north/\">Woburn North</a></li></ul><p class=\"source-note\">These pages follow the City's neighbourhood boundaries, not association or newspaper coverage. Scarb.TO matches source coordinates to those boundaries; a record's location can be imperfect. Different source IDs stay separate.</p><p><a href=\"https://open.toronto.ca/dataset/neighbourhoods/\">City of Toronto neighbourhood boundaries</a>, under the <a href=\"https://open.toronto.ca/open-data-licence/\">Open Government Licence - Toronto</a>.</p></main><footer><p>Scarb.TO is an independent, AI-assisted guide to public records, not an official City service. Inspection results describe their recorded date, not conditions today.</p></footer></div></body></html>\n",
     "slots": [
       {
         "start": 258,
@@ -1161,8 +1161,8 @@
       },
       {
         "start": 1239,
-        "end": 1482,
-        "draft": "Right now this map selection has 30 City neighbourhoods, each with its own page. Pick one and I'll show you the boundaries, recorded inspections and source links. I find it's the little geographic details that make this especially interesting.",
+        "end": 1496,
+        "draft": "Pick a neighbourhood and follow its map. This directory has 30 pages using names from the City of Toronto neighbourhood registry. This is Scarb.TO's retained map selection, not an official City membership list or a claim about current inspection conditions.",
         "attribute": false,
         "id": "static.directory-intro",
         "fields": {
@@ -1170,246 +1170,246 @@
         }
       },
       {
-        "start": 1554,
-        "end": 1569,
+        "start": 1568,
+        "end": 1583,
         "draft": "Agincourt North",
         "attribute": false,
         "id": "shell.shell-012700e3-009"
       },
       {
-        "start": 1624,
-        "end": 1652,
+        "start": 1638,
+        "end": 1666,
         "draft": "Agincourt South-Malvern West",
         "attribute": false,
         "id": "shell.shell-012700e3-010"
       },
       {
-        "start": 1692,
-        "end": 1705,
+        "start": 1706,
+        "end": 1719,
         "draft": "Bendale South",
         "attribute": false,
         "id": "shell.shell-012700e3-011"
       },
       {
-        "start": 1751,
-        "end": 1770,
+        "start": 1765,
+        "end": 1784,
         "draft": "Bendale-Glen Andrew",
         "attribute": false,
         "id": "shell.shell-012700e3-012"
       },
       {
-        "start": 1818,
-        "end": 1839,
+        "start": 1832,
+        "end": 1853,
         "draft": "Birchcliffe-Cliffside",
         "attribute": false,
         "id": "shell.shell-012700e3-013"
       },
       {
-        "start": 1888,
-        "end": 1910,
+        "start": 1902,
+        "end": 1924,
         "draft": "Centennial Scarborough",
         "attribute": false,
         "id": "shell.shell-012700e3-014"
       },
       {
-        "start": 1956,
-        "end": 1975,
+        "start": 1970,
+        "end": 1989,
         "draft": "Clairlea-Birchmount",
         "attribute": false,
         "id": "shell.shell-012700e3-015"
       },
       {
-        "start": 2012,
-        "end": 2022,
+        "start": 2026,
+        "end": 2036,
         "draft": "Cliffcrest",
         "attribute": false,
         "id": "shell.shell-012700e3-016"
       },
       {
-        "start": 2060,
-        "end": 2071,
+        "start": 2074,
+        "end": 2085,
         "draft": "Dorset Park",
         "attribute": false,
         "id": "shell.shell-012700e3-017"
       },
       {
-        "start": 2113,
-        "end": 2132,
+        "start": 2127,
+        "end": 2146,
         "draft": "East L'Amoreaux",
         "attribute": false,
         "id": "shell.shell-012700e3-018"
       },
       {
-        "start": 2172,
-        "end": 2185,
+        "start": 2186,
+        "end": 2199,
         "draft": "Eglinton East",
         "attribute": false,
         "id": "shell.shell-012700e3-019"
       },
       {
-        "start": 2237,
-        "end": 2262,
+        "start": 2251,
+        "end": 2276,
         "draft": "Golfdale-Cedarbrae-Woburn",
         "attribute": false,
         "id": "shell.shell-012700e3-020"
       },
       {
-        "start": 2298,
-        "end": 2307,
+        "start": 2312,
+        "end": 2321,
         "draft": "Guildwood",
         "attribute": false,
         "id": "shell.shell-012700e3-021"
       },
       {
-        "start": 2348,
-        "end": 2362,
+        "start": 2362,
+        "end": 2376,
         "draft": "Highland Creek",
         "attribute": false,
         "id": "shell.shell-012700e3-022"
       },
       {
-        "start": 2396,
-        "end": 2403,
+        "start": 2410,
+        "end": 2417,
         "draft": "Ionview",
         "attribute": false,
         "id": "shell.shell-012700e3-023"
       },
       {
-        "start": 2442,
-        "end": 2454,
+        "start": 2456,
+        "end": 2468,
         "draft": "Kennedy Park",
         "attribute": false,
         "id": "shell.shell-012700e3-024"
       },
       {
-        "start": 2496,
-        "end": 2515,
+        "start": 2510,
+        "end": 2529,
         "draft": "L'Amoreaux West",
         "attribute": false,
         "id": "shell.shell-012700e3-025"
       },
       {
-        "start": 2554,
-        "end": 2566,
+        "start": 2568,
+        "end": 2580,
         "draft": "Malvern East",
         "attribute": false,
         "id": "shell.shell-012700e3-026"
       },
       {
-        "start": 2605,
-        "end": 2617,
+        "start": 2619,
+        "end": 2631,
         "draft": "Malvern West",
         "attribute": false,
         "id": "shell.shell-012700e3-027"
       },
       {
-        "start": 2652,
-        "end": 2660,
+        "start": 2666,
+        "end": 2674,
         "draft": "Milliken",
         "attribute": false,
         "id": "shell.shell-012700e3-028"
       },
       {
-        "start": 2698,
-        "end": 2709,
+        "start": 2712,
+        "end": 2723,
         "draft": "Morningside",
         "attribute": false,
         "id": "shell.shell-012700e3-029"
       },
       {
-        "start": 2755,
-        "end": 2774,
+        "start": 2769,
+        "end": 2788,
         "draft": "Morningside Heights",
         "attribute": false,
         "id": "shell.shell-012700e3-030"
       },
       {
-        "start": 2809,
-        "end": 2817,
+        "start": 2823,
+        "end": 2831,
         "draft": "Oakridge",
         "attribute": false,
         "id": "shell.shell-012700e3-031"
       },
       {
-        "start": 2863,
-        "end": 2882,
+        "start": 2877,
+        "end": 2896,
         "draft": "Scarborough Village",
         "attribute": false,
         "id": "shell.shell-012700e3-032"
       },
       {
-        "start": 2916,
-        "end": 2923,
+        "start": 2930,
+        "end": 2937,
         "draft": "Steeles",
         "attribute": false,
         "id": "shell.shell-012700e3-033"
       },
       {
-        "start": 2972,
-        "end": 2998,
+        "start": 2986,
+        "end": 3012,
         "draft": "Tam O'Shanter-Sullivan",
         "attribute": false,
         "id": "shell.shell-012700e3-034"
       },
       {
-        "start": 3034,
-        "end": 3043,
+        "start": 3048,
+        "end": 3057,
         "draft": "West Hill",
         "attribute": false,
         "id": "shell.shell-012700e3-035"
       },
       {
-        "start": 3080,
-        "end": 3090,
+        "start": 3094,
+        "end": 3104,
         "draft": "West Rouge",
         "attribute": false,
         "id": "shell.shell-012700e3-036"
       },
       {
-        "start": 3133,
-        "end": 3149,
+        "start": 3147,
+        "end": 3163,
         "draft": "Wexford/Maryvale",
         "attribute": false,
         "id": "shell.shell-012700e3-037"
       },
       {
-        "start": 3188,
-        "end": 3200,
+        "start": 3202,
+        "end": 3214,
         "draft": "Woburn North",
         "attribute": false,
         "id": "shell.shell-012700e3-038"
       },
       {
-        "start": 3237,
-        "end": 3462,
+        "start": 3251,
+        "end": 3476,
         "draft": "These pages follow the City's neighbourhood boundaries, not association or newspaper coverage. Scarb.TO matches source coordinates to those boundaries; a record's location can be imperfect. Different source IDs stay separate.",
         "attribute": false,
         "id": "shell.shell-012700e3-039"
       },
       {
-        "start": 3527,
-        "end": 3567,
+        "start": 3541,
+        "end": 3581,
         "draft": "City of Toronto neighbourhood boundaries",
         "attribute": false,
         "id": "shell.shell-012700e3-040"
       },
       {
-        "start": 3571,
-        "end": 3583,
+        "start": 3585,
+        "end": 3597,
         "draft": ", under the ",
         "attribute": false,
         "id": "shell.shell-012700e3-041"
       },
       {
-        "start": 3636,
-        "end": 3669,
+        "start": 3650,
+        "end": 3683,
         "draft": "Open Government Licence - Toronto",
         "attribute": false,
         "id": "shell.shell-012700e3-042"
       },
       {
-        "start": 3696,
-        "end": 3861,
+        "start": 3710,
+        "end": 3875,
         "draft": "Scarb.TO is an independent, AI-assisted guide to public records, not an official City service. Inspection results describe their recorded date, not conditions today.",
         "attribute": false,
         "id": "shell.shell-012700e3-043"
