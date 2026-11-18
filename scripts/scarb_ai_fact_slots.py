@@ -122,10 +122,15 @@ def _generate(packet,config,state,*,transport,now,env,live=False):
         v.need(v.digest(packet) == FRESH_HEADLINE_PACKET_SHA256,'Only the separately scoped fresh homepage-title packet is eligible')
     credentials=v.funding_check(config,now,env)
     key=cache_key(packet,config);target=state/('accepted-v2' if live else 'fixture-v2')/(key+'.json');held=state/'held'/(key+'.json')
+    from scripts.scarb_packet_consumption_candidate import protected_root
+    expected_state=protected_root() if live else state
+    if live:v.need(state.is_dir() and state.resolve()==expected_state.resolve(),"Missing or wrong protected state root")
     with v.exclusive(state):
         v.need(not (state/'held'/(v.cache_key(packet,config)+'.json')).exists(),'Original v1 attempt remains held')
         if target.exists():
             receipt=json.loads(target.read_text());receipt_check(receipt,packet,config,fixture=not live);return receipt
+        from scripts.scarb_packet_consumption_candidate import assert_unconsumed
+        assert_unconsumed(state,{packet['id']:v.digest(packet)},expected_root=expected_state)
         v.need(not held.exists(),'Prior v2 attempt remains held')
         ledger_path=state/'usage.json';ledger=json.loads(ledger_path.read_text()) if ledger_path.exists() else {'months':{}}
         month=now.strftime('%Y-%m');spent=ledger['months'].get(month,0);pilot=ledger.get('paid_pilot_usd',0)

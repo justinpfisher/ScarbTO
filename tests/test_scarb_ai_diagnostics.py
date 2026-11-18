@@ -5,7 +5,7 @@ from scripts import scarb_ai_voice as v
 from tests.test_scarb_ai_voice import CONFIG,ENV,NOW,PACKET,REVIEW,FakeTransport,response,writer
 class DiagnosticTests(unittest.TestCase):
  def run_failure(self,transport):
-  with tempfile.TemporaryDirectory() as d:
+  with tempfile.TemporaryDirectory() as d,patch('scripts.scarb_packet_consumption_candidate.protected_root',lambda:Path(d)):
    state=Path(d)
    with self.assertRaises((v.VoiceError,OSError,ValueError)):
     v.generate(copy.deepcopy(PACKET),copy.deepcopy(CONFIG),state,transport=transport,env=ENV,now=NOW)
@@ -60,7 +60,7 @@ class DiagnosticTests(unittest.TestCase):
   self.assertEqual(v.diagnostic_outcome(v.VoiceError('API response incomplete or refused')),{'outcome':'response-incomplete-or-refused'})
   self.assertEqual(v.diagnostic_outcome(ValueError('FAKE_SECRET')),{'outcome':'validation-or-local-error'})
  def test_success_still_clears_only_its_held_marker(self):
-  with tempfile.TemporaryDirectory() as d:
+  with tempfile.TemporaryDirectory() as d,patch('scripts.scarb_packet_consumption_candidate.protected_root',lambda:Path(d)):
    state=Path(d);fake=FakeTransport();v.generate(copy.deepcopy(PACKET),copy.deepcopy(CONFIG),state,transport=fake,env=ENV,now=NOW)
    self.assertEqual(len(fake.calls),2);self.assertEqual(list((state/'held').glob('*.json')),[])
 

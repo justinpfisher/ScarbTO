@@ -76,7 +76,7 @@ class FactSlotsTests(unittest.TestCase):
 
  def test_production_route_default_off_and_mocked_private_bridge(self):
   from scripts.stage_scarb_ai_inputs import generator_inputs
-  with tempfile.TemporaryDirectory() as d,patch.object(v,'api_request') as api:
+  with tempfile.TemporaryDirectory() as d,patch.object(v,'api_request') as api,patch('scripts.scarb_packet_consumption_candidate.protected_root',lambda:Path(d)):
    state=Path(d)
    with self.assertRaises(v.VoiceError):f.generate(P,CONFIG,state,env=ENV,now=NOW)
    with self.assertRaises(v.VoiceError):f.generate(P,CONFIG,state,enable_v2=True,env=ENV,now=NOW)
@@ -90,7 +90,7 @@ class FactSlotsTests(unittest.TestCase):
    altered=copy.deepcopy(public);altered['entries'][P['id']]['text']+=' tampered';v.atomic_json(candidate,altered)
    with self.assertRaises(v.VoiceError):generator_inputs([P],CONFIG,state,candidate,authoring_version='v2')
  def test_live_mock_failure_holds_and_fixture_cannot_compile(self):
-  with tempfile.TemporaryDirectory() as d,patch.object(v,'api_request',return_value=response({'invalid':True})) as api:
+  with tempfile.TemporaryDirectory() as d,patch.object(v,'api_request',return_value=response({'invalid':True})) as api,patch('scripts.scarb_packet_consumption_candidate.protected_root',lambda:Path(d)):
    state=Path(d)
    for _ in range(2):
     with self.assertRaises(v.VoiceError):f.generate(P,CONFIG,state,enable_v2=True,approved_packet_sha256=[v.digest(P)],env=ENV,now=NOW)
@@ -118,7 +118,7 @@ class FactSlotsTests(unittest.TestCase):
 
  def test_v2_paid_eligibility_refuses_other_packets_before_transport(self):
   cfg=copy.deepcopy(CONFIG);cfg['funding']['billing_mode']='prepaid_cutoff_not_guaranteed'
-  with tempfile.TemporaryDirectory() as d,patch.object(v,'api_request') as api:
+  with tempfile.TemporaryDirectory() as d,patch.object(v,'api_request') as api,patch('scripts.scarb_packet_consumption_candidate.protected_root',lambda:Path(d)):
    with self.assertRaisesRegex(v.VoiceError,'separately scoped'):
     f.generate(P,cfg,Path(d),enable_v2=True,approved_packet_sha256=[v.digest(P)],env=ENV,now=NOW)
    api.assert_not_called()

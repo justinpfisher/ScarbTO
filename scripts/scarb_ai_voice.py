@@ -413,11 +413,16 @@ def generate(packet: dict, config: dict, state: Path, *, transport: Callable = a
     now = now or dt.datetime.now(dt.timezone.utc)
     key = cache_key(packet, config)
     target = state / "accepted" / (key + ".json")
+    from scripts.scarb_packet_consumption_candidate import protected_root
+    expected_state=protected_root() if transport is api_request and packet["kind"]!="verbatim" else state
     with exclusive(state):
         if target.exists():
             receipt = json.loads(target.read_text(encoding="utf-8"))
             receipt_check(receipt, packet, config, test_fixture=transport is not api_request)
             return receipt
+        if transport is api_request and packet["kind"]!="verbatim":need(state.is_dir() and state.resolve()==expected_state.resolve(),"Missing or wrong protected state root")
+        from scripts.scarb_packet_consumption_candidate import assert_unconsumed
+        assert_unconsumed(state,{packet["id"]:digest(packet)},expected_root=expected_state)
         held = state / "held" / (key + ".json")
         need(not held.exists(), "A prior attempt is held; resolve its cause before an explicit retry")
         usage = []
@@ -446,8 +451,8 @@ def generate(packet: dict, config: dict, state: Path, *, transport: Callable = a
             ledger["months"][month] = round(spent + reserve, 6)
             atomic_json(ledger_path, ledger)
             # A crash, refusal or outage must not trigger an unbounded daily loop.
-            atomic_json(held, {"key": key, "attempted_at": now.isoformat(), "status": "reserved-or-held"})
-            journal={"key":key,"attempted_at":now.isoformat(),"status":"reserved-or-held",
+            atomic_json(held, {"key": key, "attempted_at": now.isoformat(), "status": "reserved-or-held", "packet_sha256":digest(packet)})
+            journal={"packet_sha256":digest(packet),"key":key,"attempted_at":now.isoformat(),"status":"reserved-or-held",
                      "stage":"request-preparation","transport_attempts":0,"response_received":False}
             try:
                 for stage, model, prompt, data, schema in (
