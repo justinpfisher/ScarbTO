@@ -12,7 +12,7 @@ PROJECT='proj_ZiSvyeNLotSbqtH2vDEKqNxx'
 ROOT=Path(__file__).resolve().parents[1]
 SOURCES=frozenset('scarb_ai_voice scarb_ai_fact_slots scarb_grouped_runner_candidate scarb_grouped_context_candidate scarb_grouped_provenance_candidate scarb_grouped_fixture_envelope scarb_grouped_projection_seam scarb_grouped_membership_candidate scarb_packet_consumption_candidate scarb_legacy_consumption_bindings scarb_shared_cost_proof_candidate scarb_grouped_protected_caller_candidate'.split())
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-def source_pins():return {name:sha(ROOT/'scripts'/(name+'.py')) for name in sorted(SOURCES)}|{'finding_context_producer':sha(ROOT/'scripts/scarb_finding_contexts.mjs'),'launcher_python':sha(ROOT/'scripts/launch_scarb_grouped_candidate.py'),'launcher_powershell':sha(ROOT/'scripts/run-scarb-grouped-candidate.ps1')}
+def source_pins():return {name:sha(ROOT/'scripts'/(name+'.py')) for name in sorted(SOURCES)}|{'finding_context_producer':sha(ROOT/'scripts/scarb_finding_contexts.mjs'),'selected_calls_context_producer':sha(ROOT/'scripts/scarb_selected_calls_contexts.mjs'),'launcher_python':sha(ROOT/'scripts/launch_scarb_grouped_candidate.py'),'launcher_powershell':sha(ROOT/'scripts/run-scarb-grouped-candidate.ps1')}
 
 def _invoke(manifest_path,approved_manifest_sha256,*,state,expected_state,env,transport,now,completed_at,production=False,preflight=False):
  # Same ordering: immutable manifest/code/config/packet/root identity, then

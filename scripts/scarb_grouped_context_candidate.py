@@ -53,12 +53,17 @@ def area_context(packet,raw,text):
 
 def current_contexts(packets):
  current=seam.current_canonical_requests();path=ROOT/'docs/index.html';raw=path.read_bytes();text=raw.decode('utf8');contexts={}
- findings=None
+ findings=None;selected_calls=None
  if any(p['id'].startswith('static.finding-explanation-') for p in packets):
   import subprocess
   findings=json.loads(subprocess.run(['node',str(ROOT/'scripts/scarb_finding_contexts.mjs')],cwd=ROOT,check=True,capture_output=True,text=True,encoding='utf8').stdout)
+ if any(p['id'].startswith('static.selected-calls-') for p in packets):
+  import subprocess
+  selected_calls=json.loads(subprocess.run(['node',str(ROOT/'scripts/scarb_selected_calls_contexts.mjs')],cwd=ROOT,check=True,capture_output=True,text=True,encoding='utf8').stdout)
  for packet in packets:
   identity=packet['id'];v.need(current.get(identity)==packet,'Unsupported or stale context producer')
+  if identity.startswith('static.selected-calls-'):
+   v.need(identity in selected_calls,'Unbound selected-call context');contexts[identity]=selected_calls[identity];continue
   if identity.startswith('static.finding-explanation-'):
    v.need(identity in findings,'Unbound finding context');contexts[identity]=findings[identity];continue
   if identity not in ANCHORS:
