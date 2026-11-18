@@ -12,6 +12,8 @@ class BoundedSourceCompatibilityTests(unittest.TestCase):
   # Historical positive proof remains bound to the exact previously qualified bytes.
   head='bc3026ce85db024a0c299397011e1820c9b8342d'
   files={path:subprocess.check_output(['git','show',head+':'+path],cwd=c.ROOT) for path in h.TRANSITIONS}
+  # Git stores LF; the pinned Windows source bytes used CRLF. Verify exact hash.
+  files={path:raw.replace(b'\r\n',b'\n').replace(b'\n',b'\r\n') for path,raw in files.items()}
   for path,raw in files.items():self.assertEqual(hashlib.sha256(raw).hexdigest(),h.TRANSITIONS[path][1])
   context=copy.deepcopy(self.context)
   for item in context.values():
