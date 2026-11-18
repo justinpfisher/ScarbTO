@@ -16528,12 +16528,32 @@
       [
         "createScarbAiResolver",
         "literal",
+        "scarb-ai-voice-mixed-1"
+      ],
+      [
+        "createScarbAiResolver",
+        "literal",
         "scarb-ai-voice-1"
       ],
       [
         "createScarbAiResolver",
         "literal",
+        "scarb-ai-voice-mixed-1"
+      ],
+      [
+        "createScarbAiResolver",
+        "literal",
         "AI copy catalogue does not match the qualified request manifest"
+      ],
+      [
+        "createScarbAiResolver",
+        "literal",
+        "scarb-grouped-projection-2"
+      ],
+      [
+        "createScarbAiResolver",
+        "literal",
+        "scarb-grouped-run-envelope-2"
       ],
       [
         "createScarbAiResolver",
@@ -16585,7 +16605,7 @@
       {
         "owner": "<module>",
         "name": "createScarbAiResolver",
-        "ast_sha256": "ceb53eca4f67959189cc703baf8164a9c8800864301937aed52a1f9270e0e243"
+        "ast_sha256": "361fa85ea7b038020e48a1d8b62a53212b9f4d8e9d3555806d2fd7a497222581"
       }
     ]
   },
