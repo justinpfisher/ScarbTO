@@ -30,3 +30,7 @@ h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.08;margin:.15rem 0 .6rem}h2{fo
 
 .record-item details{margin-top:10px;overflow-wrap:anywhere}.record-item summary{cursor:pointer;min-height:44px;padding:12px 0}.inspection-findings p,.inspection-findings li{line-height:1.5;margin:8px 0}
 @media print{.records-panel{break-inside:auto}.record-item{break-inside:avoid}.record-item details>summary{min-height:0;padding:4pt 0}}
+
+/* Keep the visible name with the narrow Mosaic mark. */
+.brand-name{display:none}
+@media(max-width:420px){.site-header{flex-wrap:wrap;justify-content:flex-start}.site-header .brand{flex:1 1 100%;gap:8px}.brand-lockup{width:52px;max-height:58px}.brand-name{display:inline;color:var(--brand-cream);font-size:1.55rem;line-height:1.2;font-weight:800;white-space:nowrap}.header-link{margin-left:auto}}
