@@ -397,7 +397,7 @@ export const SCARB_COPY = Object.freeze({
   "finding-explanation-dc61761581abe33d": "Utensils were not made of material that could be readily cleaned.",
   "finding-explanation-ffc9683a1081a818": "Utensils were not of sound, tight construction.",
   "finding-explanation-5072e77f0a9cf64c": "Utensils were being used for a purpose they were not suitable for.",
-  "finding-explanation-7e0c1202c0f59cfd": "Food requiring temperature control was held between 4°C and 60°C.",
+  "finding-explanation-7e0c1202c0f59cfd": "Food requiring temperature control was held at an internal temperature between 4°C and 60°C.",
   "composition-heading": "Here's what turned up in the DineSafe records for {{NAME}}",
   "composition-footer": "Edition revision 1. Information cut-off: {{CUTOFF}}.\nCity of Toronto DineSafe: https://open.toronto.ca/dataset/dinesafe/\nOpen Government Licence - Toronto: https://open.toronto.ca/open-data-licence/\nInformation checked {{CHECKED}}. Evidence: https://scarb.to/community/evidence/?release={{RELEASEID}}\nPrepared with Scarb.TO. Keep the downloaded receipt with this edition. Scarb.TO's editorial voice is AI-assisted, not first-hand reporting.",
   "composition-limitations": "One detail I never want to skip: these dated inspection results are not restaurant ratings or a guarantee of conditions today. Check the official DineSafe record for anything newer.",
@@ -529,7 +529,7 @@ const translations=new Map([
   ['food premise maintained in manner permitting adverse effect on food - sec. 7(1)(a)(iii)','Conditions at the premises could adversely affect the food. This finding does not establish that contamination or illness occurred.'],
   ['fail to maintain handwashing stations (liquid soap and paper towels) - sec. 7(3)(c)','Handwashing stations were not properly maintained with liquid soap and paper towels.'],
   ['fail to protect food from contamination or adulteration - sec. 26(1)','Food was not adequately protected from contamination or adulteration. This does not establish that contamination occurred.'],
-  ['maintain potentially hazardous foods at internal temperature between 4°c and 60°c - sec. 27(1)','Food requiring temperature control was held between 4°C and 60°C.'],
+  ['maintain potentially hazardous foods at internal temperature between 4°c and 60°c - sec. 27(1)','Food requiring temperature control was held at an internal temperature between 4°C and 60°C.'],
   ['fail to ensure equipment surface cleaned as necessary - sec. 22','Equipment surfaces were not cleaned as required.'],
 ]);
 

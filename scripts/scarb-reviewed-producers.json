@@ -20692,7 +20692,7 @@
       [
         "<module>",
         "literal",
-        "Food requiring temperature control was held between 4°C and 60°C."
+        "Food requiring temperature control was held at an internal temperature between 4°C and 60°C."
       ],
       [
         "<module>",
@@ -21422,7 +21422,7 @@
       [
         "<module>",
         "literal",
-        "Food requiring temperature control was held between 4°C and 60°C."
+        "Food requiring temperature control was held at an internal temperature between 4°C and 60°C."
       ],
       [
         "<module>",
@@ -22688,7 +22688,7 @@
         "expression_sha256": "d6261804d6fd0900aba0f355e9dab7d8c6fb50df5efcaea1320d13b10080d4ed",
         "bindings": {
           "own": "0839c545dda95ad90d0567134eb9a63bf8924de954c52316933f10e5a7384297",
-          "SCARB_COPY": "607b7d496059b5821af582dfae48f1c86d4addfc7aedb52834aca185556e8fb9",
+          "SCARB_COPY": "ac74c3a9fe1e77e445b083ec028dc772c9a69b239c0620d820d847bf134369c5",
           "template": "f18f5c0d37e351e5f23211809451958b0d0de9d8c46f1b8d2f2e966f84c21aaa"
         }
       },
@@ -22733,7 +22733,7 @@
         "kind": "ReturnStatement",
         "expression_sha256": "b8d15ff1294d096ddac3df6d2c62e19aa42b653f175aa76b4995f50e9e0a2990",
         "bindings": {
-          "translations": "f9d36329c0e09161be0ca92f151a33a00ad74bf02a06e662be22b2138e246a54"
+          "translations": "0145c2ce468644365f13e7c68c9d973536b08164df5c3b6fe42b2a8630ba5ebe"
         }
       },
       {

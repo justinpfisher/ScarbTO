@@ -29,5 +29,6 @@ for(const [key,official] of Object.entries(sources)){
  contexts[id]={source_sha256,official_evidence_id:packet.evidence[1].id,official_wording:official,effective_translation:text,accepted_key:key,locks:packet.locks,meaning:'Exact dated inspection-finding explanation only. Preserve official wording, required qualifiers and all locks. No humour or inference of current conditions, actual contamination or illness. Unknown wording remains untranslated.'};
 }
 need(contexts['static.finding-explanation-376035dc95fc05a1'].effective_translation.includes('This does not establish that contamination occurred.'),'Contamination qualifier lost');
+need(contexts['static.finding-explanation-7e0c1202c0f59cfd'].effective_translation.includes('internal temperature'),'Internal-temperature qualifier lost');
 need(contexts['static.finding-explanation-7e0c1202c0f59cfd'].locks.VALUE_0==='4' && contexts['static.finding-explanation-7e0c1202c0f59cfd'].locks.VALUE_1==='60','Temperature-range override lost');
 process.stdout.write(canonical(contexts));
