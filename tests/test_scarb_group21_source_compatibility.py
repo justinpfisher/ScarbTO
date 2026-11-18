@@ -1,4 +1,4 @@
-import copy,unittest
+import copy,unittest,subprocess,hashlib
 from unittest.mock import patch
 from scripts import scarb_group21_source_compatibility as h
 from scripts import scarb_grouped_context_candidate as c
@@ -9,8 +9,26 @@ class BoundedSourceCompatibilityTests(unittest.TestCase):
    for path,(before,after) in h.TRANSITIONS.items():item['source_sha256'][path]=before
   self.pin={'manifest_sha256':h.MANIFEST,'packet_bindings':h.BINDINGS}
  def test_exact_transition_and_unmodified_packets(self):
-  self.assertEqual({i:c.v.digest(self.current[i]) for i in h.BINDINGS},h.BINDINGS)
-  self.assertEqual(h.historical_context(self.pin,self.context,self.old),self.old)
+  # Historical positive proof remains bound to the exact previously qualified bytes.
+  head='bc3026ce85db024a0c299397011e1820c9b8342d'
+  files={path:subprocess.check_output(['git','show',head+':'+path],cwd=c.ROOT) for path in h.TRANSITIONS}
+  for path,raw in files.items():self.assertEqual(hashlib.sha256(raw).hexdigest(),h.TRANSITIONS[path][1])
+  context=copy.deepcopy(self.context)
+  for item in context.values():
+   for path,(_,after) in h.TRANSITIONS.items():item['source_sha256'][path]=after
+  context['static.finding-explanation-fcf37504d73b4996']['effective_translation']='Food equipment was not of sound, tight construction.'
+  old=copy.deepcopy(context)
+  for item in old.values():
+   for path,(before,_) in h.TRANSITIONS.items():item['source_sha256'][path]=before
+  original=h.Path.read_bytes
+  def historical_bytes(path):
+   for rel,raw in files.items():
+    if path.as_posix().endswith(rel):return raw
+   return original(path)
+  with patch.object(h.Path,'read_bytes',historical_bytes):
+   self.assertEqual(h.historical_context(self.pin,context,old),old)
+  self.assertNotEqual({i:c.v.digest(self.current[i]) for i in h.BINDINGS},h.BINDINGS)
+  with self.assertRaises(c.v.VoiceError):h.historical_context(self.pin,self.context,old)
   self.assertEqual(h.historical_context({},self.context,self.context),self.context)
  def test_unrelated_change_wrong_pin_membership_and_hash_fail(self):
   for kind in ['meaning','official','hash','manifest','binding','membership']:
