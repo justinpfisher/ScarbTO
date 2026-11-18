@@ -293,16 +293,22 @@ def reservation_bound(packet: dict, config: dict) -> tuple[int, float]:
     return input_bound, reserve
 
 
-def check_config(config: dict) -> None:
+def check_config_common(config: dict) -> None:
+    """Shared shape/model/month checks; funding policy belongs to each caller."""
     need(isinstance(config, dict) and set(config) == {"enabled", "author_model", "reviewer_model", "month_cap_usd", "funding"}, "Unexpected AI configuration")
     need(type(config["enabled"]) is bool, "Invalid enabled flag")
     need(config["author_model"] in MODELS and config["reviewer_model"] in MODELS, "Model is not qualified for this adapter")
     need(config["author_model"] != config["reviewer_model"], "Use a separate reviewer model")
-    if paid_pilot_cap(config) is not None:
+    if isinstance(config["funding"], dict) and config["funding"].get("kind") == "existing_paid_api_credits":
         need((config["author_model"], config["reviewer_model"]) == ("gpt-6-luna", "gpt-6.1-terra"),
              "The bounded paid pilot uses Luna author and separate Terra reviewer")
     cap = config["month_cap_usd"]
     need(type(cap) in (int, float) and math.isfinite(cap) and 0 <= cap <= 5, "Local API-value cap must be between zero and US$5")
+
+
+def check_config(config: dict) -> None:
+    check_config_common(config)
+    paid_pilot_cap(config)  # Unchanged generic initial-pilot US$0.25 policy.
 
 
 def funding_check(config: dict, now: dt.datetime, env: dict) -> dict:

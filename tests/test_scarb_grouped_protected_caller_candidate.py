@@ -105,9 +105,11 @@ class DisabledProductionBranchTests(ProtectedCallerTests):
  def test_nonfixture_branch_in_memory_gate_fake_credentials_transport_only(self):
   with tempfile.TemporaryDirectory() as d:
    state=Path(d);mp,env,t,_=self.prepare(state);now=w.v.dt.datetime.now(w.v.dt.timezone.utc)
-   config=json.loads((state/'fixture-config.json').read_text());config['funding']['verified_at']=(now-w.v.dt.timedelta(minutes=1)).isoformat();config['funding']['expires_at']=(now+w.v.dt.timedelta(minutes=30)).isoformat()
+   config=json.loads((state/'fixture-config.json').read_text());config['month_cap_usd']=.723427;config['funding']['pilot_cap_usd']=.723427
+   w.emitter.save(state,'usage.json',{'months':{'2026-11':.663943},'paid_pilot_usd':.663943})
+   config['funding']['verified_at']=(now-w.v.dt.timedelta(minutes=1)).isoformat();config['funding']['expires_at']=(now+w.v.dt.timedelta(minutes=30)).isoformat()
    w.emitter.save(state,'fixture-config.json',config)
-   m=json.loads(mp.read_text());m['version']='scarb-grouped-wrapper-production-1';m['config_sha256']=w.sha(state/'fixture-config.json');w.emitter.save(state,mp.name,m);digest=w.sha(mp)
+   m=json.loads(mp.read_text());m['version']='scarb-grouped-wrapper-production-1';m['pilot_cap_nusd']=723427000;m['config_sha256']=w.sha(state/'fixture-config.json');w.emitter.save(state,mp.name,m);digest=w.sha(mp)
    # Scoped test patches only. No private on-disk enablement or real key lookup.
    with patch.object(w,'LIVE_GROUPED_ENABLED',True),patch('scripts.scarb_packet_consumption_candidate.protected_root',lambda:state),patch.object(w.v,'api_request',side_effect=t.responses) as api:
     calls=[]
@@ -137,9 +139,11 @@ class ExternalPinMaterializationTests(unittest.TestCase):
    local=base/'local';state=local/'ScarbTO/voice-private';state.mkdir(parents=True)
    mp,env,t,_=ProtectedCallerTests().prepare(state)
    now=w.v.dt.datetime.now(w.v.dt.timezone.utc);config=json.loads((state/'fixture-config.json').read_text())
+   config['month_cap_usd']=.723427;config['funding']['pilot_cap_usd']=.723427
+   w.emitter.save(state,'usage.json',{'months':{'2026-11':.663943},'paid_pilot_usd':.663943})
    config['funding']['verified_at']=(now-w.v.dt.timedelta(minutes=1)).isoformat();config['funding']['expires_at']=(now+w.v.dt.timedelta(minutes=20)).isoformat();w.emitter.save(state,'fixture-config.json',config)
    pins=json.loads(subprocess.check_output([str(Path(os.sys.executable)),'-I','-S','-c',"import sys,json;sys.path.insert(0,"+repr(str(repo))+");from scripts.scarb_grouped_protected_caller_candidate import source_pins;print(json.dumps(source_pins()))"],text=True))
-   manifest=json.loads(mp.read_text());manifest.update(version='scarb-grouped-wrapper-production-1',code_sha256=pins,config_sha256=w.sha(state/'fixture-config.json'));w.emitter.save(state,mp.name,manifest)
+   manifest=json.loads(mp.read_text());manifest.update(version='scarb-grouped-wrapper-production-1',code_sha256=pins,config_sha256=w.sha(state/'fixture-config.json'),pilot_cap_nusd=723427000);w.emitter.save(state,mp.name,manifest)
    external_pin=w.sha(mp) # retained separately, never written into pinned source
    cmd=[os.sys.executable,'-I','-S',str(repo/'scripts/launch_scarb_grouped_candidate.py'),'--preflight-only','--manifest',str(mp),'--manifest-sha256',external_pin,'--state',str(state)]
    child_env={**os.environ,'LOCALAPPDATA':str(local)}
@@ -153,3 +157,45 @@ class ExternalPinMaterializationTests(unittest.TestCase):
    self.assertNotEqual(tampered.returncode,0);self.assertIn('Exact manifest changed',tampered.stderr)
    self.assertEqual((state/'usage.json').read_bytes(),before);self.assertFalse((state/'grouped-runs').exists())
    self.assertFalse(w.LIVE_GROUPED_ENABLED);self.assertFalse(hasattr(w,'LIVE_DISPATCH_MANIFEST_SHA256'))
+
+class ScopedCapRegressionTests(unittest.TestCase):
+ def test_exact_scoped_preflight_preserves_usage_and_generic_cap(self):
+  with tempfile.TemporaryDirectory() as d:
+   state=Path(d);mp,env,t,now=ProtectedCallerTests().prepare(state)
+   config=json.loads((state/'fixture-config.json').read_text());config['month_cap_usd']=.723427;config['funding']['pilot_cap_usd']=.723427
+   w.emitter.save(state,'fixture-config.json',config)
+   w.emitter.save(state,'usage.json',{'months':{'2026-11':.663943},'paid_pilot_usd':.663943})
+   manifest=json.loads(mp.read_text());manifest.update(config_sha256=w.sha(state/'fixture-config.json'),pilot_cap_nusd=723427000);w.emitter.save(state,mp.name,manifest)
+   with self.assertRaisesRegex(w.v.VoiceError,'US\$0.25'):w.v.check_config(config)
+   original=copy.deepcopy(config);original['funding']['pilot_cap_usd']=.25;w.v.check_config(original)
+   before=(state/'usage.json').read_bytes()
+   result=w._invoke(mp,w.sha(mp),state=state,expected_state=state,env=env,transport=t,now=now,completed_at=None,preflight=True)
+   self.assertTrue(result['ready_for_protected_lookup']);self.assertEqual(t.calls,[])
+   for kind in ['expired','cap-mismatch','wrong-project','wrong-version','extra-config','wrong-model','excess-month']:
+    c=copy.deepcopy(config);m=copy.deepcopy(manifest)
+    if kind=='expired':c['funding']['expires_at']='2029-01-01T00:00:00Z'
+    elif kind=='cap-mismatch':c['funding']['pilot_cap_usd']=.8
+    elif kind=='wrong-project':c['funding']['project']='arbitrary'
+    elif kind=='wrong-version':m['version']='arbitrary'
+    elif kind=='extra-config':c['new_field']=True
+    elif kind=='wrong-model':c['reviewer_model']=c['author_model']
+    else:c['month_cap_usd']=6
+    w.emitter.save(state,'fixture-config.json',c);m['config_sha256']=w.sha(state/'fixture-config.json');w.emitter.save(state,mp.name,m)
+    with self.subTest(kind=kind),self.assertRaises(w.v.VoiceError):
+     w._invoke(mp,w.sha(mp),state=state,expected_state=state,env=env,transport=t,now=now,completed_at=None,preflight=True)
+   self.assertEqual(t.calls,[]);self.assertEqual((state/'usage.json').read_bytes(),before);self.assertFalse((state/'grouped-runs').exists())
+
+ def test_protected_expired_and_unapproved_cap_stop_before_loader(self):
+  from unittest.mock import Mock
+  for kind in ['expired','cap-mismatch']:
+   with self.subTest(kind=kind),tempfile.TemporaryDirectory() as d:
+    state=Path(d);mp,env,t,now=ProtectedCallerTests().prepare(state)
+    c=json.loads((state/'fixture-config.json').read_text());c['month_cap_usd']=.723427;c['funding']['pilot_cap_usd']=.723427
+    if kind=='expired':c['funding']['expires_at']='2029-01-01T00:00:00Z'
+    w.emitter.save(state,'fixture-config.json',c)
+    m=json.loads(mp.read_text());m.update(version='scarb-grouped-wrapper-production-1',config_sha256=w.sha(state/'fixture-config.json'),pilot_cap_nusd=723427000 if kind=='expired' else 250000000);w.emitter.save(state,mp.name,m)
+    loader=Mock(side_effect=AssertionError('credential lookup'));before=(state/'usage.json').read_bytes()
+    with patch.object(w,'LIVE_GROUPED_ENABLED',True),patch('scripts.scarb_packet_consumption_candidate.protected_root',lambda:state),patch.object(w.v,'api_request',side_effect=AssertionError('network')) as api:
+     with self.assertRaises(w.v.VoiceError):w.invoke_protected(mp,w.sha(mp),state=state,env_loader=loader,now=now)
+     loader.assert_not_called();api.assert_not_called()
+    self.assertEqual((state/'usage.json').read_bytes(),before);self.assertFalse((state/'grouped-runs').exists())

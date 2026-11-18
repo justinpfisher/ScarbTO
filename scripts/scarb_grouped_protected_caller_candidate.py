@@ -30,7 +30,9 @@ def _invoke(manifest_path,approved_manifest_sha256,*,state,expected_state,env,tr
  config=json.loads(config_path.read_text());packets=json.loads(requests_path.read_text())
  v.need(len(packets)==2 and {p['id']:v.digest(p) for p in packets}==manifest['packet_bindings'],'Wrong exact two-packet scope')
  models={'author':config['author_model'],'reviewer':config['reviewer_model']};v.need(models==manifest['models'] and models=={'author':'gpt-6-luna','reviewer':'gpt-6.1-terra'},'Model scope changed')
- v.check_config(config)
+ # Common validation is shared; this pinned route validates its exact cumulative
+ # funding cap below rather than the generic initial-pilot cap. No fallback.
+ v.check_config_common(config)
  # Only a sentinel, supplied by test, may reach funding_check. Never read os.env.
  v.need(production or env.get('OPENAI_API_KEY')=='fixture-not-a-key','No real credentials accepted by offline caller')
  check_env={'SCARB_AI_ENABLE':'1','OPENAI_API_KEY':'fixture-not-a-key','OPENAI_ORG_ID':ORG,'OPENAI_PROJECT_ID':PROJECT} if production else env
