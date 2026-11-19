@@ -41,12 +41,20 @@ def community15_context(pin,current,recorded):
  packets=current_canonical_requests()
  v.need(all(v.digest(packets[i])==h for i,h in bindings.items()),'Community15 canonical packet changed')
  path='docs/scarb-voice.mjs';raw=(ROOT/path).read_bytes()
+ if hashlib.sha256(raw).hexdigest()==COMMUNITY333637_AFTER:
+  for old,new in COMMUNITY333637_EDITS:
+   v.need(raw.count(new)==1 and old not in raw,'Community333637 exact literal differs')
+   raw=raw.replace(new,old)
+  v.need(hashlib.sha256(raw).hexdigest()==COMMUNITY15_AFTER,'Community333637 old file reconstruction differs')
  v.need(hashlib.sha256(raw).hexdigest()==COMMUNITY15_AFTER and raw.count(COMMUNITY15_NEW)==1 and COMMUNITY15_OLD not in raw,'Community15 current bytes changed')
  restored=raw.replace(COMMUNITY15_NEW,COMMUNITY15_OLD)
  v.need(hashlib.sha256(restored).hexdigest()==COMMUNITY15_BEFORE and restored.count(COMMUNITY15_OLD)==1,'Community15 historical bytes changed')
  old=copy.deepcopy(current)
  for identity in bindings:
-  v.need(current[identity].get('source_sha256',{}).get(path)==COMMUNITY15_AFTER and recorded[identity].get('source_sha256',{}).get(path)==COMMUNITY15_BEFORE,'Community15 exact digest transition differs')
+  v.need(current[identity].get('source_sha256',{}).get(path)==hashlib.sha256((ROOT/path).read_bytes()).hexdigest() and recorded[identity].get('source_sha256',{}).get(path)==COMMUNITY15_BEFORE,'Community15 exact digest transition differs')
   old[identity]['source_sha256'][path]=COMMUNITY15_BEFORE
  v.need(old==recorded,'Community15 unrelated context changed')
  return old
+
+COMMUNITY333637_AFTER='1f62b579084f8093a5d653da291b9f322dc74270c04913f2f72e76815924424d'
+COMMUNITY333637_EDITS=[(b'Only a reviewed draft can be finalised.', b'Only a draft can be finalised.'), (b'This correction does not preserve its original edition.', b'This correction exceeds the revision limit or has an invalid original-edition link, revision sequence or explanation.'), (b'Create a draft and retain the original before making a correction.', b'A correction requires a draft, and the original edition must remain below the revision limit.')]
