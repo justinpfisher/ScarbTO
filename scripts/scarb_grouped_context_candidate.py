@@ -291,6 +291,50 @@ def neighbourhood_runtime_context(packet):
          'anchor':anchor,'locks':locks,'must_preserve':list(meaning),
          'meaning':'Generated neighbourhood pages only. Keep existing runtime values, official attribution and source limits.'}
 
+
+# Exact editable weekly HTML renderer only; never activate an archive rewrite
+# or extend the separately pinned RSS producer.
+# Verified fefaba0 Git blob bytes (LF) and clean GMKtec checkout bytes (CRLF).
+# Match exact whole-file hashes; context records the representation actually read.
+WEEKLY_HTML_PINS={
+ 'scripts/build_weekly_brief.py':('b990db32234c6576603037c5229459b9f0e42c9b1d05190a38d878a6a2ac2415','a5af87e4f32b07def1dc0c5ae5d9c5f9e0b4d548927195a40d67aed203992cba'),
+ 'scripts/scarb_voice.py':('48921ff3372649708e9ed3405a31aa824b9d6f76da71f86c17d9a79b4beb2e45','eaa22ee4c6bb8f15eaa972d0bf6ddebe8db4c5929f17de8f33608232f0a8480b'),
+}
+WEEKLY_HTML_STATES={
+ 'python.weekly-counts':('128a6b0e03d27ded4619e4ede47aa59968f980cea6ff786ecffd803b38b945a5', 'safety', {'VALUE_0': '{{COUNT}}', 'VALUE_1': '{{AREAS}}', 'VALUE_2': 'Scarb.TO'}, 'C', ('Keep exact recorded update count and number of Scarb.TO-matched neighbourhoods.', 'A place can have multiple updates; invite readers to see how the records fit together.')),
+ 'python.weekly-geography':('8bf631de74cf8db36b3a1e1323456e386ff19be21b2e9ca619ff532c6287bf4a', 'safety', {'VALUE_0': 'DineSafe', 'VALUE_1': 'Scarb.TO', 'VALUE_2': 'DineSafe', 'VALUE_3': 'Scarborough', 'VALUE_4': 'Scarb.TO'}, 'V', ('In first person, explain that Scarb.TO matches City DineSafe coordinates to City neighbourhood boundaries; DineSafe does not supply the neighbourhood label.', 'Source coordinate error can give the wrong neighbourhood; some neighbourhoods cross the six Scarborough ward selection boundaries.', 'Inspection date, when Scarb.TO first recorded the update, and page publication are distinct; newly added does not mean a new business.')),
+ 'python.weekly-source-limit':('76c6f92eabb81834f9e7ecc80dad4177a027a88410a8574de31e7d9c72440b5c', 'safety', {'VALUE_0': 'DineSafe'}, 'V', ('The updates are from City DineSafe records, not visits.', 'The brief is not a complete record of City activity and results may have changed.')),
+ 'python.weekly-source-note':('8e755c1139cf89688397b02099ad8592bcb82aa91158e3038f27b30e167ec426', 'safety', {'VALUE_0': 'DineSafe'}, 'V', ('Each place name leads to the City DineSafe record; that source may contain newer information than the inspection date shown.', 'Link behaviour must not imply fresh inspection or current conditions.')),
+ 'python.weekly-source-invitation':('d45b52c19541b3e47a8579ea3dd6f366a86b115c674865b078a58934dde79e27', 'functional', {'LAYOUT_SUFFIX': ' '}, 'V', ('Invite readers to follow the trail to the following official dataset link.', 'Keep the exact separator and trailing space before the link.')),
+ 'python.weekly-source-name':('04afd63fd4d7b9bbdf3f09d74b5ec883abde1722513989b4c5d400d13fd26e2f', 'functional', {'VALUE_0': 'DineSafe'}, 'V', ('Identify the linked dataset as City of Toronto DineSafe Open Data.', 'Keep this official source identity distinct from the individual City establishment record and the adjacent licence link.')),
+ 'python.weekly-preparation':('bec263f592bd4c2fd0cb637b783c17d4218de41aa17aed86cd6975f189fa5578', 'safety', {'VALUE_0': '{{ID}}', 'VALUE_1': '{{REVISION}}', 'VALUE_2': '{{FIRST}}', 'VALUE_3': '{{REVISED}}'}, 'C', ('Keep exact edition ID, revision, first-prepared UTC value and revision value; these are edition preparation times, not publication.', 'Preserve the first-person disclosure that individual addresses and map coordinates are left out.')),
+ 'python.weekly-correction':('867354b2e785d2c97562593e2e6b75473986c4abf7702a46707926b562116771', 'functional', {'VALUE_0': '{{REVISION}}'}, 'C', ('Label the existing correction and exact revision number, introducing the independent supplied correction explanation.', 'Only rendered if revision is above one; do not invent a correction or change its wording.')),
+ 'python.weekly-updated':('1fb92bfe535d9ebad12facd9837dd5a5e436b8598455edd249787d48b2c1fb7f', 'functional', {'VALUE_0': '{{DATE}}'}, 'C', ('Show the dated update of an existing correction; the runtime date is the revision time interpreted in Toronto.', 'Do not conflate it with first preparation, page publication or any inspection date.')),
+}
+
+def weekly_html_context(packet):
+ import ast
+ identity=packet['id'];v.need(identity in WEEKLY_HTML_STATES,'Unsupported weekly HTML producer context')
+ digest,kind,locks,formatter,meaning=WEEKLY_HTML_STATES[identity]
+ v.need(v.digest(packet)==digest and packet['kind']==kind and packet['locks']==locks,
+        'Weekly HTML packet or locks changed')
+ sources={path:(ROOT/path).read_bytes() for path in WEEKLY_HTML_PINS}
+ source_hashes={path:hashlib.sha256(raw).hexdigest() for path,raw in sources.items()}
+ v.need(all(digest in WEEKLY_HTML_PINS[path] for path,digest in source_hashes.items()),
+        'Weekly HTML renderer or formatter changed')
+ module=ast.parse(sources['scripts/build_weekly_brief.py'])
+ functions={x.name:x for x in module.body if isinstance(x,ast.FunctionDef)}
+ key=identity.removeprefix('python.')
+ calls=[node for node in ast.walk(functions['_render_voice_edition']) if isinstance(node,ast.Call)
+        and isinstance(node.func,ast.Name) and node.func.id==formatter and node.args
+        and isinstance(node.args[0],ast.Constant) and node.args[0].value==key]
+ v.need(len(calls)==1 and 'prior["html_sha256"]' in ast.unparse(functions['build_weekly_brief']).replace("'",'"')
+        and 'html_sha256' in ast.unparse(functions['preserve_weekly_archive']),
+        'Weekly HTML call site or archive guard changed')
+ return {'path':'scripts/build_weekly_brief.py','source_sha256':source_hashes,
+         'consumer':'_render_voice_edition/'+formatter+'/'+key,'locks':locks,'must_preserve':list(meaning),
+         'meaning':'Future editable weekly HTML copy only. Existing archived editions and RSS identities are unchanged.'}
+
 def current_contexts(packets):
  current=seam.current_canonical_requests();path=ROOT/'docs/index.html';raw=path.read_bytes();text=raw.decode('utf8');contexts={}
  findings=None;selected_calls=None;community_validation=None
@@ -318,6 +362,8 @@ def current_contexts(packets):
    v.need(identity in selected_calls,'Unbound selected-call context');contexts[identity]=selected_calls[identity];continue
   if identity.startswith('static.finding-explanation-'):
    v.need(identity in findings,'Unbound finding context');contexts[identity]=findings[identity];continue
+  if identity in WEEKLY_HTML_STATES:
+   contexts[identity]=weekly_html_context(packet);continue
   if identity in NEIGHBOURHOOD_RUNTIME:
    contexts[identity]=neighbourhood_runtime_context(packet);continue
   if identity in HOME_DINESAFE_LIST_STATES:

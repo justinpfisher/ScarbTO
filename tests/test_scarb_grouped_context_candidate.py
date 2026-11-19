@@ -111,6 +111,45 @@ class ContextCandidateTests(unittest.TestCase):
    c.neighbourhood_runtime_context(dict(item,locks={}))
   with self.assertRaisesRegex(c.v.VoiceError,'Unsupported neighbourhood runtime consumer'):
    c.neighbourhood_runtime_context(self.current['static.neighbourhood-page-03'])
+ def test_weekly_html_context_is_route_bound_and_retains_limitations(self):
+  keys=('counts','geography','source-limit','source-note','source-invitation','source-name','preparation','correction','updated')
+  ids=['python.weekly-'+k for k in keys]
+  a=c.current_contexts([self.current[k] for k in ids])
+  self.assertEqual(set(a),set(ids))
+  for k in ids:
+   self.assertEqual(a[k]['locks'],self.current[k]['locks'])
+   self.assertIn('archived editions and RSS identities are unchanged',a[k]['meaning'])
+  self.assertIn('/C/',a[ids[0]]['consumer'])
+  self.assertIn('/V/',a[ids[1]]['consumer'])
+  self.assertIn('newly added does not mean a new business',' '.join(a[ids[1]]['must_preserve']))
+  self.assertIn('not publication',' '.join(a[ids[6]]['must_preserve']))
+  self.assertIn('revision is above one',' '.join(a[ids[7]]['must_preserve']))
+ def test_weekly_html_context_accepts_only_the_two_exact_byte_representations(self):
+  import hashlib
+  from unittest.mock import patch
+  item=self.current['python.weekly-counts']; actual=Path.read_bytes
+  for offset in (0,1):
+   files={}
+   for path,allowed in c.WEEKLY_HTML_PINS.items():
+    raw=actual(c.ROOT/path).replace(b'\r\n',b'\n')
+    if offset:raw=raw.replace(b'\n',b'\r\n')
+    self.assertEqual(hashlib.sha256(raw).hexdigest(),allowed[offset])
+    files[c.ROOT/path]=raw
+   with patch.object(Path,'read_bytes',lambda p:files[p] if p in files else actual(p)):
+    a=c.weekly_html_context(item)
+    self.assertEqual(a['source_sha256'],{k:v[offset] for k,v in c.WEEKLY_HTML_PINS.items()})
+    for path in files:
+     saved=files[path];files[path]+=(b'\r\n' if offset else b'\n')+b'# unrelated content edit'
+     with self.assertRaisesRegex(c.v.VoiceError,'renderer or formatter changed'):c.weekly_html_context(item)
+     files[path]=saved
+ def test_weekly_html_context_refuses_archive_route_source_or_packet_drift(self):
+  from unittest.mock import patch
+  item=self.current['python.weekly-counts']; read=Path.read_bytes
+  with patch.object(Path,'read_bytes',lambda p:read(p)+(b' ' if p.name=='build_weekly_brief.py' else b'')):
+   with self.assertRaisesRegex(c.v.VoiceError,'renderer or formatter changed'):c.weekly_html_context(item)
+  with self.assertRaisesRegex(c.v.VoiceError,'packet or locks changed'):c.weekly_html_context(dict(item,locks={}))
+  with self.assertRaisesRegex(c.v.VoiceError,'Unsupported weekly HTML producer context'):
+   c.weekly_html_context(self.current['python.weekly-title'])
  def test_missing_full_catalogue_rejected(self):
   with self.assertRaisesRegex(c.v.VoiceError,'736'):c.compile_admitted_mixed_draft({'solo_v1':{},'solo_v2':{},'grouped':[]},{})
  def test_unadmitted_run_refused(self):
