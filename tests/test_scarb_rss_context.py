@@ -27,3 +27,33 @@ class RSSContextTests(unittest.TestCase):
     q=root/f;q.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(c.ROOT/f,q)
    q=root/'scripts/build_rss.py';q.write_text(q.read_text(encoding='utf-8').replace("ZoneInfo('America/Toronto')","ZoneInfo('UTC')"),encoding='utf-8')
    with self.assertRaises(ValueError):r.contexts([p],root)
+
+ def test_four_channel_templates_and_actual_caller(self):
+  from scripts import build_rss
+  from datetime import datetime,timezone
+  import xml.etree.ElementTree as ET
+  cur=c.seam.current_canonical_requests();ps=[cur['python.'+k] for k in r.CHANNEL_EXPECTED];ctx=c.current_contexts(ps)
+  self.assertEqual(len(ctx),4)
+  channel=ET.fromstring(build_rss.build_feed([],built_at=datetime(2026,1,1,tzinfo=timezone.utc))).find('channel')
+  self.assertEqual(channel.findtext('title'),voice.copy('rss-title'))
+  for key in ('rss-intro','rss-limits'):self.assertIn(voice.copy(key),channel.findtext('description'))
+  self.assertIn(voice.compose_copy('rss-licence-link',{'URL':build_rss.LICENCE_URL}),channel.findtext('description'))
+  self.assertEqual(r.LICENCE_URL,build_rss.LICENCE_URL)
+  for key in r.CHANNEL_EXPECTED:
+   q=ctx['python.'+key];self.assertEqual(q['locks'],cur['python.'+key]['locks'])
+   self.assertEqual(q['parameters'],{'URL':build_rss.LICENCE_URL} if key=='rss-licence-link' else {})
+   self.assertEqual(q['field'],'URL' if key=='rss-licence-link' else None)
+  for batch in (ps[:3],ps[3:]):
+   body=c.context_prompts(batch,{'author':'gpt-6-luna','reviewer':'gpt-6.1-terra'},{p['id']:ctx[p['id']] for p in batch},prompt_version='numeric-citation-2')
+   self.assertLessEqual(len(c.v.encoded(body)),48000)
+ def test_channel_contract_mutations_rejected(self):
+  cur=c.seam.current_canonical_requests()
+  for key in r.CHANNEL_EXPECTED:
+   for kind in ('draft','class','evidence','locks'):
+    p=copy.deepcopy(cur['python.'+key])
+    if kind=='draft':p['draft']+=' new claim'
+    elif kind=='class':p['kind']='unknown'
+    elif kind=='evidence':p['evidence'][0]['source']='repo:wrong'
+    else:p['locks']['VALUE_0']='changed'
+    with self.subTest(key=key,kind=kind),self.assertRaises(ValueError):r.contexts([p])
+  with self.assertRaises(ValueError):r.contexts([cur['python.licence']])
