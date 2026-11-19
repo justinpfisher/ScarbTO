@@ -161,13 +161,16 @@ HOME_MAP_ACCESSIBILITY={
 HOME_MAP_PINS=dict(HOME_LIST_PINS)
 
 def home_map_accessibility_context(packet):
+ sources={path:(ROOT/path).read_bytes() for path in HOME_MAP_PINS}
+ return _home_map_accessibility_context(packet,sources)
+
+def _home_map_accessibility_context(packet,sources):
  identity=packet['id']
  v.need(identity in HOME_MAP_ACCESSIBILITY,'Unsupported homepage map accessibility state')
  digest,shapes=HOME_MAP_ACCESSIBILITY[identity]
  v.need(v.digest(packet)==digest and packet['kind']=='safety' and packet['locks']=={'VALUE_0':'DineSafe'},
         'Homepage map accessibility packet or factual lock changed')
- sources={path:(ROOT/path).read_bytes() for path in HOME_MAP_PINS}
- v.need(all(hashlib.sha256(raw).hexdigest()==HOME_MAP_PINS[path] for path,raw in sources.items()),
+ v.need(set(sources)==set(HOME_MAP_PINS) and all(hashlib.sha256(raw).hexdigest()==HOME_MAP_PINS[path] for path,raw in sources.items()),
         'Homepage map accessibility source changed')
  app=sources['docs/app.mjs'].decode('utf8'); html=sources['docs/index.html'].decode('utf8')
  consumer="$('map').setAttribute('aria-label',mapLabel);"

@@ -150,6 +150,35 @@ class ContextCandidateTests(unittest.TestCase):
   with self.assertRaisesRegex(c.v.VoiceError,'packet or locks changed'):c.weekly_html_context(dict(item,locks={}))
   with self.assertRaisesRegex(c.v.VoiceError,'Unsupported weekly HTML producer context'):
    c.weekly_html_context(self.current['python.weekly-title'])
+ def test_exact_historical_map_replay_accepts_only_audited_representations_and_scope(self):
+  import hashlib
+  from unittest.mock import patch
+  packets=[self.current[k] for k in ('static.app-16','static.app-17')]
+  binding={x['id']:c.v.digest(x) for x in packets}
+  pin={'manifest_sha256':p.HISTORICAL_MAP_MANIFEST,'source_context_sha256':p.HISTORICAL_MAP_CONTEXT,'packet_bindings':binding}
+  lf={k:(c.ROOT/k).read_bytes().replace(b'\r\n',b'\n') for k in p.HISTORICAL_MAP_LF}
+  crlf={k:x.replace(b'\n',b'\r\n') for k,x in lf.items()}
+  first,lf_pins=p._historical_map_context(pin,packets,lf)
+  second,crlf_pins=p._historical_map_context(pin,packets,crlf)
+  self.assertEqual(first,second)
+  self.assertEqual(c.v.digest(first),p.HISTORICAL_MAP_CONTEXT)
+  self.assertEqual(lf_pins,p.HISTORICAL_MAP_LF)
+  self.assertEqual(crlf_pins,c.HOME_MAP_PINS)
+  for source in (lf,crlf):
+   for k,raw in source.items():
+    bad=raw.replace(b'data',b'dAta',1)
+    self.assertNotEqual(hashlib.sha256(raw).hexdigest(),hashlib.sha256(bad).hexdigest())
+    with self.assertRaisesRegex(c.v.VoiceError,'Unknown historical map source bytes'):
+     p._historical_map_context(pin,packets,{**source,k:bad})
+  with self.assertRaisesRegex(c.v.VoiceError,'provenance scope'):
+   p._historical_map_context(dict(pin,manifest_sha256='0'*64),packets,lf)
+  with self.assertRaisesRegex(c.v.VoiceError,'provenance scope'):
+   p._historical_map_context(pin,[self.current['static.app-15'],packets[1]],lf)
+  read=Path.read_bytes
+  with patch.object(Path,'read_bytes',lambda path:lf[path.relative_to(c.ROOT).as_posix()] if path.is_relative_to(c.ROOT) and path.relative_to(c.ROOT).as_posix() in lf else read(path)):
+   with self.assertRaisesRegex(c.v.VoiceError,'accessibility source changed'):
+    c.home_map_accessibility_context(packets[0])
+  self.assertFalse(p.TRUSTED_GROUPED_RUNS)
  def test_missing_full_catalogue_rejected(self):
   with self.assertRaisesRegex(c.v.VoiceError,'736'):c.compile_admitted_mixed_draft({'solo_v1':{},'solo_v2':{},'grouped':[]},{})
  def test_unadmitted_run_refused(self):

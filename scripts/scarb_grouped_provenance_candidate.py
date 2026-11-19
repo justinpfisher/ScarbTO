@@ -13,7 +13,42 @@ from types import MappingProxyType
 TRUSTED_GROUPED_RUNS=MappingProxyType({})
 FILES={'envelope.json','journal.json','seal.json','funding.json','prices.json','budget.json','ledger-before.json','ledger-after.json'}
 def file_hash(path):return hashlib.sha256(path.read_bytes()).hexdigest()
-def _verify_pinned(root,pin,current_packets):
+
+# Audited raw Git-LF counterparts at bbf2198 of the original GMKtec CRLF
+# sources recorded by this one author/reviewer envelope. Not authoring inputs.
+HISTORICAL_MAP_MANIFEST='3b1d4bf6a41e1f7cea9282976083479952ba3ec8f6db171f5a547cb69a2de1c2'
+HISTORICAL_MAP_SCOPE='c29324388a3b6b3090405e8698d6f65049809bad9b4e5a1a09cf98d7ee9aa5bd'
+HISTORICAL_MAP_CONTEXT='22b9f31c4e5dff2b5f25040162309590434e9da4649e604d7c2601242f40aedd'
+HISTORICAL_MAP_LF={
+ 'docs/app.mjs':'00dd1b611bb2ff8e1ff47fd14c76ff53ad8c590426e5359e05bef43ce0368f8a',
+ 'docs/index.html':'93283867eba047a32a2866994fb2f496e16aaf5eabc8772407a8823a923eb753',
+}
+
+def _historical_map_context(pin, packets, observed):
+    from scripts import scarb_grouped_context_candidate as c
+    sha=lambda raw:hashlib.sha256(raw).hexdigest()
+    bindings={p['id']:v.digest(p) for p in packets}
+    v.need(pin.get('manifest_sha256')==HISTORICAL_MAP_MANIFEST and pin.get('source_context_sha256')==HISTORICAL_MAP_CONTEXT
+           and len(packets)==2 and set(bindings)=={'static.app-16','static.app-17'}
+           and pin.get('packet_bindings')==bindings and v.digest(bindings)==HISTORICAL_MAP_SCOPE,
+           'Unrecognised historical map provenance scope')
+    v.need(set(observed)==set(HISTORICAL_MAP_LF)==set(c.HOME_MAP_PINS),'Incomplete historical map sources')
+    checked={}; historical={}
+    for path,raw in observed.items():
+        digest=sha(raw); checked[path]=digest; historic=c.HOME_MAP_PINS[path]
+        v.need(digest in (historic,HISTORICAL_MAP_LF[path]),'Unknown historical map source bytes')
+        if digest==historic:
+            historical[path]=raw
+        else:
+            counterpart=raw.replace(b'\n',b'\r\n')
+            v.need(counterpart.replace(b'\r\n',b'\n')==raw and sha(counterpart)==historic,
+                   'Unverified historical map byte counterpart')
+            historical[path]=counterpart
+    projected={p['id']:c._home_map_accessibility_context(p,historical) for p in packets}
+    v.need(v.digest(projected)==HISTORICAL_MAP_CONTEXT,'Historical map context projection differs')
+    return projected, checked
+
+def _verify_pinned(root,pin,current_packets,*, replay_enrolled_history=False):
     """Pure verification seam; callers cannot turn this test helper into a grant."""
     root=Path(root);manifest_path=root/'manifest.json'
     v.need(not root.is_symlink() and manifest_path.is_file() and not manifest_path.is_symlink(),'Invalid protected record path')
@@ -56,7 +91,11 @@ def _verify_pinned(root,pin,current_packets):
     if contextual:
         from scripts.scarb_grouped_context_candidate import current_contexts,context_prompts
         v.need(membership,'Contextual admission requires packet membership')
-        contexts=current_contexts(current_packets)
+        if replay_enrolled_history and pin['manifest_sha256']==HISTORICAL_MAP_MANIFEST:
+            from scripts.scarb_grouped_context_candidate import ROOT
+            contexts, _ = _historical_map_context(pin,current_packets,{path:(ROOT/path).read_bytes() for path in HISTORICAL_MAP_LF})
+        else:
+            contexts=current_contexts(current_packets)
         from scripts.scarb_group21_source_compatibility import historical_context
         contexts=historical_context(pin,contexts,env['source_context'])
         v.need(env['source_context']==contexts and pin.get('source_context_sha256')==v.digest(contexts),'Current source context mismatch')
@@ -91,7 +130,7 @@ def verify_grouped_provenance(root,current_packets):
     v.need(pin.get('membership_version')==1 and v.digest(snapshot(pin['solo_state_root']))==pin.get('solo_state_sha256'),'Current solo holds/acceptances differ')
     env=json.loads((Path(root)/'envelope.json').read_text(encoding='utf8'))
     v.need(env.get('version') in {'scarb-grouped-run-envelope-2','scarb-grouped-run-envelope-3'},'Context-bound grouped version required for actual admission')
-    return _verify_pinned(root,TRUSTED_GROUPED_RUNS[digest],current_packets)
+    return _verify_pinned(root,TRUSTED_GROUPED_RUNS[digest],current_packets,replay_enrolled_history=True)
 
 
 def _verify_cost(records,pin,author,review,journal,stages):
