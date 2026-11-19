@@ -51,6 +51,22 @@ def area_context(packet,raw,text):
  'behavior_path':'docs/area-explorer.mjs','behavior_sha256':AREA_BEHAVIOR_SHA256,
  'meaning':AREA_MEANINGS[dom]+' Keep visible and accessible names aligned; no new findings or changes to source facts.'}
 
+
+SAVED_PACKET_BINDINGS={'static.saved-added': '8446e89d6860fe98da2faab21a20cd230dcd7d12fa6b4fb111929a556891894a', 'static.saved-duplicate': 'c63dbc710171c7d62ea968309a0c3a0bb393753dc5807414ccaf30cbcab0ac08', 'static.saved-neighbourhoods': '40dc757e741d0ccd3dd166a89b6e37ca688d037efd84c30ee93896128ccdb13f', 'static.saved-remove': '7de975c6a2a08af9849c6ac50523d764b4b1adbbf9da9b6c878d9a18adca67ad', 'static.saved-remove-label': '245dff2c510b2a102ec83ee6b99e8ca6d137954fb96f5b8fb2760d3a8c0c6884', 'static.saved-removed': 'b84fbbd6172e7f77c46b6aa63b67149ad78a1a0606507f1ba90822897143286f', 'static.saved-unreadable': 'efff9b8990933e7e64c2719c245019b3564e5400e02e5e9c95c3bbb35223dcb9', 'static.saved-wards': 'bf7037cbc0577799712a452eed7574b37672f0a64d6286511159bdea0702ef5b', 'static.saved-write-failed': 'ab634f0a4d6da41f9ccfa56119ce843e6dd743f964b798b1037f2861a6c52d01'}
+SAVED_SOURCE_PINS={'docs/saved-areas.mjs': '73825cb71f9e4260e1fbdce6ada30ddf88788c625baa20a539bc045cc00c368f', 'docs/area-selection.mjs': '7f6ac42ebe9c174d28f02d97244267b2baa9efd6f538bd98cecb4d57bcc18313'}
+SAVED_MEANINGS={'saved-unreadable': 'Reading or parsing saved browser areas failed. Areas can still be chosen; do not claim stored data was deleted.', 'saved-write-failed': 'Persisting a change failed; the existing list remains unchanged. Do not claim the change succeeded.', 'saved-wards': 'Option-group label for City wards, distinct from neighbourhoods.', 'saved-neighbourhoods': 'Option-group label for neighbourhoods, distinct from City wards.', 'saved-remove': 'Visible removal button for one saved public area, not clearing map selection or deleting other records.', 'saved-remove-label': 'Accessible name of the same removal button; preserve NAME and agreement with visible Remove.', 'saved-removed': 'Only after successful persistence of removal; saved list rerenders and focus returns to chooser. Removal is from this browser only.', 'saved-duplicate': 'Selected kind/code is already saved. No duplicate entry or write is made.', 'saved-added': 'Only after successful persistence of a validated new public area; saved on this browser, not an account or cloud service.'}
+
+def saved_context(packet):
+ identity=packet['id'];key=identity.removeprefix('static.')
+ v.need(identity in SAVED_PACKET_BINDINGS and v.digest(packet)==SAVED_PACKET_BINDINGS[identity],'Unsupported or changed saved-area packet')
+ for path,expected in SAVED_SOURCE_PINS.items():
+  v.need(hashlib.sha256((ROOT/path).read_bytes()).hexdigest()==expected,'Saved-area behavior changed')
+ raw=(ROOT/'docs/saved-areas.mjs').read_text(encoding='utf8')
+ anchor="staticCopy('"+key+"'";v.need(raw.count(anchor)==1,'Saved-area consumer changed')
+ named=key in ('saved-remove-label','saved-removed','saved-duplicate','saved-added')
+ v.need(packet['locks']==({'VALUE_0':'{{NAME}}'} if named else {}),'Saved-area NAME contract changed')
+ return {'path':'docs/saved-areas.mjs','source_sha256':SAVED_SOURCE_PINS,'consumer':anchor,'locks':packet['locks'],'source_evidence_sha256':packet['evidence'][0]['sha256'],'runtime_parameter':{'NAME':'Public area name supplied locally at rendering; never include a saved selection in the model request.'} if named else {},'meaning':SAVED_MEANINGS[key]+' Preserve the exact functional trigger and scope. No inference about private saved selections, personal location, safety or current source findings.'}
+
 def current_contexts(packets):
  current=seam.current_canonical_requests();path=ROOT/'docs/index.html';raw=path.read_bytes();text=raw.decode('utf8');contexts={}
  findings=None;selected_calls=None;community_validation=None
@@ -65,6 +81,8 @@ def current_contexts(packets):
   community_validation=json.loads(subprocess.run(['node',str(ROOT/'scripts/scarb_community_validation_contexts.mjs')],cwd=ROOT,check=True,capture_output=True,text=True,encoding='utf8').stdout)
  for packet in packets:
   identity=packet['id'];v.need(current.get(identity)==packet,'Unsupported or stale context producer')
+  if identity.startswith('static.saved-'):
+   contexts[identity]=saved_context(packet);continue
   if identity.startswith('static.community-publishing-message-'):
    v.need(identity in community_validation,'Unsupported Community Publishing validation key');contexts[identity]=community_validation[identity];continue
   if identity.startswith('python.rss-'):
