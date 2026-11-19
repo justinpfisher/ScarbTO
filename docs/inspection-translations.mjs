@@ -30,11 +30,11 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "fail to ensure food handler in food premise practices good personal hygiene - sec. 33(1)(b)",
-    "A food handler was not following good personal hygiene practices."
+    "The inspection found a failure to ensure that food handlers practised good personal hygiene."
   ],
   [
     "fail to ensure food handler in food premise protects against contamination by hair - sec.  33(1)(d)",
-    "A food handler was not taking the required precautions to keep hair from contaminating food."
+    "The inspection found a failure to ensure that food handlers protected against contamination by hair."
   ],
   [
     "fail to ensure food handler in food premise wears clean outer garments - sec. 33(1)(c)",
@@ -278,7 +278,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "sanitize utensils using agent for which test reagent not readily available - sec. 19(e)(iii)",
-    "The testing chemical needed to check the utensil sanitizer was not readily available."
+    "Utensils were sanitized using an agent for which the testing reagent was not readily available."
   ],
   [
     "thermometer in hot-holding equipment not easily readable - sec. 30(b)",
@@ -294,19 +294,19 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "use food equipment not of readily cleanable form - sec.  8(1)(c)",
-    "Food equipment was not designed so it could be readily cleaned."
+    "Food equipment being used was not designed so it could be readily cleaned."
   ],
   [
     "use food equipment not of readily cleanable material - sec.  8(1)(c)",
-    "Food equipment was not made of material that could be readily cleaned."
+    "Food equipment being used was not made of material that could be readily cleaned."
   ],
   [
     "use food equipment not of sound and tight construction - sec. 8(1)(a)",
-    "Food equipment was not of sound, tight construction."
+    "Food equipment being used was not of sound, tight construction."
   ],
   [
     "use multi-service articles not of readily cleanable form - sec. 8(1)(c)",
-    "Reusable articles were not designed so they could be readily cleaned."
+    "Multi-service articles that were not readily cleanable were being used."
   ],
   [
     "use multi-service articles not suitable for intended purpose - sec. 8(1)(d)",
@@ -322,7 +322,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "use shelves not of readily cleanable design - sec. 31",
-    "Shelves were not designed so they could be readily cleaned."
+    "Shelves being used were not designed so they could be readily cleaned."
   ],
   [
     "use towel used for other purpose for cleaning food contact surface - sec. 16(c)",
@@ -334,7 +334,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "use utensils not in good repair - sec. 8(1)(b)",
-    "Utensils were not in good repair."
+    "Utensils being used were not in good repair."
   ],
   [
     "use utensils not non-toxic in contact with food - sec. 8(2)(a)",
@@ -342,15 +342,15 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "use utensils not of readily cleanable form - sec.  8(1)(c)",
-    "Utensils were not designed so they could be readily cleaned."
+    "Utensils being used were not designed so they could be readily cleaned."
   ],
   [
     "use utensils not of readily cleanable material - sec.  8(1)(c)",
-    "Utensils were not made of material that could be readily cleaned."
+    "Utensils being used were not made of material that could be readily cleaned."
   ],
   [
     "use utensils not of sound and tight construction - sec. 8(1)(a)",
-    "Utensils were not of sound, tight construction."
+    "Utensils being used were not of sound, tight construction."
   ],
   [
     "use utensils not suitable for intended purpose - sec. 8(1)(d)",

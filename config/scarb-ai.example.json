@@ -1,0 +1,7 @@
+{
+  "enabled": false,
+  "author_model": "gpt-6.1-terra",
+  "reviewer_model": "gpt-6.1-sol",
+  "month_cap_usd": 0,
+  "funding": null
+}

@@ -260,7 +260,7 @@ test('recent DineSafe captions distinguish detected changes from inspection date
   const app=await loadApp(snapshot);
   try {
     assert.equal(app.document.getElementById('results-caption').textContent,
-      'Pick a place and explore its latest DineSafe inspection record with me. Each one links back to the City source.');
+      'Pick a familiar name and follow its inspection trail with me. These are the latest DineSafe records in this snapshot, with the original City link beside each one.');
     app.document.tabs.find(tab=>tab.dataset.mode==='recent').click();
     assert.equal(app.document.getElementById('results-caption').textContent,
       'This is where the records get interesting: compare them from day to day and the changes come into view. Here’s what I found in DineSafe. The inspection date may be earlier than when a record first appeared here.');

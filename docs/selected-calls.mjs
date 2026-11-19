@@ -1,3 +1,4 @@
+import {staticCopy} from './scarb-voice.mjs';
 const SERVICE = "https://services.arcgis.com/S9th0jAJ7bqgIRjw/arcgis/rest/services/C4S_Public_NoGO/FeatureServer/0";
 const QUERY = `${SERVICE}/query`;
 const DIVISIONS = Object.freeze(["D41", "D42", "D43"]);
@@ -15,7 +16,7 @@ const LIMITS = Object.freeze({
 const UNAVAILABLE = (reason) => Object.freeze({
   status: "unavailable",
   reason,
-  label: "Selected calls published by TPS - Divisions 41, 42 and 43",
+  label: staticCopy('selected-calls-01'),
   counts: Object.freeze([]),
 });
 
@@ -32,25 +33,25 @@ function fail(message, reason = "source verification failed") {
 
 /** Only known local reason codes become reader copy. Never echo remote errors. */
 export function selectedCallsMessage(view) {
-  if (view?.status === "available") return "Selected calls published by Toronto Police Service for Divisions 41, 42 and 43. These are not all calls, crime, police activity or officer presence.";
+  if (view?.status === "available") return staticCopy('selected-calls-02');
   const messages = {
-    "loading": "Checking police call totals for Divisions 41, 42 and 43.",
-    "not loaded": "Open this view to check police call totals for Divisions 41, 42 and 43.",
-    "view hidden": "Counts are removed when you leave this view. Open it again to check for fresh totals.",
-    "source data is stale": "The TPS records are more than 30 minutes old, so no counts are shown.",
-    "source data expired": "The TPS records are now more than 30 minutes old. Older counts have been removed.",
-    "cached counts expired": "These counts have been here for more than 10 minutes and have expired. Check again for fresh totals.",
-    "source request timed out": "The request to TPS did not finish within 8 seconds. No counts are shown.",
-    "request cancelled": "The check was cancelled. No counts are shown.",
-    "refresh cooldown active": "Checks are at least 5 minutes apart. Please wait before checking again; no older counts are shown.",
-    "source changed during request": "TPS changed the records while I was checking them, so no totals are shown.",
-    "clock changed; refresh required": "The clock changed while these counts were open. I removed them because I cannot verify their age.",
-    "source timestamp invalid": "I could not verify the age of the TPS records, so no counts are shown.",
-    "source verification failed": "I could not verify the TPS totals against the source checks, so no counts are shown.",
-    "source response unavailable": "The TPS request did not return a usable response. No counts are shown.",
-    "source data unavailable": "This browser could not retrieve the TPS totals. No counts are shown.",
+    "loading": staticCopy('selected-calls-03'),
+    "not loaded": staticCopy('selected-calls-04'),
+    "view hidden": staticCopy('selected-calls-05'),
+    "source data is stale": staticCopy('selected-calls-06'),
+    "source data expired": staticCopy('selected-calls-07'),
+    "cached counts expired": staticCopy('selected-calls-08'),
+    "source request timed out": staticCopy('selected-calls-09'),
+    "request cancelled": staticCopy('selected-calls-10'),
+    "refresh cooldown active": staticCopy('selected-calls-11'),
+    "source changed during request": staticCopy('selected-calls-12'),
+    "clock changed; refresh required": staticCopy('selected-calls-13'),
+    "source timestamp invalid": staticCopy('selected-calls-14'),
+    "source verification failed": staticCopy('selected-calls-15'),
+    "source response unavailable": staticCopy('selected-calls-16'),
+    "source data unavailable": staticCopy('selected-calls-17'),
   };
-  return Object.hasOwn(messages, view?.reason) ? messages[view.reason] : "I could not verify the TPS totals, so no counts are shown.";
+  return Object.hasOwn(messages, view?.reason) ? messages[view.reason] : staticCopy('selected-calls-18');
 }
 
 function exactKeys(value, expected, label) {
@@ -330,14 +331,14 @@ export class SelectedCallsClient {
         if (!this.visible || controller.signal.aborted) fail("view is no longer active");
         const publicState = Object.freeze({
           status: "available",
-          label: "Selected calls published by TPS - Divisions 41, 42 and 43",
+          label: staticCopy('selected-calls-01'),
           counts: Object.freeze(counts),
           sourceEditedAt: new Date(dataEditTime).toISOString(),
           sourceAgeMsAtFetch: finalEditAge,
           fetchedAt: new Date(completedAt).toISOString(),
-          attribution: "Contains information licensed under the Open Government Licence - Ontario.",
+          attribution: staticCopy('selected-calls-19'),
           sourceUrl: "https://experience.arcgis.com/experience/a22f5295933e48a5b0a4c90cd3c4cae1",
-          disclosure: "These are the selected calls TPS publishes for Divisions 41, 42 and 43, not all crime, police activity, or officer presence.",
+          disclosure: staticCopy('selected-calls-20'),
         });
         this.current = {
           publicState,

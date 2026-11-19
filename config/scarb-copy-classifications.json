@@ -1,0 +1,1662 @@
+{
+  "app-01": [
+    "map",
+    "functional"
+  ],
+  "app-02": [
+    "map",
+    "functional"
+  ],
+  "app-03": [
+    "map",
+    "safety"
+  ],
+  "app-04": [
+    "map",
+    "functional"
+  ],
+  "app-05": [
+    "map",
+    "functional"
+  ],
+  "app-06": [
+    "map",
+    "functional"
+  ],
+  "app-07": [
+    "map",
+    "functional"
+  ],
+  "app-08": [
+    "map",
+    "functional"
+  ],
+  "app-09": [
+    "map",
+    "safety"
+  ],
+  "app-10": [
+    "map",
+    "functional"
+  ],
+  "app-11": [
+    "map",
+    "functional"
+  ],
+  "app-12": [
+    "map",
+    "safety"
+  ],
+  "app-13": [
+    "map",
+    "safety"
+  ],
+  "app-14": [
+    "map",
+    "safety"
+  ],
+  "app-15": [
+    "map",
+    "safety"
+  ],
+  "app-16": [
+    "map",
+    "safety"
+  ],
+  "app-17": [
+    "map",
+    "safety"
+  ],
+  "app-18": [
+    "map",
+    "functional"
+  ],
+  "app-19": [
+    "map",
+    "functional"
+  ],
+  "app-20": [
+    "map",
+    "safety"
+  ],
+  "app-21": [
+    "map",
+    "functional"
+  ],
+  "app-22": [
+    "map",
+    "safety"
+  ],
+  "app-23": [
+    "map",
+    "functional"
+  ],
+  "app-24": [
+    "map",
+    "editorial"
+  ],
+  "app-25": [
+    "map",
+    "editorial"
+  ],
+  "app-26": [
+    "map",
+    "functional"
+  ],
+  "app-27": [
+    "map",
+    "functional"
+  ],
+  "app-28": [
+    "map",
+    "functional"
+  ],
+  "app-29": [
+    "map",
+    "functional"
+  ],
+  "app-30": [
+    "map",
+    "editorial"
+  ],
+  "app-31": [
+    "map",
+    "editorial"
+  ],
+  "app-32": [
+    "map",
+    "editorial"
+  ],
+  "app-33": [
+    "map",
+    "functional"
+  ],
+  "app-34": [
+    "map",
+    "functional"
+  ],
+  "app-35": [
+    "map",
+    "functional"
+  ],
+  "app-36": [
+    "map",
+    "functional"
+  ],
+  "app-37": [
+    "map",
+    "functional"
+  ],
+  "app-38": [
+    "map",
+    "functional"
+  ],
+  "app-39": [
+    "map",
+    "safety"
+  ],
+  "app-40": [
+    "map",
+    "safety"
+  ],
+  "app-41": [
+    "map",
+    "functional"
+  ],
+  "app-42": [
+    "map",
+    "functional"
+  ],
+  "app-43": [
+    "map",
+    "functional"
+  ],
+  "app-44": [
+    "map",
+    "functional"
+  ],
+  "app-45": [
+    "map",
+    "safety"
+  ],
+  "app-46": [
+    "map",
+    "functional"
+  ],
+  "app-47": [
+    "map",
+    "functional"
+  ],
+  "app-48": [
+    "map",
+    "functional"
+  ],
+  "app-49": [
+    "map",
+    "functional"
+  ],
+  "app-50": [
+    "map",
+    "safety"
+  ],
+  "app-dynamic-01": [
+    "map",
+    "functional"
+  ],
+  "app-dynamic-02": [
+    "map",
+    "safety"
+  ],
+  "app-dynamic-03": [
+    "map",
+    "safety"
+  ],
+  "app-dynamic-04": [
+    "map",
+    "functional"
+  ],
+  "app-dynamic-05": [
+    "map",
+    "functional"
+  ],
+  "app-dynamic-06": [
+    "map",
+    "functional"
+  ],
+  "app-dynamic-07": [
+    "map",
+    "functional"
+  ],
+  "app-dynamic-08": [
+    "map",
+    "functional"
+  ],
+  "app-dynamic-09": [
+    "map",
+    "functional"
+  ],
+  "app-dynamic-10": [
+    "map",
+    "functional"
+  ],
+  "app-dynamic-11": [
+    "map",
+    "functional"
+  ],
+  "app-dynamic-12": [
+    "map",
+    "functional"
+  ],
+  "app-dynamic-13": [
+    "map",
+    "safety"
+  ],
+  "app-dynamic-14": [
+    "map",
+    "safety"
+  ],
+  "area-boundary-failed": [
+    "map",
+    "functional"
+  ],
+  "area-boundary-licence": [
+    "map",
+    "safety"
+  ],
+  "area-boundary-link": [
+    "map",
+    "functional"
+  ],
+  "area-boundary-missing": [
+    "map",
+    "functional"
+  ],
+  "area-boundary-title": [
+    "map",
+    "functional"
+  ],
+  "area-choice": [
+    "map",
+    "functional"
+  ],
+  "area-coordinate-limit": [
+    "map",
+    "safety"
+  ],
+  "area-crime-title": [
+    "map",
+    "functional"
+  ],
+  "area-development": [
+    "map",
+    "safety"
+  ],
+  "area-development-title": [
+    "map",
+    "functional"
+  ],
+  "area-hidden": [
+    "map",
+    "safety"
+  ],
+  "area-inspection-limit": [
+    "map",
+    "safety"
+  ],
+  "area-membership": [
+    "map",
+    "safety"
+  ],
+  "area-mp": [
+    "map",
+    "functional"
+  ],
+  "area-mpp": [
+    "map",
+    "functional"
+  ],
+  "area-neighbourhood-crime": [
+    "map",
+    "safety"
+  ],
+  "area-off": [
+    "map",
+    "functional"
+  ],
+  "area-office-date": [
+    "map",
+    "safety"
+  ],
+  "area-office-link": [
+    "map",
+    "functional"
+  ],
+  "area-office-title": [
+    "map",
+    "functional"
+  ],
+  "area-other-topic": [
+    "map",
+    "safety"
+  ],
+  "area-overlap": [
+    "map",
+    "safety"
+  ],
+  "area-page-intro": [
+    "map",
+    "editorial"
+  ],
+  "area-page-title": [
+    "map",
+    "functional"
+  ],
+  "area-planning-link": [
+    "map",
+    "functional"
+  ],
+  "area-results": [
+    "map",
+    "functional"
+  ],
+  "area-ridings": [
+    "map",
+    "editorial"
+  ],
+  "area-ridings-title": [
+    "map",
+    "functional"
+  ],
+  "area-stale": [
+    "map",
+    "safety"
+  ],
+  "area-switched": [
+    "map",
+    "functional"
+  ],
+  "area-topic-limit": [
+    "map",
+    "safety"
+  ],
+  "area-unavailable": [
+    "map",
+    "safety"
+  ],
+  "area-ward-address": [
+    "map",
+    "functional"
+  ],
+  "area-ward-crime": [
+    "map",
+    "safety"
+  ],
+  "area-your-office-title": [
+    "map",
+    "functional"
+  ],
+  "beach-history-01": [
+    "source-note",
+    "safety"
+  ],
+  "beach-history-message-01": [
+    "source-note",
+    "functional"
+  ],
+  "beach-history-message-02": [
+    "source-note",
+    "safety"
+  ],
+  "beach-history-message-03": [
+    "source-note",
+    "functional"
+  ],
+  "beach-history-message-04": [
+    "source-note",
+    "safety"
+  ],
+  "beach-history-message-05": [
+    "source-note",
+    "functional"
+  ],
+  "beach-history-message-06": [
+    "source-note",
+    "functional"
+  ],
+  "beach-history-message-07": [
+    "source-note",
+    "safety"
+  ],
+  "briefs-intro": [
+    "brief",
+    "safety"
+  ],
+  "briefs-title": [
+    "brief",
+    "editorial"
+  ],
+  "community-core": [
+    "community",
+    "editorial"
+  ],
+  "community-coverage": [
+    "community",
+    "safety"
+  ],
+  "community-editor-dynamic-01": [
+    "community",
+    "functional"
+  ],
+  "community-editor-dynamic-02": [
+    "community",
+    "functional"
+  ],
+  "community-editor-dynamic-03": [
+    "community",
+    "functional"
+  ],
+  "community-editor-dynamic-04": [
+    "community",
+    "functional"
+  ],
+  "community-editor-dynamic-05": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-01": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-02": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-03": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-04": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-05": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-06": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-07": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-08": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-09": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-10": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-11": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-12": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-13": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-14": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-15": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-16": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-17": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-18": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-19": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-20": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-21": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-22": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-23": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-24": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-25": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-26": [
+    "community",
+    "functional"
+  ],
+  "community-editor-message-27": [
+    "community",
+    "safety"
+  ],
+  "community-editor-message-28": [
+    "community",
+    "safety"
+  ],
+  "community-embed-dynamic-01": [
+    "embed",
+    "safety"
+  ],
+  "community-embed-message-01": [
+    "embed",
+    "functional"
+  ],
+  "community-embed-message-02": [
+    "embed",
+    "functional"
+  ],
+  "community-embed-message-03": [
+    "embed",
+    "functional"
+  ],
+  "community-embed-message-04": [
+    "embed",
+    "functional"
+  ],
+  "community-embed-message-05": [
+    "embed",
+    "functional"
+  ],
+  "community-embed-message-06": [
+    "embed",
+    "safety"
+  ],
+  "community-embed-message-07": [
+    "embed",
+    "safety"
+  ],
+  "community-embed-message-08": [
+    "embed",
+    "functional"
+  ],
+  "community-embed-message-09": [
+    "embed",
+    "functional"
+  ],
+  "community-embed-message-10": [
+    "embed",
+    "functional"
+  ],
+  "community-embed-message-11": [
+    "embed",
+    "functional"
+  ],
+  "community-evidence-01": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-02": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-03": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-04": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-05": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-06": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-07": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-08": [
+    "evidence",
+    "safety"
+  ],
+  "community-evidence-dynamic-01": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-dynamic-02": [
+    "evidence",
+    "safety"
+  ],
+  "community-evidence-message-01": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-message-02": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-message-03": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-message-04": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-message-05": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-message-06": [
+    "evidence",
+    "functional"
+  ],
+  "community-evidence-message-07": [
+    "evidence",
+    "functional"
+  ],
+  "community-exports-01": [
+    "export",
+    "functional"
+  ],
+  "community-exports-02": [
+    "export",
+    "functional"
+  ],
+  "community-exports-03": [
+    "export",
+    "functional"
+  ],
+  "community-exports-04": [
+    "export",
+    "functional"
+  ],
+  "community-exports-05": [
+    "export",
+    "functional"
+  ],
+  "community-exports-06": [
+    "export",
+    "functional"
+  ],
+  "community-exports-message-01": [
+    "export",
+    "functional"
+  ],
+  "community-exports-message-02": [
+    "export",
+    "functional"
+  ],
+  "community-intro": [
+    "community",
+    "editorial"
+  ],
+  "community-publishing-message-01": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-02": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-03": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-04": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-05": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-06": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-07": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-08": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-09": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-10": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-11": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-12": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-13": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-14": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-15": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-16": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-17": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-18": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-19": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-20": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-21": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-22": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-23": [
+    "community",
+    "functional"
+  ],
+  "community-publishing-message-24": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-25": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-26": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-27": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-28": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-29": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-30": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-31": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-32": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-33": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-34": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-35": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-36": [
+    "community",
+    "safety"
+  ],
+  "community-publishing-message-37": [
+    "community",
+    "safety"
+  ],
+  "community-title": [
+    "community",
+    "editorial"
+  ],
+  "composition-boundary-other": [
+    "community",
+    "safety"
+  ],
+  "composition-boundary-standard": [
+    "community",
+    "safety"
+  ],
+  "composition-changed": [
+    "community",
+    "safety"
+  ],
+  "composition-embed-all": [
+    "community",
+    "safety"
+  ],
+  "composition-embed-omitted": [
+    "community",
+    "safety"
+  ],
+  "composition-empty": [
+    "community",
+    "safety"
+  ],
+  "composition-event-first_seen": [
+    "community",
+    "safety"
+  ],
+  "composition-event-first_seen-nearby": [
+    "community",
+    "safety"
+  ],
+  "composition-event-new_inspection": [
+    "community",
+    "safety"
+  ],
+  "composition-event-new_inspection-nearby": [
+    "community",
+    "safety"
+  ],
+  "composition-event-status_changed": [
+    "community",
+    "safety"
+  ],
+  "composition-event-status_changed-nearby": [
+    "community",
+    "safety"
+  ],
+  "composition-footer": [
+    "community",
+    "safety"
+  ],
+  "composition-heading": [
+    "community",
+    "functional"
+  ],
+  "composition-limitations": [
+    "community",
+    "safety"
+  ],
+  "composition-period-exclusive": [
+    "community",
+    "safety"
+  ],
+  "composition-period-inclusive": [
+    "community",
+    "safety"
+  ],
+  "composition-snapshot": [
+    "community",
+    "safety"
+  ],
+  "composition-stale": [
+    "community",
+    "safety"
+  ],
+  "directory-intro": [
+    "neighbourhood",
+    "editorial"
+  ],
+  "editor-start": [
+    "community",
+    "functional"
+  ],
+  "embed-intro": [
+    "embed",
+    "editorial"
+  ],
+  "embed-title": [
+    "embed",
+    "editorial"
+  ],
+  "evidence-intro": [
+    "evidence",
+    "safety"
+  ],
+  "evidence-title": [
+    "evidence",
+    "editorial"
+  ],
+  "finding-category": [
+    "source-note",
+    "safety"
+  ],
+  "finding-coverage-many": [
+    "source-note",
+    "safety"
+  ],
+  "finding-coverage-one": [
+    "source-note",
+    "safety"
+  ],
+  "finding-empty": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-09a869a514276b26": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-0ac7faf6108da739": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-0baa6b9f81867a50": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-0bd1898c410b80ab": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-0cccdf046fd4e2e1": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-0d7b4ce606acee55": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-102fa7236342db38": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-166112e70da21005": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-1af905522aa2a33f": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-1eaa43e01db597ad": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-20363154ac4a238b": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-233b3a3934b6fc0d": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-250836a55400e2d2": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-2a5a4167ff430b78": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-2c28027af8513b95": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-2f130e4ac268594b": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-2fa203d49f248dbf": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-2fc75dccd864addb": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-301b33152fa2ae4e": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-311c575d18c08f88": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-376035dc95fc05a1": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-3b80f2b85f700014": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-3be26fcb2bea0ad3": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-3c52d9cf17d280b1": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-3fa8b60a24dfb615": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-40a5c4ce267befac": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-43d5b22e576e6a48": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-453b1dae8806a855": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-4586d24a972736ff": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-4687388b4399098f": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-48e8c6a0de01d3df": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-496fe84fd1aa10a6": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-49cb0402e13be124": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-4ff4bb2e488f0940": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-5072e77f0a9cf64c": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-544b08c684a7ba77": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-549749191cc32f62": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-54a68a5e7db206d7": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-55b1373fe438a221": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-55eb3a9acbeba3d6": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-60f58672d67dea9b": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-664e0ed0696a1822": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-6d4e8868216f592c": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-71163b5e8ba09bb7": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-7155e6e6c00df05f": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-7507fe18e4efce30": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-7e0c1202c0f59cfd": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-7ea38bf0b6710acb": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-81cb5ba276533b89": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-88eeb889ed6c8232": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-890e0fb1977b8965": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-8c997947787a0cee": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-956d3f8b5784c964": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-97881a45d10a023d": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-982425a3e677e82b": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-990b53cbf14a721e": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-99e18a7c0db2be70": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-9ee635f015842859": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-9f0584588789d2f6": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-9ffe7b3753d0a052": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-a0d4bd970117a106": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-a1d039c638d480c8": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-a453f43f952c3107": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-aa1edc84017fdbca": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-b5624e0779fc3f7c": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-bc87fa104f07ca31": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-be850ff3201189da": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-c17bbbf70409c000": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-c484c25ea66993ed": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-c4fbfa3a08039d7c": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-c81e84fecdde1720": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-c99c97cd13926bfb": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-d06c0b1ad56687b4": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-d1a54a8320e2699e": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-dc61761581abe33d": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-e30d88d467d25736": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-e4aa7550e59bc4b0": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-e515079639b0b2ad": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-e6a840398ac06901": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-e929a3db8cf382f3": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-e9be03fc092ac361": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-f1c3821f2efad5f0": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-f47febd1613c1fbb": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-f882cb7b45e3af65": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-f9ae482f2342e759": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-f9eb75190a51c30d": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-fb4d5d15fe5e5507": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-fcf37504d73b4996": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-ff5650b4f3e1d752": [
+    "source-note",
+    "safety"
+  ],
+  "finding-explanation-ffc9683a1081a818": [
+    "source-note",
+    "safety"
+  ],
+  "finding-legacy": [
+    "source-note",
+    "safety"
+  ],
+  "finding-outcome": [
+    "source-note",
+    "safety"
+  ],
+  "finding-source-title": [
+    "source-note",
+    "safety"
+  ],
+  "finding-untranslated": [
+    "source-note",
+    "safety"
+  ],
+  "home-boundaries": [
+    "home",
+    "safety"
+  ],
+  "home-intro": [
+    "home",
+    "editorial"
+  ],
+  "home-title": [
+    "home",
+    "editorial"
+  ],
+  "logic-01": [
+    "source-note",
+    "functional"
+  ],
+  "logic-02": [
+    "source-note",
+    "functional"
+  ],
+  "missing-pdf-tools": [
+    "error",
+    "functional"
+  ],
+  "neighbourhood-intro": [
+    "neighbourhood",
+    "editorial"
+  ],
+  "neighbourhood-page-01": [
+    "neighbourhood",
+    "functional"
+  ],
+  "neighbourhood-page-02": [
+    "neighbourhood",
+    "safety"
+  ],
+  "neighbourhood-page-03": [
+    "neighbourhood",
+    "safety"
+  ],
+  "neighbourhood-page-04": [
+    "neighbourhood",
+    "functional"
+  ],
+  "neighbourhood-page-05": [
+    "neighbourhood",
+    "safety"
+  ],
+  "neighbourhood-page-dynamic-01": [
+    "neighbourhood",
+    "functional"
+  ],
+  "neighbourhood-page-dynamic-02": [
+    "neighbourhood",
+    "functional"
+  ],
+  "neighbourhood-page-dynamic-03": [
+    "neighbourhood",
+    "functional"
+  ],
+  "neighbourhood-page-dynamic-04": [
+    "neighbourhood",
+    "functional"
+  ],
+  "neighbourhood-page-dynamic-05": [
+    "neighbourhood",
+    "functional"
+  ],
+  "neighbourhood-page-dynamic-06": [
+    "neighbourhood",
+    "safety"
+  ],
+  "neighbourhood-page-dynamic-07": [
+    "neighbourhood",
+    "safety"
+  ],
+  "neighbourhood-page-dynamic-08": [
+    "neighbourhood",
+    "safety"
+  ],
+  "saved-added": [
+    "saved-areas",
+    "functional"
+  ],
+  "saved-duplicate": [
+    "saved-areas",
+    "functional"
+  ],
+  "saved-neighbourhoods": [
+    "saved-areas",
+    "functional"
+  ],
+  "saved-remove": [
+    "saved-areas",
+    "functional"
+  ],
+  "saved-remove-label": [
+    "saved-areas",
+    "functional"
+  ],
+  "saved-removed": [
+    "saved-areas",
+    "functional"
+  ],
+  "saved-unreadable": [
+    "saved-areas",
+    "functional"
+  ],
+  "saved-wards": [
+    "saved-areas",
+    "functional"
+  ],
+  "saved-write-failed": [
+    "saved-areas",
+    "functional"
+  ],
+  "selected-calls-01": [
+    "source-note",
+    "functional"
+  ],
+  "selected-calls-02": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-03": [
+    "source-note",
+    "functional"
+  ],
+  "selected-calls-04": [
+    "source-note",
+    "functional"
+  ],
+  "selected-calls-05": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-06": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-07": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-08": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-09": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-10": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-11": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-12": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-13": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-14": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-15": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-16": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-17": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-18": [
+    "source-note",
+    "safety"
+  ],
+  "selected-calls-19": [
+    "source-note",
+    "functional"
+  ],
+  "selected-calls-20": [
+    "source-note",
+    "safety"
+  ],
+  "event-prose-unavailable": [
+    "source-note",
+    "safety"
+  ],
+  "event-nearby-coverage": [
+    "community",
+    "safety"
+  ],
+  "app-audit-show-key": [
+    "map",
+    "functional"
+  ],
+  "app-audit-hide-key": [
+    "map",
+    "functional"
+  ],
+  "app-audit-beach-label": [
+    "map",
+    "functional"
+  ],
+  "app-audit-recent": [
+    "map",
+    "functional"
+  ],
+  "app-audit-loading": [
+    "map",
+    "functional"
+  ],
+  "app-audit-unavailable": [
+    "map",
+    "functional"
+  ],
+  "app-audit-zero": [
+    "map",
+    "functional"
+  ],
+  "app-audit-clear": [
+    "map",
+    "functional"
+  ],
+  "app-audit-fit": [
+    "map",
+    "functional"
+  ],
+  "app-audit-inspection-prefix": [
+    "map",
+    "functional"
+  ],
+  "app-audit-updated": [
+    "map",
+    "functional"
+  ],
+  "app-audit-unknown": [
+    "map",
+    "functional"
+  ],
+  "app-audit-hide-filters": [
+    "map",
+    "functional"
+  ],
+  "app-audit-filters": [
+    "map",
+    "functional"
+  ],
+  "exports-audit-map-limit": [
+    "export",
+    "safety"
+  ],
+  "exports-audit-map-source": [
+    "export",
+    "safety"
+  ],
+  "exports-audit-map-receipt": [
+    "export",
+    "safety"
+  ],
+  "embed-audit-coverage": [
+    "embed",
+    "safety"
+  ],
+  "app-audit-source": [
+    "source-note",
+    "functional"
+  ],
+  "app-audit-meaning": [
+    "source-note",
+    "functional"
+  ],
+  "evidence-audit-download": [
+    "evidence",
+    "functional"
+  ]
+}

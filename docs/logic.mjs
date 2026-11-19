@@ -1,3 +1,4 @@
+import {staticCopy} from './scarb-voice.mjs';
 import {readerDate} from './reader-date.mjs';
 import {areaMatches} from './area-selection.mjs';
 /** Pure presentation/filtering functions; safe to test without a browser. */
@@ -58,11 +59,11 @@ export function displayAddress(value) {
 
 /** The CKAN catalogue timestamp may not specify a time zone; never infer one. */
 export function cityCatalogueRefreshText(value) {
-  if (typeof value !== 'string') return 'The City has not supplied a catalogue refresh time';
+  if (typeof value !== 'string') return staticCopy('logic-01');
   const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})?)?$/);
-  if (!match) return 'The City has not supplied a catalogue refresh time';
+  if (!match) return staticCopy('logic-01');
   const formatted = readerDate(value);
-  if (formatted === 'Date unavailable') return 'The City has not supplied a usable catalogue date';
+  if (formatted === 'Date unavailable') return staticCopy('logic-02');
   // Unknown-zone source dates are displayed as stated, never shifted to Toronto.
   return 'City catalogue date: ' + formatted;
 }

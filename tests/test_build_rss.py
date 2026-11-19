@@ -51,7 +51,7 @@ class BuildRssTests(unittest.TestCase):
             items = channel.findall("item")
             self.assertEqual(root.tag, "rss")
             self.assertEqual(channel.findtext("lastBuildDate"), "Tue, 03 Nov 2026 00:00:00 +0000")
-            self.assertIn("with the City source so you can dig in too", channel.findtext("description"))
+            self.assertIn("with their City sources so you can check the details yourself", channel.findtext("description"))
             self.assertIn("added dates show when I first recorded each change", channel.findtext("description"))
             self.assertIn("The City status may have changed since.", channel.findtext("description"))
             self.assertIn("A place newly added here is not necessarily a new business.", channel.findtext("description"))
@@ -178,6 +178,25 @@ class BuildRssTests(unittest.TestCase):
             with self.assertRaises(FeedError):
                 write_feed(history, output)
             self.assertEqual(output.read_text(encoding="utf-8"), "last good")
+
+    def test_unchanged_rebuild_keeps_last_build_date_and_all_item_identities(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            history = root / "history"
+            history.mkdir()
+            write_archive(history, "2026-11", [make_event()])
+            output = root / "feed.xml"
+            original_time = datetime(2026, 11, 3, tzinfo=timezone.utc)
+            write_feed(history, output, built_at=original_time)
+            original = output.read_bytes()
+            write_feed(history, output)
+            self.assertEqual(output.read_bytes(), original)
+            before = ET.fromstring(original).find("channel/item")
+            write_archive(history, "2026-11", [make_event(), make_event("1" * 20, detected_at="2026-11-04T10:00:00+00:00")])
+            write_feed(history, output)
+            after = ET.fromstring(output.read_bytes()).findall("channel/item")
+            same = next(item for item in after if item.findtext("guid") == before.findtext("guid"))
+            self.assertEqual(ET.tostring(same), ET.tostring(before))
 
     def test_rejects_missing_history(self):
         with tempfile.TemporaryDirectory() as temp:

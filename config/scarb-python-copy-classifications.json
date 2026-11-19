@@ -1,0 +1,226 @@
+{
+  "rss-title": [
+    "rss",
+    "functional"
+  ],
+  "rss-intro": [
+    "rss",
+    "editorial"
+  ],
+  "rss-limits": [
+    "rss",
+    "safety"
+  ],
+  "licence": [
+    "rss",
+    "safety"
+  ],
+  "coordinate-limits": [
+    "rss",
+    "safety"
+  ],
+  "safety": [
+    "rss",
+    "safety"
+  ],
+  "first_seen": [
+    "rss",
+    "functional"
+  ],
+  "status_changed": [
+    "rss",
+    "functional"
+  ],
+  "new_inspection": [
+    "rss",
+    "functional"
+  ],
+  "weekly-intro": [
+    "brief",
+    "editorial"
+  ],
+  "rss-neighbourhood": [
+    "rss",
+    "functional"
+  ],
+  "rss-previous": [
+    "rss",
+    "functional"
+  ],
+  "rss-source": [
+    "rss",
+    "functional"
+  ],
+  "rss-result": [
+    "rss",
+    "functional"
+  ],
+  "rss-inspection": [
+    "rss",
+    "functional"
+  ],
+  "rss-observed": [
+    "rss",
+    "functional"
+  ],
+  "weekly-description": [
+    "brief",
+    "functional"
+  ],
+  "weekly-source-limit": [
+    "brief",
+    "safety"
+  ],
+  "weekly-patterns-title": [
+    "brief",
+    "functional"
+  ],
+  "weekly-timezone": [
+    "brief",
+    "safety"
+  ],
+  "weekly-kind-heading": [
+    "brief",
+    "functional"
+  ],
+  "weekly-area-heading": [
+    "brief",
+    "functional"
+  ],
+  "weekly-safety": [
+    "brief",
+    "safety"
+  ],
+  "weekly-updates-heading": [
+    "brief",
+    "functional"
+  ],
+  "weekly-source-invitation": [
+    "brief",
+    "functional"
+  ],
+  "weekly-source-name": [
+    "brief",
+    "functional"
+  ],
+  "weekly-licence-prefix": [
+    "brief",
+    "functional"
+  ],
+  "weekly-made-title": [
+    "brief",
+    "functional"
+  ],
+  "weekly-disclosure": [
+    "brief",
+    "safety"
+  ],
+  "event-prose-unavailable": [
+    "source-note",
+    "safety"
+  ],
+  "weekly-title": [
+    "brief",
+    "functional"
+  ],
+  "weekly-counts": [
+    "brief",
+    "safety"
+  ],
+  "weekly-exact-time-label": [
+    "brief",
+    "functional"
+  ],
+  "weekly-recorded-at": [
+    "brief",
+    "safety"
+  ],
+  "weekly-source-note": [
+    "brief",
+    "safety"
+  ],
+  "weekly-result-prefix": [
+    "brief",
+    "functional"
+  ],
+  "weekly-previous-prefix": [
+    "brief",
+    "functional"
+  ],
+  "weekly-inspection-prefix": [
+    "brief",
+    "functional"
+  ],
+  "weekly-added-prefix": [
+    "brief",
+    "functional"
+  ],
+  "weekly-match-suffix": [
+    "brief",
+    "functional"
+  ],
+  "weekly-correction": [
+    "brief",
+    "functional"
+  ],
+  "weekly-updated": [
+    "brief",
+    "functional"
+  ],
+  "weekly-preparation": [
+    "brief",
+    "safety"
+  ],
+  "weekly-not-revised": [
+    "brief",
+    "functional"
+  ],
+  "weekly-site-nav": [
+    "brief",
+    "functional"
+  ],
+  "weekly-home": [
+    "brief",
+    "functional"
+  ],
+  "weekly-all-briefs": [
+    "brief",
+    "functional"
+  ],
+  "weekly-feed-link": [
+    "brief",
+    "functional"
+  ],
+  "weekly-tagline": [
+    "brief",
+    "functional"
+  ],
+  "weekly-geography": [
+    "brief",
+    "safety"
+  ],
+  "rss-licence-link": [
+    "source-note",
+    "functional"
+  ],
+  "index-row-title": [
+    "brief",
+    "functional"
+  ],
+  "index-row-meta": [
+    "brief",
+    "functional"
+  ],
+  "index-quiet": [
+    "brief",
+    "safety"
+  ],
+  "index-title": [
+    "brief",
+    "functional"
+  ],
+  "index-choose": [
+    "brief",
+    "functional"
+  ]
+}

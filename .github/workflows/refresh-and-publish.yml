@@ -97,9 +97,13 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Check production smoke-check script syntax
         run: python -m py_compile scripts/verify_live_overlay.py scripts/build_rss.py scripts/build_weekly_brief.py scripts/build_community_publishing.py
+      - name: Check Scarb Voice Gateway and approved public identity
+        run: node scripts/check_scarb_voice.mjs
       - name: Check JavaScript syntax
         run: |
           $files = @(
+            'docs/scarb-voice.mjs',
+            'scripts/check_scarb_voice.mjs',
             'docs/logic.mjs',
             'docs/area-selection.mjs',
             'docs/area-explorer.mjs',
@@ -119,7 +123,7 @@ jobs:
             }
           }
       - name: JavaScript logic tests
-        run: node --test tests/logic.test.mjs tests/view-state.test.mjs tests/inspection-findings.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs tests/boundary.test.mjs tests/area-selection.test.mjs tests/neighbourhood-pages.test.mjs tests/community-publishing.test.mjs
+        run: node --test tests/logic.test.mjs tests/view-state.test.mjs tests/inspection-findings.test.mjs tests/list-focus.test.mjs tests/app-render.test.mjs tests/boundary.test.mjs tests/area-selection.test.mjs tests/neighbourhood-pages.test.mjs tests/community-publishing.test.mjs tests/brand-generated-pages.test.mjs tests/scarb-voice-gateway.test.mjs
       - name: Offline research prototype tests
         run: python .github/scripts/test_research_prototypes.py
       - name: Beach sample view tests
@@ -183,6 +187,8 @@ jobs:
           fi
       - name: Generate source-linked community publication inputs
         run: python scripts/build_community_publishing.py
+      - name: Check Scarb Voice Gateway before publishing public pages
+        run: node scripts/check_scarb_voice.mjs --publishing
       - name: Persist only validated data and recoverable release baseline
         run: |
           git config user.name "Scarb.TO data publisher"
