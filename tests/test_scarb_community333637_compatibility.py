@@ -4,6 +4,7 @@ from scripts import scarb_grouped_context_candidate as c
 class DiagnosticCopyTests(unittest.TestCase):
  def test_exact_three_edits_reconstruct_prior_source(self):
   raw=(h.ROOT/'docs/scarb-voice.mjs').read_bytes()
+  for old,new in h.FINDING22_EDITS:raw=raw.replace(new,old)
   self.assertEqual(hashlib.sha256(raw).hexdigest(),h.COMMUNITY333637_AFTER)
   for old,new in h.COMMUNITY333637_EDITS:
    self.assertEqual(raw.count(new),1);self.assertNotIn(old,raw);raw=raw.replace(new,old)

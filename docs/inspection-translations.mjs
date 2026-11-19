@@ -30,11 +30,11 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "fail to ensure food handler in food premise practices good personal hygiene - sec. 33(1)(b)",
-    "A food handler was not following good personal hygiene practices."
+    "The inspection found a failure to ensure that food handlers practised good personal hygiene."
   ],
   [
     "fail to ensure food handler in food premise protects against contamination by hair - sec.  33(1)(d)",
-    "A food handler was not taking the required precautions to keep hair from contaminating food."
+    "The inspection found a failure to ensure that food handlers protected against contamination by hair."
   ],
   [
     "fail to ensure food handler in food premise wears clean outer garments - sec. 33(1)(c)",

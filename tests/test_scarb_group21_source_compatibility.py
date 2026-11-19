@@ -25,6 +25,7 @@ class BoundedSourceCompatibilityTests(unittest.TestCase):
   files={}
   for path,(_,expected) in h.TRANSITIONS.items():
    raw=(c.ROOT/path).read_bytes()
+   for old,new in h.FINDING22_EDITS:raw=raw.replace(new,old)
    if path=='docs/scarb-voice.mjs':
     for old,new in h.COMMUNITY333637_EDITS:raw=raw.replace(new,old)
    raw=raw.replace(b"Supply a non-empty list of boundary polygons within the publishing tool's polygon limit.",b'Boundary polygons are missing.')
