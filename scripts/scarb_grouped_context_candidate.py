@@ -84,6 +84,38 @@ def neighbourhood_context(packet):
  slot=bound['slot'];v.need(slot in record['slots'],'Neighbourhood slot changed')
  return {'path':'docs/neighbourhood-page.template.html','source_sha256':NEIGHBOURHOOD_SOURCE_PINS,'slot_range':[slot['start'],slot['end']],'attribute':slot['attribute'],'element':bound['element'],'semantic_class':bound['semantic_class'],'locks':packet['locks'],'template_fields':{'NAME':'Public neighbourhood name, HTML-escaped at render time','CODE':'Qualified public neighbourhood code, HTML-escaped','SLUG':'Canonical slug from public name; fixed route generation'},'meaning':'Exact reusable slot for 30 qualified neighbourhood pages, not a claim about a particular private selection. Preserve element, attribute, link destination, template fields and semantic class. Keep inspection date versus current safety, coordinate-calculated boundaries versus source labels, records versus unique businesses, neighbourhood versus ward/address representation, missing feeds versus no events, historical beach samples and exact source/licence attribution distinctions. Share uses canonical URL with supported fallback; print includes loaded records and restores state; show-more expands records, not a new source refresh. Do not turn editorial interest into invented findings or successful operations.'}
 
+HOME_FILTER_SLOTS={
+ 'shell.shell-b04b38d4-014':('<aside class="filters" aria-label="Map filters">','Map filters',True),
+ 'shell.shell-b04b38d4-016':('<button class="mobile-filter-toggle" id="toggle-filters" type="button" aria-expanded="false" aria-controls="filter-options">Filters</button>','Filters',False),
+}
+HOME_FILTER_BEHAVIOR_PINS={
+ 'docs/app.mjs':'f5d46d07bd8a2c670831fa4b60c87930f4af76ee02c8dfc90b002dc8dc007b9d',
+ 'docs/styles.css':'329e6c662ca681c65a9392305403de33ce4249e5d23cb4d62e3ec8f5859ee598',
+}
+
+def home_filter_context(packet,raw,text):
+ from scripts.scarb_static_materialize import discover
+ identity=packet['id'];v.need(identity in HOME_FILTER_SLOTS,'Unsupported home filter label')
+ anchor,label,attribute=HOME_FILTER_SLOTS[identity]
+ options='<div id="filter-options" class="filter-options">'
+ v.need(text.count(anchor)==1 and text.count(options)==1 and text.count('id="toggle-filters"')==1
+        and packet['draft']==label and packet['kind']=='functional' and packet['locks']=={},'Exact homepage filter disclosure changed')
+ for path,digest in HOME_FILTER_BEHAVIOR_PINS.items():
+  v.need(hashlib.sha256((ROOT/path).read_bytes()).hexdigest()==digest,'Homepage filter disclosure behavior changed')
+ shell=json.loads((ROOT/'config/scarb-static-shells.json').read_text(encoding='utf8'))['docs/index.html']
+ v.need(discover(shell['source'])==[{k:value for k,value in s.items() if k not in ('id','fields')} for s in shell['slots']],
+        'Homepage filter source slot inventory changed')
+ slots=[s for s in shell['slots'] if s['id']==identity]
+ v.need(len(slots)==1 and slots[0]['draft']==label and slots[0]['attribute']==attribute
+        and shell['source'].count(anchor)==1 and shell['source'].count(options)==1,'Homepage filter canonical slot changed')
+ slot=slots[0];start=shell['source'].index(anchor)
+ v.need(start<=slot['start']<slot['end']<=start+len(anchor),'Homepage filter slot belongs to different control')
+ meaning=('Accessible name of the homepage filter region, not a button or status.'
+          if attribute else 'Initial collapsed mobile button label; expansion reveals filter options and runtime switches to the separate hide-filters label.')
+ return {'path':'docs/index.html','source_sha256':hashlib.sha256(raw).hexdigest(),'anchor_html':anchor,
+         'behavior_source_sha256':HOME_FILTER_BEHAVIOR_PINS,'slot_role':'region-name' if attribute else 'initial-disclosure-label',
+         'meaning':meaning+' Keep the region and disclosure labels aligned with the existing controls. Do not claim the label applies filters, changes data, or reports success.'}
+
 def current_contexts(packets):
  current=seam.current_canonical_requests();path=ROOT/'docs/index.html';raw=path.read_bytes();text=raw.decode('utf8');contexts={}
  findings=None;selected_calls=None;community_validation=None
@@ -111,6 +143,8 @@ def current_contexts(packets):
    v.need(identity in selected_calls,'Unbound selected-call context');contexts[identity]=selected_calls[identity];continue
   if identity.startswith('static.finding-explanation-'):
    v.need(identity in findings,'Unbound finding context');contexts[identity]=findings[identity];continue
+  if identity in HOME_FILTER_SLOTS:
+   contexts[identity]=home_filter_context(packet,raw,text);continue
   if identity not in ANCHORS:
    contexts[identity]=area_context(packet,raw,text);continue
   destination,label=ANCHORS[identity];anchor=f'<a href="{destination}" class="about-link">{label}</a>'
