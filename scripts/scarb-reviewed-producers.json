@@ -13957,7 +13957,7 @@
       [
         "<module>",
         "literal",
-        "A food handler was not following good personal hygiene practices."
+        "The inspection found a failure to ensure that food handlers practised good personal hygiene."
       ],
       [
         "<module>",
@@ -13967,7 +13967,7 @@
       [
         "<module>",
         "literal",
-        "A food handler was not taking the required precautions to keep hair from contaminating food."
+        "The inspection found a failure to ensure that food handlers protected against contamination by hair."
       ],
       [
         "<module>",
@@ -14577,7 +14577,7 @@
       [
         "<module>",
         "literal",
-        "The testing chemical needed to check the utensil sanitizer was not readily available."
+        "Utensils were sanitized using an agent for which the testing reagent was not readily available."
       ],
       [
         "<module>",
@@ -14617,7 +14617,7 @@
       [
         "<module>",
         "literal",
-        "Food equipment was not designed so it could be readily cleaned."
+        "Food equipment being used was not designed so it could be readily cleaned."
       ],
       [
         "<module>",
@@ -14627,7 +14627,7 @@
       [
         "<module>",
         "literal",
-        "Food equipment was not made of material that could be readily cleaned."
+        "Food equipment being used was not made of material that could be readily cleaned."
       ],
       [
         "<module>",
@@ -14637,7 +14637,7 @@
       [
         "<module>",
         "literal",
-        "Food equipment was not of sound, tight construction."
+        "Food equipment being used was not of sound, tight construction."
       ],
       [
         "<module>",
@@ -14647,7 +14647,7 @@
       [
         "<module>",
         "literal",
-        "Reusable articles were not designed so they could be readily cleaned."
+        "Multi-service articles that were not readily cleanable were being used."
       ],
       [
         "<module>",
@@ -14687,7 +14687,7 @@
       [
         "<module>",
         "literal",
-        "Shelves were not designed so they could be readily cleaned."
+        "Shelves being used were not designed so they could be readily cleaned."
       ],
       [
         "<module>",
@@ -14717,7 +14717,7 @@
       [
         "<module>",
         "literal",
-        "Utensils were not in good repair."
+        "Utensils being used were not in good repair."
       ],
       [
         "<module>",
@@ -14737,7 +14737,7 @@
       [
         "<module>",
         "literal",
-        "Utensils were not designed so they could be readily cleaned."
+        "Utensils being used were not designed so they could be readily cleaned."
       ],
       [
         "<module>",
@@ -14747,7 +14747,7 @@
       [
         "<module>",
         "literal",
-        "Utensils were not made of material that could be readily cleaned."
+        "Utensils being used were not made of material that could be readily cleaned."
       ],
       [
         "<module>",
@@ -14757,7 +14757,7 @@
       [
         "<module>",
         "literal",
-        "Utensils were not of sound, tight construction."
+        "Utensils being used were not of sound, tight construction."
       ],
       [
         "<module>",
