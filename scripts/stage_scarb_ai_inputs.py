@@ -61,7 +61,8 @@ def private_grouped_registry(state, path, expected_sha256):
     roots={}
     for identity,pin in value['runs'].items():
         need(isinstance(identity,str) and re.fullmatch(r"[a-f0-9]{64}",identity) and isinstance(pin,dict)
-             and set(pin)==fields and pin.get('manifest_sha256')==identity and pin.get('expected_purpose')=='production-grouped-review'
+             and set(pin)==fields|({'prompt_version'} if pin.get('prompt_version')=='numeric-citation-2' else set())
+             and pin.get('manifest_sha256')==identity and pin.get('expected_purpose')=='production-grouped-review'
              and pin.get('cost_version')==2 and pin.get('membership_version')==1
              and Path(pin.get('solo_state_root','')).resolve()==state,"Wrong registry identity or provenance scope")
         bindings=pin['packet_bindings']

@@ -137,3 +137,58 @@ class MixedReleaseBridgeTests(unittest.TestCase):
     with self.subTest(kind=kind),patch.object(c.provenance,'verify_grouped_provenance',side_effect=c.v.VoiceError('unverified run')) as verify,self.assertRaises(c.v.VoiceError):
      with stage.private_grouped_registry(state,path,digest):self.fail('bad roster admitted')
     self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
+
+class PrivateRegistryPromptVersionTests(unittest.TestCase):
+ def fixture(self, version):
+  from tests.test_scarb_grouped_publication_versions import PublicationVersionTests
+  from scripts import scarb_shared_cost_proof_candidate as amounts
+  import shutil
+  f=PublicationVersionTests();f.setUp();self.addCleanup(f.doCleanups)
+  if version==3:f.upgrade()
+  old=f.extra['budget.json'];before={'months':{'2026-11':.1},'paid_pilot_usd':.1}
+  reserve=f.pin['reservation_nusd'];after,_=amounts.debit(before,'2026-11',reserve,1000000000,1000000000)
+  members={h:c.v.digest(f.pin['packet_bindings']) for h in f.pin['packet_bindings'].values()}
+  budget=amounts.proof(before,after,'2026-11',reserve,old['actual_usage_cost_nusd'],1000000000,1000000000,f.pin['packet_bindings'],{},members)
+  budget.update({k:old[k] for k in ['funding_sha256','prices_sha256','input_bounds','output_bounds']})
+  f.extra.update({'ledger-before.json':before,'ledger-after.json':after,'membership-before.json':{},'membership-after.json':members,'budget.json':budget})
+  f.pin.update(cost_version=2,expected_purpose='production-grouped-review',month_cap_nusd=1000000000,membership_before_sha256=c.v.digest({}),ledger_before_sha256=c.v.digest(before))
+  f.seal.update(budget_sha256=c.v.digest(budget),ledger_after_sha256=c.v.digest(after),packet_membership_sha256=c.v.digest(members));f.sync()
+  state=f.root/'state';target=state/'grouped-runs'/c.v.digest(f.pin['packet_bindings']);target.mkdir(parents=True)
+  for p in f.root.glob('*.json'):shutil.copyfile(p,target/p.name)
+  f.root=target;f.pin['solo_state_root']=str(state)
+  return f,state
+ def check(self,f,state,pin):
+  from scripts import stage_scarb_ai_inputs as stage
+  import hashlib
+  path=state/'fictional-registry.json';path.write_text(json.dumps({'version':'scarb-private-grouped-registry-1','runs':{pin['manifest_sha256']:pin}}),encoding='utf8')
+  with patch('scripts.scarb_grouped_membership_candidate.snapshot',return_value={}):
+   with stage.private_grouped_registry(state,path,hashlib.sha256(path.read_bytes()).hexdigest()):
+    self.assertEqual(set(c.provenance.TRUSTED_GROUPED_RUNS),{pin['manifest_sha256']})
+  self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
+ def test_exact_legacy_and_version3_pins_with_real_provenance(self):
+  for version in [2,3]:
+   with self.subTest(version=version):
+    f,state=self.fixture(version);self.check(f,state,f.pin)
+ def test_missing_swapped_unknown_extra_versions_fail_closed(self):
+  for version in [2,3]:
+   f,state=self.fixture(version)
+   changes=['missing','legacy','unknown','null','extra','swap'] if version==3 else ['legacy','unknown','null','extra','swap']
+   for change in changes:
+    pin=copy.deepcopy(f.pin)
+    if change=='missing':pin.pop('prompt_version')
+    elif change=='extra':pin['extra']=True
+    else:pin['prompt_version']={'legacy':'legacy-1','unknown':'future-9','null':None,'swap':'numeric-citation-2' if version==2 else 'legacy-1'}[change]
+    with self.subTest(version=version,change=change),self.assertRaises(c.v.VoiceError):self.check(f,state,pin)
+    self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
+ def test_version3_still_checks_immutable_receipts_and_independent_qa(self):
+  from tests.test_scarb_ai_voice import response,REVIEW
+  for defect in ['tamper','adverse']:
+   f,state=self.fixture(3)
+   if defect=='tamper':(f.root/'journal.json').write_text('{}')
+   else:
+    rr=response({p['id']:dict(REVIEW,approve=False,meaning_preserved=False,issues=['Fictional adverse finding']) for p in f.p});rr.update(id='context-reviewer',model=f.models['reviewer'])
+    f.env['review_response']=rr;_,usage=c.v.unpack(rr)
+    f.journal['stages'][1].update(response_sha256=c.v.digest(rr),usage=usage)
+    f.seal.update(envelope_sha256=c.v.digest(f.env),journal_sha256=c.v.digest(f.journal));f.sync()
+   with self.subTest(defect=defect),self.assertRaises(c.v.VoiceError):self.check(f,state,f.pin)
+   self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
