@@ -338,6 +338,31 @@ def weekly_html_context(packet):
          'consumer':'_render_voice_edition/'+formatter+'/'+key,'locks':locks,'must_preserve':list(meaning),
          'meaning':'Future editable weekly HTML copy only. Existing archived editions and RSS identities are unchanged.'}
 
+EDITORIAL_ENTRY_PINS={
+ 'docs/community/index.html':('db2475b3831c70edc8b7fd49ba5e7450c2ddbf8c66183292e62d7390ec02dfac','6690986d1ad8779abe76ecac3db1253882748efcef016be7b47e54f01e2ae1b2'),
+ 'docs/embed/index.html':('072ad58e394b381d3f7ff0f2e6a73c85703f31abe3dbcf747f466a66f27e4ea5','a32967347bacdc06f4266bb6f08209e2ad11f6bb665f29d07c0e28af6468b9e3'),
+}
+EDITORIAL_ENTRY_STATES={
+ 'static.community-title':('e5f7ea55c31fcfd47029c843fecde099a155f39e6fe5a9e9fc4c26a5d725b16e','docs/community/index.html','h1','Invite the reader to make a neighbourhood update from local records, not to publish automatically or claim new findings.'),
+ 'static.community-intro':('0f3f850aebea58410d23f54f53e62da3aefc0ea7f6f38c3b1258de1651bc49c3','docs/community/index.html','p','Invite the reader to choose their part of Scarborough and assemble dated, source-linked findings for print or their website. Evidence remains attached and the user chooses what to share.'),
+ 'static.embed-intro':('40f5c7b5399918193e75dcb074a10de457fb27ac61c18f695de3d56748321931','docs/embed/index.html','p','Introduce records for this area, not a sitewide census or firsthand discovery. Keep the clear positive invitation to explore the source trail, and retain source dates and links.'),
+}
+
+def editorial_entry_context(packet):
+ import re
+ from html import unescape
+ identity=packet['id'];v.need(identity in EDITORIAL_ENTRY_STATES,'Unsupported fixed editorial entry')
+ digest,path,tag,meaning=EDITORIAL_ENTRY_STATES[identity]
+ v.need(v.digest(packet)==digest and packet['kind']=='editorial','Editorial entry packet changed')
+ raw=(ROOT/path).read_bytes();observed=hashlib.sha256(raw).hexdigest()
+ v.need(observed in EDITORIAL_ENTRY_PINS[path],'Editorial entry source changed')
+ key=identity.removeprefix('static.')
+ marks=re.findall(r'<'+tag+r' data-scarb-voice="'+re.escape(key)+r'">([^<>]+)</'+tag+r'>',raw.decode('utf8'))
+ phrase=packet['draft']
+ for field,value in packet['locks'].items():phrase=phrase.replace('{{LOCK:'+field+'}}',value)
+ v.need(len(marks)==1 and unescape(marks[0])==phrase,'Editorial entry consumer changed')
+ return {'path':path,'source_sha256':observed,'consumer':tag+'[data-scarb-voice='+key+']','locks':packet['locks'],'meaning':meaning,'boundary':'This is entry-page prose only; no generated or archived editions, source data, published findings or RSS change.'}
+
 def current_contexts(packets):
  current=seam.current_canonical_requests();path=ROOT/'docs/index.html';raw=path.read_bytes();text=raw.decode('utf8');contexts={}
  findings=None;selected_calls=None;community_validation=None
@@ -365,6 +390,8 @@ def current_contexts(packets):
    v.need(identity in selected_calls,'Unbound selected-call context');contexts[identity]=selected_calls[identity];continue
   if identity.startswith('static.finding-explanation-'):
    v.need(identity in findings,'Unbound finding context');contexts[identity]=findings[identity];continue
+  if identity in EDITORIAL_ENTRY_STATES:
+   contexts[identity]=editorial_entry_context(packet);continue
   if identity in WEEKLY_HTML_STATES:
    contexts[identity]=weekly_html_context(packet);continue
   if identity in NEIGHBOURHOOD_RUNTIME:
