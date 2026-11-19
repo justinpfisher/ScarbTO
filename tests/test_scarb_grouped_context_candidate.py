@@ -72,6 +72,28 @@ class ContextCandidateTests(unittest.TestCase):
    c.home_selected_calls_context(dict(item,locks={}))
   with self.assertRaisesRegex(c.v.VoiceError,'Unsupported homepage selected-calls runtime state'):
    c.home_selected_calls_context(self.current['static.app-04'])
+ def test_home_dinesafe_list_preserves_nine_consumer_specific_propositions(self):
+  expected=('26','28','30','32','43','46','dynamic-08','dynamic-09','dynamic-12')
+  ids=['static.app-'+i for i in expected]
+  a=c.current_contexts([self.current[k] for k in ids])
+  self.assertEqual(set(a),set(ids));self.assertEqual(a[ids[0]]['occurrences'],2)
+  self.assertIn('inspection date may be earlier',' '.join(a[ids[2]]['must_preserve']))
+  self.assertIn('In first person, report what Scarb found',a[ids[2]]['must_preserve'][0])
+  self.assertIn('comparing the records day to day brings changes into view',a[ids[2]]['must_preserve'][0])
+  self.assertIn('pick a familiar name and follow its inspection trail with Scarb',a[ids[3]]['must_preserve'][0])
+  self.assertIn('detected the event',' '.join(a[ids[4]]['must_preserve']))
+  self.assertIn('previous recorded status',' '.join(a[ids[7]]['must_preserve']))
+  self.assertIn('does not fetch',' '.join(a[ids[8]]['must_preserve']))
+  for k in ids:self.assertEqual(a[k]['locks'],self.current[k]['locks'])
+ def test_home_dinesafe_list_refuses_drift_and_other_mode(self):
+  from unittest.mock import patch
+  item=self.current['static.app-43']; read=Path.read_bytes
+  with patch.object(Path,'read_bytes',lambda p:read(p)+(b' ' if p.name=='app.mjs' else b'')):
+   with self.assertRaisesRegex(c.v.VoiceError,'DineSafe list source changed'):c.home_dinesafe_list_context(item)
+  with self.assertRaisesRegex(c.v.VoiceError,'packet or locks changed'):
+   c.home_dinesafe_list_context(dict(item,locks={}))
+  with self.assertRaisesRegex(c.v.VoiceError,'Unsupported homepage DineSafe list consumer'):
+   c.home_dinesafe_list_context(self.current['static.app-39'])
  def test_missing_full_catalogue_rejected(self):
   with self.assertRaisesRegex(c.v.VoiceError,'736'):c.compile_admitted_mixed_draft({'solo_v1':{},'solo_v2':{},'grouped':[]},{})
  def test_unadmitted_run_refused(self):

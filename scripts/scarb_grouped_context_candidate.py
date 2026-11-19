@@ -224,6 +224,39 @@ def home_selected_calls_context(packet):
          'state':state,'locks':locks,'must_preserve':list(meaning),
          'meaning':'Selected call counts only; not mapped incidents, neighbourhood totals or real-time data. Runtime locks remain exact.'}
 
+
+# Food-inspection list copy binds the actual filtered view/card controls, not
+# the separate selected-calls and beach renderers.
+HOME_DINESAFE_LIST_STATES={
+ 'static.app-26':('e0dd33f18fa0a0c21dc4f45fa348308db91c916f79eb1849519fcc3a35fb6254', 'functional', {'VALUE_0': 'Scarb.TO'}, "staticCopy('app-26')", 2, ('Added to Scarb.TO means the record first appeared here, not that the City first inspected or opened the place.', 'Keep the same meaning in the recent-view kicker and first-seen event title.')),
+ 'static.app-28':('65916485de26fa61e433e51dd2d932ca65543603fd3b7d7fc0c7a6e9643a7d77', 'functional', {'VALUE_0': 'DineSafe'}, "staticCopy('app-28')", 1, ('This is a view of places with DineSafe records; it does not classify all Scarborough businesses or their present safety.',)),
+ 'static.app-30':('d8303b6dbe5a515d7bdb53d537f22e00b066efcbae3e2ffe96a64f6c3f3b4ecb', 'editorial', {'VALUE_0': 'DineSafe'}, "staticCopy('app-30')", 1, ('In first person, report what Scarb found in DineSafe: comparing the records day to day brings changes into view.', 'The inspection date may be earlier than the date on which a record first appeared on Scarb.TO.')),
+ 'static.app-32':('544fc4aa0ea78ac72a7ade596273a0cba3856809b2a142fce6538ca457c853bc', 'editorial', {'VALUE_0': 'DineSafe'}, "staticCopy('app-32')", 1, ('Invite the reader to pick a familiar name and follow its inspection trail with Scarb. Show the latest DineSafe records in this snapshot, not a live feed.', 'Readers can follow the original City record link for each place.')),
+ 'static.app-43':('366250cac151c248439c0cf11f627e62fc555006ee6d9724b5a7c316122ddf7c', 'functional', {'LAYOUT_SUFFIX': ' ', 'VALUE_0': 'Scarb.TO'}, "staticCopy('app-43')+publishedAt(entry.event.detected_at)", 1, ('The appended value is when Scarb.TO detected the event, not the City inspection date.', 'Preserve the exact separator and trailing layout space.')),
+ 'static.app-46':('260c35504a5c40b2704a8e855c692c32784c9e1e29b33270d56510e6bb055b03', 'functional', {'VALUE_0': 'DineSafe'}, "staticCopy('app-46')", 1, ('The link opens the City DineSafe record page for the matching source record.', 'Do not relabel it as an establishment home page or verification of current safety.')),
+ 'static.app-dynamic-08':('d06d58876a9a262af43fb7d94d252290348f765f1f2ad68193afd842c244e820', 'functional', {'VALUE_0': '{{VALUE0}}'}, "staticCopy('app-dynamic-08',{ VALUE0:(records.length.toLocaleString('en-CA')) })", 1, ('The supplied total counts the matching records in the current rendered-view scope, not all City records or only the first loaded page.',)),
+ 'static.app-dynamic-09':('527f6d4209a30eca7632f37bb9e1cb8b0c4fa8027bcfb735bdc312fa3b7413f1', 'functional', {'VALUE_0': '{{VALUE0}}'}, "staticCopy('app-dynamic-09',{ VALUE0:(entry.event.previous_status||staticCopy('app-audit-unknown')) })", 1, ('For a status-change event, the supplied outcome is the previous recorded status or the explicit unknown fallback.', 'Do not say it is the new or current City outcome.')),
+ 'static.app-dynamic-12':('63f7939a284f06afe7a6419daad8566c28ccc4b098dce21db5e43e7823a00a2e', 'functional', {'VALUE_0': '{{VALUE0}}'}, "staticCopy('app-dynamic-12',{ VALUE0:(Math.min(80,remaining).toLocaleString('en-CA')) })", 1, ('This button reveals the next displayed count of already matched records, up to the retained page increment.', 'It does not fetch a new snapshot, reset filters, or promise records beyond that count.')),
+}
+
+def home_dinesafe_list_context(packet):
+ identity=packet['id']
+ v.need(identity in HOME_DINESAFE_LIST_STATES,'Unsupported homepage DineSafe list consumer')
+ digest,kind,locks,anchor,count,meaning=HOME_DINESAFE_LIST_STATES[identity]
+ v.need(v.digest(packet)==digest and packet['kind']==kind and packet['locks']==locks,
+        'Homepage DineSafe list packet or locks changed')
+ sources={path:(ROOT/path).read_bytes() for path in HOME_LIST_PINS}
+ v.need(all(hashlib.sha256(raw).hexdigest()==HOME_LIST_PINS[path] for path,raw in sources.items()),
+        'Homepage DineSafe list source changed')
+ app=sources['docs/app.mjs'].decode('utf8')
+ html=sources['docs/index.html'].decode('utf8')
+ v.need(app.count(anchor)==count and app.count("const list=$('record-list');")==1
+        and html.count('id="record-list"')==1 and html.count('id="results-count" aria-live="polite"')==1,
+        'Homepage DineSafe list consumer changed')
+ return {'path':'docs/app.mjs','source_sha256':HOME_LIST_PINS,'consumer':anchor,'occurrences':count,
+         'locks':locks,'must_preserve':list(meaning),
+         'meaning':'Homepage food-inspection list only. Keep official source, inspection, and Scarb.TO observation distinct.'}
+
 def current_contexts(packets):
  current=seam.current_canonical_requests();path=ROOT/'docs/index.html';raw=path.read_bytes();text=raw.decode('utf8');contexts={}
  findings=None;selected_calls=None;community_validation=None
@@ -251,6 +284,8 @@ def current_contexts(packets):
    v.need(identity in selected_calls,'Unbound selected-call context');contexts[identity]=selected_calls[identity];continue
   if identity.startswith('static.finding-explanation-'):
    v.need(identity in findings,'Unbound finding context');contexts[identity]=findings[identity];continue
+  if identity in HOME_DINESAFE_LIST_STATES:
+   contexts[identity]=home_dinesafe_list_context(packet);continue
   if identity in HOME_SELECTED_CALLS_STATES:
    contexts[identity]=home_selected_calls_context(packet);continue
   if identity in HOME_MAP_ACCESSIBILITY:
