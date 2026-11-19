@@ -116,6 +116,42 @@ def home_filter_context(packet,raw,text):
          'behavior_source_sha256':HOME_FILTER_BEHAVIOR_PINS,'slot_role':'region-name' if attribute else 'initial-disclosure-label',
          'meaning':meaning+' Keep the region and disclosure labels aligned with the existing controls. Do not claim the label applies filters, changes data, or reports success.'}
 
+
+# Exact homepage Food inspection results-list states. Context only: no text,
+# source data, renderer, prior context bytes or admission contract changes.
+HOME_LIST_PINS={
+ 'docs/app.mjs':'f5d46d07bd8a2c670831fa4b60c87930f4af76ee02c8dfc90b002dc8dc007b9d',
+ 'docs/index.html':'2ec549f9cb4a193c5bae436545533ab093a4ade4e95526648fc825aaf0391db9',
+}
+HOME_LIST_STATES={
+ 'static.app-38':('93e2f920c20fd987138fb16d671ac76736821b21a555ca011b374aee0400c1cb','functional','Scarb.TO',
+  "dineSafeLoadState==='loading'?staticCopy('app-38'):staticCopy('app-39')",
+  'Loading before a checked inspection snapshot is ready; not a failed request or a zero result.'),
+ 'static.app-39':('bcf79c8af5238a177dbc42cb4ccf44005bdf8258ab79e9f5381860dc78955766','safety','DineSafe',
+  "dineSafeLoadState==='loading'?staticCopy('app-38'):staticCopy('app-39')",
+  'No checked snapshot ready after excluding loading and error. Not a zero-match result or a claim no inspections occurred.'),
+ 'static.app-40':('4e8a8724a624c606bf4b04cdb8ce17980bdca9528c102c53a0153279f06eef32','safety','Scarborough',
+  "list.append(els('p','empty',staticCopy('app-40')));",
+  'Checked snapshot ready, no records match current filters/map view. Existing controls may clear filters or fit the map; never infer no incidents or promise results.'),
+}
+
+def home_list_context(packet):
+ identity=packet['id']; v.need(identity in HOME_LIST_STATES,'Unsupported homepage results-list state')
+ digest,kind,lock,anchor,meaning=HOME_LIST_STATES[identity]
+ v.need(v.digest(packet)==digest and packet['kind']==kind and packet['locks']=={'VALUE_0':lock},
+        'Homepage results-list packet or factual lock changed')
+ sources={path:(ROOT/path).read_bytes() for path in HOME_LIST_PINS}
+ v.need(all(hashlib.sha256(raw).hexdigest()==HOME_LIST_PINS[path] for path,raw in sources.items()),
+        'Homepage results-list producer or accessible region changed')
+ app=sources['docs/app.mjs'].decode('utf8'); html=sources['docs/index.html'].decode('utf8')
+ v.need(app.count(anchor)==1 and app.count("staticCopy('"+identity.removeprefix('static.')+"')")==1
+        and app.count("const list=$('record-list');")==1
+        and html.count('id="record-list"')==1 and html.count('id="results-count" aria-live="polite"')==1,
+        'Homepage results-list consumer changed')
+ return {'path':'docs/app.mjs','source_sha256':HOME_LIST_PINS,'consumer':'renderList/record-list',
+         'trigger':anchor,'locks':packet['locks'],'meaning':meaning+
+         ' Keep separate from the existing polite results count; no claims about safety, source refresh or current events.'}
+
 def current_contexts(packets):
  current=seam.current_canonical_requests();path=ROOT/'docs/index.html';raw=path.read_bytes();text=raw.decode('utf8');contexts={}
  findings=None;selected_calls=None;community_validation=None
@@ -143,6 +179,8 @@ def current_contexts(packets):
    v.need(identity in selected_calls,'Unbound selected-call context');contexts[identity]=selected_calls[identity];continue
   if identity.startswith('static.finding-explanation-'):
    v.need(identity in findings,'Unbound finding context');contexts[identity]=findings[identity];continue
+  if identity in HOME_LIST_STATES:
+   contexts[identity]=home_list_context(packet);continue
   if identity in HOME_FILTER_SLOTS:
    contexts[identity]=home_filter_context(packet,raw,text);continue
   if identity not in ANCHORS:

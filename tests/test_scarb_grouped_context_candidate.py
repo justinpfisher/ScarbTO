@@ -16,6 +16,26 @@ class ContextCandidateTests(unittest.TestCase):
  def test_source_packet_change_rejected(self):
   changed=[dict(self.packets[0],draft='Changed')]
   with self.assertRaises(c.v.VoiceError):c.current_contexts(changed)
+ def test_home_results_list_context_preserves_distinct_runtime_states_and_locks(self):
+  ids=['static.app-38','static.app-39','static.app-40']
+  contexts=c.current_contexts([self.current[i] for i in ids])
+  self.assertEqual(set(c.HOME_LIST_STATES),set(ids))
+  self.assertEqual(set(contexts),set(ids))
+  for identity,lock,meaning in zip(ids,('Scarb.TO','DineSafe','Scarborough'),('Loading before','No checked snapshot','no records match')):
+   self.assertEqual(contexts[identity]['locks'],{'VALUE_0':lock})
+   self.assertEqual(contexts[identity]['consumer'],'renderList/record-list')
+   self.assertIn(meaning,contexts[identity]['meaning'])
+  self.assertEqual(c.current_contexts(self.packets),self.contexts)
+ def test_home_results_list_rejects_source_drift_packet_drift_and_unsupported_state(self):
+  from unittest.mock import patch
+  item=self.current['static.app-38']; read=Path.read_bytes
+  with patch.object(Path,'read_bytes',lambda path:read(path)+(b' ' if path.name=='app.mjs' else b'')):
+   with self.assertRaisesRegex(c.v.VoiceError,'producer or accessible region changed'):
+    c.home_list_context(item)
+  with self.assertRaisesRegex(c.v.VoiceError,'packet or factual lock changed'):
+   c.home_list_context(dict(item,locks={}))
+  with self.assertRaisesRegex(c.v.VoiceError,'Unsupported homepage results-list state'):
+   c.home_list_context(self.current['static.app-41'])
  def test_missing_full_catalogue_rejected(self):
   with self.assertRaisesRegex(c.v.VoiceError,'736'):c.compile_admitted_mixed_draft({'solo_v1':{},'solo_v2':{},'grouped':[]},{})
  def test_unadmitted_run_refused(self):
