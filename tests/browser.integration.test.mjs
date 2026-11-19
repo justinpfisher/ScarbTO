@@ -765,6 +765,9 @@ test('resetting during a selected-call request aborts it and prevents late rende
 
 test('all five verified Namma findings render with original source details', {timeout:60_000}, async t=>{
   const fixture=JSON.parse(await readFile(new URL('./fixtures/namma-findings.json',import.meta.url),'utf8'));
+  const observedTemperature=fixture.rows.find(row=>row.unique_id==="2913ed6f8436882ab0b231bfcf48292c");
+  assert.ok(observedTemperature);
+  observedTemperature.typeDesc="Maintain potentially hazardous foods at internal temperature between 4°C and 60°C -  Sec. 27(1)";
   const first=fixture.rows[0];
   const entry={id:first.estId,name:first.estName,address:first.address,status:first.inspectionStatus,inspection_date:first.inspectionDate,latitude:Number(first.latitude),longitude:Number(first.longitude),neighbourhood:'Scarborough Village',inspection_findings:fixture.rows.map(r=>({row_id:r.unique_id,wording:r.typeDesc,severity:r.severity,category:r.deficiencyDesc,inspection_date:r.inspectionDate,observation:r.observation,outcome:r.OutcomeDesc}))};
   const {server,origin}=await startStaticServer();const browser=await chromium.launch();
@@ -773,6 +776,7 @@ test('all five verified Namma findings render with original source details', {ti
   await view.page.locator('#window').selectOption('all');
   await view.page.getByRole('button',{name:/NAMMA MADURAI/}).click();
   assert.equal(await view.page.locator('.inspection-findings>ul>li').count(),5);
+  assert.match(await view.page.locator('.inspection-findings').textContent(),/held at an internal temperature between 4°C and 60°C/);
   assert.match(await view.page.locator('.inspection-findings').textContent(),/does not establish that contamination/);
   await view.page.getByText('Original findings and source details',{exact:true}).click();
   for(const row of fixture.rows)assert.ok((await view.page.locator('.inspection-originals').textContent()).includes(row.typeDesc));

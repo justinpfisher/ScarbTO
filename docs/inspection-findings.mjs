@@ -4,7 +4,13 @@ import {findingVoice} from './scarb-voice.mjs';
 export const FINDING_SOURCE='https://open.toronto.ca/dataset/dinesafe/';
 export const presentText=value=>typeof value==='string'&&!/^(?:none|null|undefined|n\/a)?$/i.test(value.trim())?value.trim():'';
 export function explainFinding(wording) {
-  return findingVoice('translation',{wording:presentText(wording)});
+  const source=presentText(wording);
+  // City row 2913ed6f8436882ab0b231bfcf48292c adds one space after the dash.
+  // Match the whole phrase; never change the original displayed source wording.
+  const lookup=source.toLocaleLowerCase('en-CA')==='maintain potentially hazardous foods at internal temperature between 4°c and 60°c -  sec. 27(1)'
+    ? 'maintain potentially hazardous foods at internal temperature between 4°c and 60°c - sec. 27(1)'
+    : source;
+  return findingVoice('translation',{wording:lookup});
 }
 export function availableFindings(entry) {
   if(Array.isArray(entry.inspection_findings))return entry.inspection_findings.filter(row=>presentText(row?.wording));

@@ -13548,6 +13548,21 @@
       [
         "explainFinding",
         "literal",
+        "en-CA"
+      ],
+      [
+        "explainFinding",
+        "literal",
+        "maintain potentially hazardous foods at internal temperature between 4°c and 60°c -  sec. 27(1)"
+      ],
+      [
+        "explainFinding",
+        "literal",
+        "maintain potentially hazardous foods at internal temperature between 4°c and 60°c - sec. 27(1)"
+      ],
+      [
+        "explainFinding",
+        "literal",
         "translation"
       ],
       [
@@ -13750,9 +13765,11 @@
       {
         "owner": "explainFinding",
         "kind": "ReturnStatement",
-        "expression_sha256": "6a7ce3700452f7619031ca04042a6dd6b2a9b02b68cac8c141189eaf1e13cc93",
+        "expression_sha256": "bdf50e76c6ff67ea76d19cdb8dd01968c836eadd175bdd210496624393792e0d",
         "bindings": {
-          "presentText": "10078f4eb9488d790d7e5622701e88796ff65cfd032a16afcbd9fa4000e83793"
+          "lookup": "4e9739ab1d764d867a7a2df11612967cae5bebf68edd408d5d3561fa68855520",
+          "presentText": "10078f4eb9488d790d7e5622701e88796ff65cfd032a16afcbd9fa4000e83793",
+          "source": "7cbf636c1701000fc3cb91034412aee9674f6bac65cf7dedb9d364ee637ca294"
         }
       },
       {
@@ -13836,7 +13853,7 @@
       {
         "owner": "<module>",
         "name": "explainFinding",
-        "ast_sha256": "68c4c2b1ed71d965bd49b3148ba943b412548af9de6d9cb9dfcb92aa2dfeb3f0"
+        "ast_sha256": "6068a3ba4bf9788186803e534d5b8135994200663f5bbdaf7b1540820085dedb"
       },
       {
         "owner": "<module>",
