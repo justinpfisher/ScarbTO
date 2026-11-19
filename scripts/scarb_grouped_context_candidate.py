@@ -182,6 +182,48 @@ def home_map_accessibility_context(packet):
          'Each inspection outcome is written out in the matching list.'],
          'meaning':'Food-inspection map accessible name only. Do not describe a different map mode, rely only on colour, or claim marker shapes in fallback.'}
 
+
+# The homepage selected-calls adapter has its own status, source note and list
+# renderers. Do not extend the separate selected-calls source contract.
+HOME_SELECTED_CALLS_PINS={**HOME_LIST_PINS,
+ 'docs/selected-calls.mjs':'3be2e3bebbda9d57ac55cad86f998b14380ae9807ca4b7b421b88a9629232a4a',
+}
+HOME_SELECTED_CALLS_STATES={
+ 'static.app-02':('75d7161ce4c7d75c2f8aeace91d7a0417daa0656ebf25f0de8ff55c3f2f8154f', 'functional', {'VALUE_0': '41', 'VALUE_1': '42', 'VALUE_2': '43'}, 'loading', ('Loading selected TPS call counts for Divisions 41, 42 and 43.', 'No counts have been rendered in this loading state.')),
+ 'static.app-03':('0f3c35259386b8f0922d25755e420d3fc3e41fad60461e5384d05ece2c059a06', 'safety', {'VALUE_0': '41', 'VALUE_1': '42', 'VALUE_2': '43'}, 'source attribution', ('Source is Toronto Police Service selected calls for Divisions 41, 42 and 43.', 'Not all calls, confirmed crimes, or neighbourhood incidents.')),
+ 'static.app-dynamic-02':('dd96df98eb596e7b330d80bb71971ae928c9e0aeda9a1e82e4274050657d30d9', 'safety', {'VALUE_0': '{{VALUE0}}', 'VALUE_1': '{{VALUE1}}'}, 'validated counts status', ('First date is when TPS changed the records; second date is when Scarb.TO checked them.', 'Older counts are removed.')),
+ 'static.app-dynamic-04':('32175f5daa9dc2fc4cf737ebddd263a113a196b78edec8b150bb6d929a14cd88', 'functional', {'VALUE_0': '{{VALUE0}}'}, 'available list total', ('Sum of the selected call counts in the available division rows.', 'Describe selected calls, not confirmed crimes, a neighbourhood count, or all requests.')),
+ 'static.app-dynamic-05':('ce58d6623251af99faa2aa5cb6c4c952b34313e34ce48a852575a7fb57203769', 'functional', {'VALUE_0': '{{VALUE0}}'}, 'available division row label', ('Identify the Toronto Police division for the matching row.', 'Use only the actual division value supplied by the qualified renderer.')),
+}
+HOME_SELECTED_CALLS_ANCHORS={
+ 'static.app-02':"selectedCallsViewState.reason==='loading'?staticCopy('app-02')",
+ 'static.app-03':"sourceDetail(staticCopy('app-audit-source'), staticCopy('app-03'));",
+ 'static.app-dynamic-02':"staticCopy('app-dynamic-02',{ VALUE0:(readerDateTime(selectedCallsViewState.sourceEditedAt)), VALUE1:(readerDateTime(selectedCallsViewState.fetchedAt)) })",
+ 'static.app-dynamic-04':"staticCopy('app-dynamic-04',{ VALUE0:(view.counts.reduce((sum,row)=>sum+row.count,0).toLocaleString('en-CA')) })",
+ 'static.app-dynamic-05':"staticCopy('app-dynamic-05',{ VALUE0:(row.division.slice(1)) })",
+}
+
+def home_selected_calls_context(packet):
+ identity=packet['id']
+ v.need(identity in HOME_SELECTED_CALLS_STATES,'Unsupported homepage selected-calls runtime state')
+ digest,kind,locks,state,meaning=HOME_SELECTED_CALLS_STATES[identity]
+ v.need(v.digest(packet)==digest and packet['kind']==kind and packet['locks']==locks,
+        'Homepage selected-calls packet or locks changed')
+ sources={path:(ROOT/path).read_bytes() for path in HOME_SELECTED_CALLS_PINS}
+ v.need(all(hashlib.sha256(raw).hexdigest()==HOME_SELECTED_CALLS_PINS[path] for path,raw in sources.items()),
+        'Homepage selected-calls producer changed')
+ app=sources['docs/app.mjs'].decode('utf8')
+ html=sources['docs/index.html'].decode('utf8')
+ producer=sources['docs/selected-calls.mjs'].decode('utf8')
+ anchor=HOME_SELECTED_CALLS_ANCHORS[identity]
+ v.need(app.count(anchor)==1 and app.count("if(state.mode==='selected-calls'){")>=2
+        and producer.count('const DIVISIONS = Object.freeze(["D41", "D42", "D43"]);')==1
+        and html.count('id="results-count" aria-live="polite"')==1 and html.count('id="source-provenance-content"')==1,
+        'Homepage selected-calls consumer changed')
+ return {'path':'docs/app.mjs','source_sha256':HOME_SELECTED_CALLS_PINS,'consumer':anchor,
+         'state':state,'locks':locks,'must_preserve':list(meaning),
+         'meaning':'Selected call counts only; not mapped incidents, neighbourhood totals or real-time data. Runtime locks remain exact.'}
+
 def current_contexts(packets):
  current=seam.current_canonical_requests();path=ROOT/'docs/index.html';raw=path.read_bytes();text=raw.decode('utf8');contexts={}
  findings=None;selected_calls=None;community_validation=None
@@ -209,6 +251,8 @@ def current_contexts(packets):
    v.need(identity in selected_calls,'Unbound selected-call context');contexts[identity]=selected_calls[identity];continue
   if identity.startswith('static.finding-explanation-'):
    v.need(identity in findings,'Unbound finding context');contexts[identity]=findings[identity];continue
+  if identity in HOME_SELECTED_CALLS_STATES:
+   contexts[identity]=home_selected_calls_context(packet);continue
   if identity in HOME_MAP_ACCESSIBILITY:
    contexts[identity]=home_map_accessibility_context(packet);continue
   if identity in HOME_LIST_STATES:

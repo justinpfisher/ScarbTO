@@ -53,6 +53,25 @@ class ContextCandidateTests(unittest.TestCase):
    c.home_map_accessibility_context(dict(item,locks={}))
   with self.assertRaisesRegex(c.v.VoiceError,'Unsupported homepage map accessibility state'):
    c.home_map_accessibility_context(self.current['static.app-15'])
+ def test_home_selected_calls_binds_five_distinct_runtime_outputs(self):
+  ids=['static.app-'+k for k in ('02','03','dynamic-02','dynamic-04','dynamic-05')]
+  rows=c.current_contexts([self.current[k] for k in ids])
+  self.assertEqual(set(rows),set(ids));self.assertEqual(len({r['consumer'] for r in rows.values()}),5)
+  for k,meaning in zip(ids,('Loading selected TPS','Toronto Police Service','TPS changed','Sum of the selected','actual division')):
+   self.assertEqual(rows[k]['locks'],self.current[k]['locks'])
+   self.assertIn(meaning,' '.join(rows[k]['must_preserve']))
+  self.assertIn('Older counts are removed.', rows[ids[2]]['must_preserve'])
+  self.assertEqual(c.current_contexts(self.packets),self.contexts)
+ def test_home_selected_calls_rejects_source_drift_and_unrelated_runtime(self):
+  from unittest.mock import patch
+  item=self.current['static.app-02']; read=Path.read_bytes
+  with patch.object(Path,'read_bytes',lambda p:read(p)+(b' ' if p.name=='selected-calls.mjs' else b'')):
+   with self.assertRaisesRegex(c.v.VoiceError,'selected-calls producer changed'):
+    c.home_selected_calls_context(item)
+  with self.assertRaisesRegex(c.v.VoiceError,'packet or locks changed'):
+   c.home_selected_calls_context(dict(item,locks={}))
+  with self.assertRaisesRegex(c.v.VoiceError,'Unsupported homepage selected-calls runtime state'):
+   c.home_selected_calls_context(self.current['static.app-04'])
  def test_missing_full_catalogue_rejected(self):
   with self.assertRaisesRegex(c.v.VoiceError,'736'):c.compile_admitted_mixed_draft({'solo_v1':{},'solo_v2':{},'grouped':[]},{})
  def test_unadmitted_run_refused(self):
