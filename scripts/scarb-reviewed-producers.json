@@ -17524,7 +17524,7 @@
       [
         "<module>",
         "literal",
-        "Boundary polygons are missing."
+        "Supply a non-empty list of boundary polygons within the publishing tool's polygon limit."
       ],
       [
         "<module>",
@@ -17704,7 +17704,7 @@
       [
         "<module>",
         "literal",
-        "Only a reviewed draft can be finalised."
+        "Only a draft can be finalised."
       ],
       [
         "<module>",
@@ -17734,7 +17734,7 @@
       [
         "<module>",
         "literal",
-        "This correction does not preserve its original edition."
+        "This correction exceeds the revision limit or has an invalid original-edition link, revision sequence or explanation."
       ],
       [
         "<module>",
@@ -17744,7 +17744,7 @@
       [
         "<module>",
         "literal",
-        "Create a draft and retain the original before making a correction."
+        "A correction requires a draft, and the original edition must remain below the revision limit."
       ],
       [
         "<module>",
@@ -19924,7 +19924,7 @@
       [
         "<module>",
         "literal",
-        "A food handler was not following good personal hygiene practices."
+        "The inspection found a failure to ensure that food handlers practised good personal hygiene."
       ],
       [
         "<module>",
@@ -19934,7 +19934,7 @@
       [
         "<module>",
         "literal",
-        "A food handler was not taking the required precautions to keep hair from contaminating food."
+        "The inspection found a failure to ensure that food handlers protected against contamination by hair."
       ],
       [
         "<module>",
@@ -20544,7 +20544,7 @@
       [
         "<module>",
         "literal",
-        "The testing chemical needed to check the utensil sanitizer was not readily available."
+        "Utensils were sanitized using an agent for which the testing reagent was not readily available."
       ],
       [
         "<module>",
@@ -20584,7 +20584,7 @@
       [
         "<module>",
         "literal",
-        "Food equipment was not designed so it could be readily cleaned."
+        "Food equipment being used was not designed so it could be readily cleaned."
       ],
       [
         "<module>",
@@ -20594,7 +20594,7 @@
       [
         "<module>",
         "literal",
-        "Food equipment was not made of material that could be readily cleaned."
+        "Food equipment being used was not made of material that could be readily cleaned."
       ],
       [
         "<module>",
@@ -20604,7 +20604,7 @@
       [
         "<module>",
         "literal",
-        "Food equipment was not of sound, tight construction."
+        "Food equipment being used was not of sound, tight construction."
       ],
       [
         "<module>",
@@ -20614,7 +20614,7 @@
       [
         "<module>",
         "literal",
-        "Reusable articles were not designed so they could be readily cleaned."
+        "Multi-service articles that were not readily cleanable were being used."
       ],
       [
         "<module>",
@@ -20654,7 +20654,7 @@
       [
         "<module>",
         "literal",
-        "Shelves were not designed so they could be readily cleaned."
+        "Shelves being used were not designed so they could be readily cleaned."
       ],
       [
         "<module>",
@@ -20684,7 +20684,7 @@
       [
         "<module>",
         "literal",
-        "Utensils were not in good repair."
+        "Utensils being used were not in good repair."
       ],
       [
         "<module>",
@@ -20704,7 +20704,7 @@
       [
         "<module>",
         "literal",
-        "Utensils were not designed so they could be readily cleaned."
+        "Utensils being used were not designed so they could be readily cleaned."
       ],
       [
         "<module>",
@@ -20714,7 +20714,7 @@
       [
         "<module>",
         "literal",
-        "Utensils were not made of material that could be readily cleaned."
+        "Utensils being used were not made of material that could be readily cleaned."
       ],
       [
         "<module>",
@@ -20724,7 +20724,7 @@
       [
         "<module>",
         "literal",
-        "Utensils were not of sound, tight construction."
+        "Utensils being used were not of sound, tight construction."
       ],
       [
         "<module>",
@@ -22740,7 +22740,7 @@
         "expression_sha256": "d6261804d6fd0900aba0f355e9dab7d8c6fb50df5efcaea1320d13b10080d4ed",
         "bindings": {
           "own": "0839c545dda95ad90d0567134eb9a63bf8924de954c52316933f10e5a7384297",
-          "SCARB_COPY": "ac74c3a9fe1e77e445b083ec028dc772c9a69b239c0620d820d847bf134369c5",
+          "SCARB_COPY": "574ad93ad43a86b44e884fa6a9d2bfe0ae0e3dfacfc2bcb2233cd1c921b6741f",
           "template": "f18f5c0d37e351e5f23211809451958b0d0de9d8c46f1b8d2f2e966f84c21aaa"
         }
       },
