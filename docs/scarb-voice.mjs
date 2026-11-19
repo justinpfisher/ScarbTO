@@ -75,7 +75,7 @@ export const SCARB_COPY = Object.freeze({
   "community-publishing-message-12": "Choose a supported physical page size and margin.",
   "community-publishing-message-13": "Choose editorial or whole-panel limits.",
   "community-publishing-message-14": "Choose Polygon or MultiPolygon geometry.",
-  "community-publishing-message-15": "Boundary polygons are missing.",
+  "community-publishing-message-15": "Supply a non-empty list of boundary polygons within the publishing tool's polygon limit.",
   "community-publishing-message-16": "This boundary is too large for the publishing tool.",
   "community-publishing-message-17": "Boundary rings are missing.",
   "community-publishing-message-18": "Boundary rings must be closed.",

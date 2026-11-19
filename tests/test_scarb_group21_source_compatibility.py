@@ -25,6 +25,7 @@ class BoundedSourceCompatibilityTests(unittest.TestCase):
   files={}
   for path,(_,expected) in h.TRANSITIONS.items():
    raw=(c.ROOT/path).read_bytes()
+   raw=raw.replace(b"Supply a non-empty list of boundary polygons within the publishing tool's polygon limit.",b'Boundary polygons are missing.')
    for current,prior in replacements.items():
     self.assertEqual(raw.count(current.encode()),1)
     raw=raw.replace(current.encode(),prior.encode())
