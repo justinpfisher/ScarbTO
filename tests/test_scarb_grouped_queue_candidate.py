@@ -35,3 +35,7 @@ class QueueTests(unittest.TestCase):
   import inspect
   source=inspect.getsource(q)
   for token in ('subprocess','requests.post','write_text','write_bytes','open('):self.assertNotIn(token,source)
+
+ def test_singleton_deferred_not_solo_dispatched(self):
+  x=self.fixture();g=x['groups'][0];g['packet_bindings']=dict(list(g['packet_bindings'].items())[:1]);g['scope_sha256']=q.v.digest(g['packet_bindings'])
+  with self.assertRaises(ValueError):q.validate(x,q.v.digest(x))

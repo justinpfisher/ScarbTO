@@ -45,9 +45,26 @@ class ProtectedCallerTests(unittest.TestCase):
    state=Path(d);prepared=self.prepare(state);mp,env,transport,now=prepared
    manifest=json.loads(mp.read_text());self.assertIn('scarb_group21_source_compatibility',manifest['code_sha256'])
    root=Path(code);(root/'scripts').mkdir()
-   names=[n+'.py' for n in w.SOURCES]+['scarb_finding_contexts.mjs','scarb_selected_calls_contexts.mjs','launch_scarb_grouped_candidate.py','run-scarb-grouped-candidate.ps1']
+   names=[n+'.py' for n in w.SOURCES]+['scarb_community_validation_contexts.mjs','scarb_finding_contexts.mjs','scarb_selected_calls_contexts.mjs','launch_scarb_grouped_candidate.py','run-scarb-grouped-candidate.ps1']
    for name in names:shutil.copyfile(w.ROOT/'scripts'/name,root/'scripts'/name)
    helper=root/'scripts/scarb_group21_source_compatibility.py';helper.write_bytes(helper.read_bytes()+b'\n# altered fixture only\n')
+   before={p.name:p.read_bytes() for p in state.iterdir() if p.is_file()}
+   with patch.object(w,'ROOT',root),patch.object(w,'exact_prepaid_funding') as funding,patch.object(w.emitter.c,'current_contexts') as context,patch.object(w.emitter,'_run_sequence') as dispatch:
+    with self.assertRaisesRegex(w.v.VoiceError,'Imported code changed'):
+     w._invoke(mp,w.sha(mp),state=state,expected_state=state,env=env,transport=transport,now=now,completed_at=None,preflight=True)
+    funding.assert_not_called();context.assert_not_called();dispatch.assert_not_called()
+   self.assertEqual(before,{p.name:p.read_bytes() for p in state.iterdir() if p.is_file()})
+   self.assertEqual(transport.calls,[]);self.assertFalse((state/'grouped-runs').exists())
+
+ def test_community_producer_bytes_pinned_before_preflight_side_effects(self):
+  import shutil
+  with tempfile.TemporaryDirectory() as d,tempfile.TemporaryDirectory() as code:
+   state=Path(d);prepared=self.prepare(state);mp,env,transport,now=prepared
+   manifest=json.loads(mp.read_text());self.assertIn('community_validation_context_producer',manifest['code_sha256'])
+   root=Path(code);(root/'scripts').mkdir()
+   names=[n+'.py' for n in w.SOURCES]+['scarb_community_validation_contexts.mjs','scarb_finding_contexts.mjs','scarb_selected_calls_contexts.mjs','launch_scarb_grouped_candidate.py','run-scarb-grouped-candidate.ps1']
+   for name in names:shutil.copyfile(w.ROOT/'scripts'/name,root/'scripts'/name)
+   helper=root/'scripts/scarb_community_validation_contexts.mjs';helper.write_bytes(helper.read_bytes()+b'\n# altered fixture only\n')
    before={p.name:p.read_bytes() for p in state.iterdir() if p.is_file()}
    with patch.object(w,'ROOT',root),patch.object(w,'exact_prepaid_funding') as funding,patch.object(w.emitter.c,'current_contexts') as context,patch.object(w.emitter,'_run_sequence') as dispatch:
     with self.assertRaisesRegex(w.v.VoiceError,'Imported code changed'):

@@ -11,7 +11,7 @@ def validate(queue, approved_digest):
  seen=set();scopes=set();total=0;prior=None
  for g in queue['groups']:
   v.need(set(g)=={'scope_sha256','packet_bindings','checkpoint_sha256','reservation_nusd','rounded_debit_nusd','before_cumulative_nusd','cumulative_nusd'},'Queue scope fields')
-  b=g['packet_bindings'];v.need(isinstance(b,dict) and 1<=len(b)<=3 and not seen.intersection(b),'Queue packet membership')
+  b=g['packet_bindings'];v.need(isinstance(b,dict) and 2<=len(b)<=3 and not seen.intersection(b),'Queue packet membership')
   v.need(g['scope_sha256']==v.digest(b) and g['scope_sha256'] not in scopes,'Queue scope binding')
   for name in ('checkpoint_sha256',):v.need(isinstance(g[name],str) and len(g[name])==64 and all(c in '0123456789abcdef' for c in g[name]),'Checkpoint binding')
   for name in ('reservation_nusd','rounded_debit_nusd','before_cumulative_nusd','cumulative_nusd'):v.need(type(g[name]) is int and g[name]>=0,'Queue accounting type')

@@ -53,15 +53,20 @@ def area_context(packet,raw,text):
 
 def current_contexts(packets):
  current=seam.current_canonical_requests();path=ROOT/'docs/index.html';raw=path.read_bytes();text=raw.decode('utf8');contexts={}
- findings=None;selected_calls=None
+ findings=None;selected_calls=None;community_validation=None
  if any(p['id'].startswith('static.finding-explanation-') for p in packets):
   import subprocess
   findings=json.loads(subprocess.run(['node',str(ROOT/'scripts/scarb_finding_contexts.mjs')],cwd=ROOT,check=True,capture_output=True,text=True,encoding='utf8').stdout)
  if any(p['id'].startswith('static.selected-calls-') for p in packets):
   import subprocess
   selected_calls=json.loads(subprocess.run(['node',str(ROOT/'scripts/scarb_selected_calls_contexts.mjs')],cwd=ROOT,check=True,capture_output=True,text=True,encoding='utf8').stdout)
+ if any(p['id'].startswith('static.community-publishing-message-') for p in packets):
+  import subprocess
+  community_validation=json.loads(subprocess.run(['node',str(ROOT/'scripts/scarb_community_validation_contexts.mjs')],cwd=ROOT,check=True,capture_output=True,text=True,encoding='utf8').stdout)
  for packet in packets:
   identity=packet['id'];v.need(current.get(identity)==packet,'Unsupported or stale context producer')
+  if identity.startswith('static.community-publishing-message-'):
+   v.need(identity in community_validation,'Unsupported Community Publishing validation key');contexts[identity]=community_validation[identity];continue
   if identity.startswith('python.rss-'):
    from scripts.scarb_rss_contexts import contexts as rss_contexts
    contexts.update(rss_contexts([packet]));continue
