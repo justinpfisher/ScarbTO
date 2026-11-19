@@ -37,7 +37,15 @@ def _verify_pinned(root,pin,current_packets):
         v.need(all('prompt_version' not in x for x in (env,pin,journal)),'Legacy prompt version substitution')
     fields={'version','packets','models','author_request','review_request','author_response','review_response'}
     v.need(set(env)==fields|({'source_context'} if contextual else set())|({'prompt_version'} if versioned else set()) and env['version'] in {'scarb-grouped-run-envelope-1','scarb-grouped-run-envelope-2','scarb-grouped-run-envelope-3'},'Not a production grouped envelope')
+    # Serialized registry maps have no semantic sequence. Recover only the exact
+    # sealed envelope order after manifest and all record bytes have been verified.
     expected={p['id']:v.digest(p) for p in current_packets}
+    by_id={p['id']:p for p in current_packets}
+    sealed=env.get('packets')
+    v.need(isinstance(sealed,list) and all(isinstance(p,dict) and isinstance(p.get('id'),str) for p in sealed),'Invalid sealed packet order')
+    order=[p['id'] for p in sealed]
+    v.need(len(order)==len(set(order))==len(current_packets)==len(by_id) and set(order)==set(by_id),'Sealed packet membership differs')
+    current_packets=[by_id[i] for i in order]
     v.need(len(expected)==len(current_packets) and expected==pin['packet_bindings'] and env['packets']==current_packets
            and env['models']==pin['requested_models'],'Current packet/model eligibility differs')
     ar=env['author_response'];rr=env['review_response']
