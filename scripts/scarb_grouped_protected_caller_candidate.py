@@ -36,7 +36,13 @@ def _invoke(manifest_path,approved_manifest_sha256,*,state,expected_state,env,tr
  models={'author':config['author_model'],'reviewer':config['reviewer_model']};v.need(models==manifest['models'] and models=={'author':'gpt-6-luna','reviewer':'gpt-6.1-terra'},'Model scope changed')
  # Common validation is shared; this pinned route validates its exact cumulative
  # funding cap below rather than the generic initial-pilot cap. No fallback.
- v.check_config_common(config)
+ if versioned:
+  v._check_config_fields(config)
+  # Only the exact v2 grouped pilot may use the new scope. The exact funding
+  # binding below still checks balance, age, project, and manifest/packet pins.
+  v.need(0<=amounts.amount(config['month_cap_usd'])<=10_000_000_000,'Exact grouped monthly cap exceeds US$10')
+ else:
+  v.check_config_common(config)
  # Only a sentinel, supplied by test, may reach funding_check. Never read os.env.
  v.need(production or env.get('OPENAI_API_KEY')=='fixture-not-a-key','No real credentials accepted by offline caller')
  check_env={'SCARB_AI_ENABLE':'1','OPENAI_API_KEY':'fixture-not-a-key','OPENAI_ORG_ID':ORG,'OPENAI_PROJECT_ID':PROJECT} if production else env

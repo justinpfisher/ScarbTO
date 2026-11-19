@@ -234,6 +234,52 @@ class ScopedCapRegressionTests(unittest.TestCase):
      loader.assert_not_called();api.assert_not_called()
     self.assertEqual((state/'usage.json').read_bytes(),before);self.assertFalse((state/'grouped-runs').exists())
 
+class RaisedGroupedCapTests(unittest.TestCase):
+ def attempt(self,state,*,month_cap,pilot_cap,manifest_cap,balance,version=2,reserve=60000000):
+  mp,env,transport,now=ProtectedCallerTests().prepare(state)
+  cp=state/'fixture-config.json'
+  config=json.loads(cp.read_text())
+  config['month_cap_usd']=month_cap
+  config['funding'].update(pilot_cap_usd=pilot_cap,remaining_usd=balance)
+  w.emitter.save(state,cp.name,config)
+  manifest=json.loads(mp.read_text())
+  manifest.update(version=f'scarb-grouped-wrapper-production-{version}',config_sha256=w.sha(cp),
+                  pilot_cap_nusd=w.amounts.amount(manifest_cap),maximum_reservation_nusd=reserve)
+  if version==2:manifest['prompt_version']=w.emitter.c.contract.CITATION_PROMPT
+  w.emitter.save(state,mp.name,manifest)
+  before={p.name:p.read_bytes() for p in state.iterdir()}
+  # Substitute only the private exact-manifest enablement. Exercise the real
+  # production preflight checks; no credential lookup, dispatch or ledger edit.
+  with patch.object(w,'launcher_preflight'),patch.object(w,'ProtectedResponses') as api:
+   try:
+    return w._invoke(mp,w.sha(mp),state=state,expected_state=state,env=env,transport=None,
+                     now=now,completed_at=None,production=True,preflight=True),config
+   finally:
+    api.assert_not_called()
+    self.assertEqual({p.name:p.read_bytes() for p in state.iterdir()},before)
+
+ def test_raised_v2_scope_and_unchanged_generic_cap(self):
+  with tempfile.TemporaryDirectory() as d:
+   result,config=self.attempt(Path(d),month_cap=10,pilot_cap=10,manifest_cap=10,balance=15)
+   self.assertTrue(result['ready_for_protected_lookup'])
+   with self.assertRaisesRegex(w.v.VoiceError,r'US\$5'):w.v.check_config(config)
+   config['funding']={'kind':'promotional_api_credits'}
+   with self.assertRaisesRegex(w.v.VoiceError,r'US\$5'):w.v.check_config(config)
+
+ def test_raised_scope_still_refuses_excess_legacy_mismatch_or_inadequate_buffer(self):
+  cases=[
+   (dict(month_cap=10.000001),r'US\$10'),
+   (dict(version=1),r'US\$5'),
+   (dict(manifest_cap=9.99),'Exact cumulative prepaid cap mismatch'),
+   (dict(pilot_cap=10.01,manifest_cap=10.01),'Exact cumulative prepaid cap mismatch'),
+   (dict(balance=14.99),'Prepaid buffer insufficient'),
+   (dict(reserve=60000001),'Exact reservation exceeded'),
+  ]
+  for overrides,error in cases:
+   with self.subTest(overrides=overrides),tempfile.TemporaryDirectory() as d:
+    args=dict(month_cap=10,pilot_cap=10,manifest_cap=10,balance=15)
+    with self.assertRaisesRegex(w.v.VoiceError,error):self.attempt(Path(d),**(args|overrides))
+
 class Utf8PreflightTests(unittest.TestCase):
  def test_real_finding_scope_strict_utf8_under_cp1252_default(self):
   from unittest.mock import Mock
