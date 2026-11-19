@@ -257,6 +257,40 @@ def home_dinesafe_list_context(packet):
          'locks':locks,'must_preserve':list(meaning),
          'meaning':'Homepage food-inspection list only. Keep official source, inspection, and Scarb.TO observation distinct.'}
 
+
+# Qualified shared runtime for generated neighbourhood pages, separate from
+# static template slots; context only, not a new source or publication route.
+NEIGHBOURHOOD_RUNTIME_PINS={k:NEIGHBOURHOOD_SOURCE_PINS[k] for k in (
+ 'docs/neighbourhood-page.mjs','docs/neighbourhood-page.template.html','docs/area-selection.mjs')}
+NEIGHBOURHOOD_RUNTIME={
+ 'static.neighbourhood-page-dynamic-01':('c2d848c90ff1254ba015242dd3a3e315a8a3ca220d382c878ae56ca944829ea7', 'functional', {'VALUE_0': '{{VALUE0}}', 'VALUE_1': '{{VALUE1}}'}, "staticCopy('neighbourhood-page-dynamic-01',", 'renderWards', ('Give the actual ward code and name, with an invitation to find the City councillor.', 'Ward overlaps are not an address or electoral assignment.')),
+ 'static.neighbourhood-page-dynamic-02':('97cdf0c1874a4e1abcb4f41eddae0d1f6515c0f6bfa04e2cd9803332592de5eb', 'functional', {'VALUE_0': '{{VALUE0}}'}, "staticCopy('neighbourhood-page-dynamic-02',", 'renderRecords', ('The supplied date is the City inspection date for this matched record.',)),
+ 'static.neighbourhood-page-dynamic-03':('03e641ac6e129d480004e934edcea21f54e4265befc7d029e822e112c8c17c39', 'functional', {'VALUE_0': '{{VALUE0}}', 'VALUE_1': '{{VALUE1}}', 'VALUE_2': '{{VALUE2}}'}, "staticCopy('neighbourhood-page-dynamic-03',", 'renderRecords', ('Give the matching related City record ID, its recorded result or explicit missing-result text, and its inspection date.', 'It is a separate source record, not proof of the selected establishment’s present outcome.')),
+ 'static.neighbourhood-page-dynamic-04':('7c66e61b3cbdbf0bbf67afa3c4e1b6accea8e20c6bc13fed9dff5f47248b215e', 'functional', {'VALUE_0': '{{VALUE0}}', 'VALUE_1': '{{VALUE1}}', 'VALUE_2': 'DineSafe'}, "staticCopy('neighbourhood-page-dynamic-04',", 'renderRecords', ('First count is currently shown, second is the total matched DineSafe source records.', 'These records were matched to this neighbourhood, not all local businesses.')),
+ 'static.neighbourhood-page-dynamic-05':('716684a8280a6161680bf2ce2b068d25de77aecf75276187a1baff5fe1f5eb71', 'functional', {'VALUE_0': '{{VALUE0}}', 'VALUE_1': 'Scarb.TO'}, "staticCopy('neighbourhood-page-dynamic-05',", 'loadPage', ('The title pairs the exact qualified public neighbourhood name and Scarb.TO.', 'It identifies the page, not findings or data freshness.')),
+ 'static.neighbourhood-page-dynamic-06':('d0b25afed4e583e729151d36d7a1aab2b90cb59264a3d58d331eb7a9746e4081', 'safety', {'VALUE_0': '{{VALUE0}}'}, "staticCopy('neighbourhood-page-dynamic-06',", 'loadPage', ('Warn that results may be out of date, state when they were last checked, and direct the reader to the City record for anything newer.',)),
+ 'static.neighbourhood-page-dynamic-07':('c56416652e13ab91d873db15b21e5b58caaa485d96816f87733e2e5338bdb414', 'safety', {'VALUE_0': '{{VALUE0}}'}, "staticCopy('neighbourhood-page-dynamic-07',", 'loadPage', ('State when these food inspection records were checked and that they are not live results.',)),
+ 'static.neighbourhood-page-dynamic-08':('c5427331e72b5a4f127abed1eee54dd41b14646abdd696937be342e36a17d54b', 'safety', {'VALUE_0': 'Scarb.TO', 'VALUE_1': '{{VALUE0}}', 'VALUE_2': '{{VALUE1}}'}, "staticCopy('neighbourhood-page-dynamic-08',", 'loadPage', ('Separate the Scarb.TO successful check from the City catalogue timestamp, whose timezone is unspecified.', 'Both are distinct from an inspection date and do not establish current conditions.')),
+}
+
+def neighbourhood_runtime_context(packet):
+ identity=packet['id']
+ v.need(identity in NEIGHBOURHOOD_RUNTIME,'Unsupported neighbourhood runtime consumer')
+ digest,kind,locks,anchor,consumer,meaning=NEIGHBOURHOOD_RUNTIME[identity]
+ v.need(v.digest(packet)==digest and packet['kind']==kind and packet['locks']==locks,
+        'Neighbourhood runtime packet or locks changed')
+ sources={path:(ROOT/path).read_bytes() for path in NEIGHBOURHOOD_RUNTIME_PINS}
+ v.need(all(hashlib.sha256(raw).hexdigest()==NEIGHBOURHOOD_RUNTIME_PINS[path] for path,raw in sources.items()),
+        'Neighbourhood runtime source changed')
+ app=sources['docs/neighbourhood-page.mjs'].decode('utf8')
+ html=sources['docs/neighbourhood-page.template.html'].decode('utf8')
+ v.need(app.count(anchor)==1 and app.count('function '+consumer+'(')==1
+        and html.count('id="feed-status"')==1 and html.count('id="source-provenance"')==1,
+        'Neighbourhood runtime consumer changed')
+ return {'path':'docs/neighbourhood-page.mjs','source_sha256':NEIGHBOURHOOD_RUNTIME_PINS,'consumer':consumer,
+         'anchor':anchor,'locks':locks,'must_preserve':list(meaning),
+         'meaning':'Generated neighbourhood pages only. Keep existing runtime values, official attribution and source limits.'}
+
 def current_contexts(packets):
  current=seam.current_canonical_requests();path=ROOT/'docs/index.html';raw=path.read_bytes();text=raw.decode('utf8');contexts={}
  findings=None;selected_calls=None;community_validation=None
@@ -284,6 +318,8 @@ def current_contexts(packets):
    v.need(identity in selected_calls,'Unbound selected-call context');contexts[identity]=selected_calls[identity];continue
   if identity.startswith('static.finding-explanation-'):
    v.need(identity in findings,'Unbound finding context');contexts[identity]=findings[identity];continue
+  if identity in NEIGHBOURHOOD_RUNTIME:
+   contexts[identity]=neighbourhood_runtime_context(packet);continue
   if identity in HOME_DINESAFE_LIST_STATES:
    contexts[identity]=home_dinesafe_list_context(packet);continue
   if identity in HOME_SELECTED_CALLS_STATES:

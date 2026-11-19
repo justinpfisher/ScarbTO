@@ -94,6 +94,23 @@ class ContextCandidateTests(unittest.TestCase):
    c.home_dinesafe_list_context(dict(item,locks={}))
   with self.assertRaisesRegex(c.v.VoiceError,'Unsupported homepage DineSafe list consumer'):
    c.home_dinesafe_list_context(self.current['static.app-39'])
+ def test_neighbourhood_runtime_keeps_all_eight_exact_roles_and_lock_values(self):
+  ids=[f'static.neighbourhood-page-dynamic-{i:02}' for i in range(1,9)]
+  a=c.current_contexts([self.current[k] for k in ids])
+  self.assertEqual(set(a),set(ids))
+  for k in ids:self.assertEqual(a[k]['locks'],self.current[k]['locks'])
+  self.assertEqual([a[k]['consumer'] for k in ids],['renderWards']+['renderRecords']*3+['loadPage']*4)
+  for idx,anchor in ((0,'electoral assignment'),(1,'City inspection date'),(3,'total matched DineSafe'),(5,'City record for anything newer'),(6,'not live results'),(7,'timezone is unspecified')):
+   self.assertIn(anchor,' '.join(a[ids[idx]]['must_preserve']))
+ def test_neighbourhood_runtime_rejects_drift_and_nonruntime_packet(self):
+  from unittest.mock import patch
+  k='static.neighbourhood-page-dynamic-08'; item=self.current[k];read=Path.read_bytes
+  with patch.object(Path,'read_bytes',lambda p:read(p)+(b' ' if p.name=='neighbourhood-page.mjs' else b'')):
+   with self.assertRaisesRegex(c.v.VoiceError,'Neighbourhood runtime source changed'):c.neighbourhood_runtime_context(item)
+  with self.assertRaisesRegex(c.v.VoiceError,'packet or locks changed'):
+   c.neighbourhood_runtime_context(dict(item,locks={}))
+  with self.assertRaisesRegex(c.v.VoiceError,'Unsupported neighbourhood runtime consumer'):
+   c.neighbourhood_runtime_context(self.current['static.neighbourhood-page-03'])
  def test_missing_full_catalogue_rejected(self):
   with self.assertRaisesRegex(c.v.VoiceError,'736'):c.compile_admitted_mixed_draft({'solo_v1':{},'solo_v2':{},'grouped':[]},{})
  def test_unadmitted_run_refused(self):
