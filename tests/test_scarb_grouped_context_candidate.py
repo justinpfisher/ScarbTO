@@ -36,6 +36,23 @@ class ContextCandidateTests(unittest.TestCase):
    c.home_list_context(dict(item,locks={}))
   with self.assertRaisesRegex(c.v.VoiceError,'Unsupported homepage results-list state'):
    c.home_list_context(self.current['static.app-41'])
+ def test_home_accessible_map_requires_positive_propositions_in_both_marker_states(self):
+  ids=['static.app-16','static.app-17']; contexts=c.current_contexts([self.current[k] for k in ids])
+  for k,expected in zip(ids,('shapes and letters','Marker letters')):
+   a=contexts[k];self.assertEqual(a['locks'],{'VALUE_0':'DineSafe'})
+   self.assertIn('DineSafe records',a['must_preserve'][0]);self.assertIn(expected,a['must_preserve'][1])
+   self.assertIn('alongside colour',a['must_preserve'][1]);self.assertIn('matching list',a['must_preserve'][2])
+  self.assertNotIn('shapes',contexts[ids[1]]['must_preserve'][1])
+ def test_home_accessible_map_refuses_other_mode_or_drift(self):
+  from unittest.mock import patch
+  item=self.current['static.app-16']; read=Path.read_bytes
+  with patch.object(Path,'read_bytes',lambda p:read(p)+(b' ' if p.name=='index.html' else b'')):
+   with self.assertRaisesRegex(c.v.VoiceError,'accessibility source changed'):
+    c.home_map_accessibility_context(item)
+  with self.assertRaisesRegex(c.v.VoiceError,'factual lock changed'):
+   c.home_map_accessibility_context(dict(item,locks={}))
+  with self.assertRaisesRegex(c.v.VoiceError,'Unsupported homepage map accessibility state'):
+   c.home_map_accessibility_context(self.current['static.app-15'])
  def test_missing_full_catalogue_rejected(self):
   with self.assertRaisesRegex(c.v.VoiceError,'736'):c.compile_admitted_mixed_draft({'solo_v1':{},'solo_v2':{},'grouped':[]},{})
  def test_unadmitted_run_refused(self):

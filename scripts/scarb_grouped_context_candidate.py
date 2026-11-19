@@ -152,6 +152,36 @@ def home_list_context(packet):
          'trigger':anchor,'locks':packet['locks'],'meaning':meaning+
          ' Keep separate from the existing polite results count; no claims about safety, source refresh or current events.'}
 
+
+# Accessible food-inspection map only; other map modes have distinct producers.
+HOME_MAP_ACCESSIBILITY={
+ 'static.app-16':('d65a238769d37ac33b13955459d58adaa466e56c3fd5cd390fdb61d9b81554c6',True),
+ 'static.app-17':('9c8573ec78b1d1f32e5bacdf9fc45964c42ada12561aa2f8e7a7de18fef20cd3',False),
+}
+HOME_MAP_PINS=dict(HOME_LIST_PINS)
+
+def home_map_accessibility_context(packet):
+ identity=packet['id']
+ v.need(identity in HOME_MAP_ACCESSIBILITY,'Unsupported homepage map accessibility state')
+ digest,shapes=HOME_MAP_ACCESSIBILITY[identity]
+ v.need(v.digest(packet)==digest and packet['kind']=='safety' and packet['locks']=={'VALUE_0':'DineSafe'},
+        'Homepage map accessibility packet or factual lock changed')
+ sources={path:(ROOT/path).read_bytes() for path in HOME_MAP_PINS}
+ v.need(all(hashlib.sha256(raw).hexdigest()==HOME_MAP_PINS[path] for path,raw in sources.items()),
+        'Homepage map accessibility source changed')
+ app=sources['docs/app.mjs'].decode('utf8'); html=sources['docs/index.html'].decode('utf8')
+ consumer="$('map').setAttribute('aria-label',mapLabel);"
+ switch="?staticCopy('app-16')\n        :staticCopy('app-17');"
+ v.need(app.replace('\r\n','\n').count(switch)==1 and app.count(consumer)==1 and app.count('statusMarkerImagesAvailable=addStatusMarkerImages(map);')==1
+        and html.count('id="map" role="region"')==1 and html.count('id="record-list"')==1,
+        'Homepage map accessibility consumer changed')
+ marker='Marker shapes and letters identify inspection outcomes alongside colour.' if shapes else 'Marker letters identify inspection outcomes alongside colour.'
+ return {'path':'docs/app.mjs','source_sha256':HOME_MAP_PINS,'consumer':'syncMapAccessibilityLabel/aria-label',
+         'state':'inspection marker images available' if shapes else 'inspection marker image fallback',
+         'locks':packet['locks'],'must_preserve':['Interactive map of places with DineSafe records.',marker,
+         'Each inspection outcome is written out in the matching list.'],
+         'meaning':'Food-inspection map accessible name only. Do not describe a different map mode, rely only on colour, or claim marker shapes in fallback.'}
+
 def current_contexts(packets):
  current=seam.current_canonical_requests();path=ROOT/'docs/index.html';raw=path.read_bytes();text=raw.decode('utf8');contexts={}
  findings=None;selected_calls=None;community_validation=None
@@ -179,6 +209,8 @@ def current_contexts(packets):
    v.need(identity in selected_calls,'Unbound selected-call context');contexts[identity]=selected_calls[identity];continue
   if identity.startswith('static.finding-explanation-'):
    v.need(identity in findings,'Unbound finding context');contexts[identity]=findings[identity];continue
+  if identity in HOME_MAP_ACCESSIBILITY:
+   contexts[identity]=home_map_accessibility_context(packet);continue
   if identity in HOME_LIST_STATES:
    contexts[identity]=home_list_context(packet);continue
   if identity in HOME_FILTER_SLOTS:
