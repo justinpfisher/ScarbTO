@@ -16575,6 +16575,21 @@
       [
         "createScarbAiResolver",
         "literal",
+        "scarb-grouped-projection-3"
+      ],
+      [
+        "createScarbAiResolver",
+        "literal",
+        "scarb-grouped-run-envelope-3"
+      ],
+      [
+        "createScarbAiResolver",
+        "literal",
+        "numeric-citation-2"
+      ],
+      [
+        "createScarbAiResolver",
+        "literal",
         "string"
       ],
       [
@@ -16622,7 +16637,7 @@
       {
         "owner": "<module>",
         "name": "createScarbAiResolver",
-        "ast_sha256": "361fa85ea7b038020e48a1d8b62a53212b9f4d8e9d3555806d2fd7a497222581"
+        "ast_sha256": "9c73445acc36ca660503d3d83ea05553b9fa21023cb490cadce513be64ad0eb0"
       }
     ]
   },
