@@ -72,7 +72,7 @@ def verify_from_private_state(state, packet, record, independent_sha256):
 # Only an independently reviewed repository change can populate this allowlist.
 # No real receipt has been admitted. The disabled bridge cannot mint authority.
 from types import MappingProxyType
-TRUSTED_FIXED_REVIEWS = MappingProxyType({})
+TRUSTED_FIXED_REVIEWS = MappingProxyType({(ITEM, PACKET): '0240258254e033e162abe95163d44178cf4b02bda2d7bc502062e78e1763fafe'})
 
 
 def verify_reviewed_private_record(state, packet, record):
