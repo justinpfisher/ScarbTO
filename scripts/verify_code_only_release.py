@@ -31,9 +31,9 @@ MAX_API_BYTES = 1_000_000
 # Exact last-good baseline independently verified for this code-only rollout.
 # Update only alongside a separately verified successful publisher run.
 PINNED_BASELINE = {
-    "commit": "962a8ba32cd26ec1983f4fc6ee53065341978485",
-    "tree": "7e6e84b5c8e4ceac912e01fc99c53205f4c3721e",
-    "run_id": 43476494235,
+    "commit": "08af44cd8ba935a9752bf665d2100ad898668e61",
+    "tree": "650a9120c3c5a8a8495a9183669e5dbe2f959076",
+    "run_id": 44593838514,
 }
 
 
@@ -215,7 +215,19 @@ def validate_dispatch_environment(environ: dict[str, str]) -> str:
 
 def verify(repo: str | Path, environ: dict[str, str]) -> dict[str, object]:
     root = Path(repo)
-    expected_sha = validate_dispatch_environment(environ)
+    if environ.get("GITHUB_EVENT_NAME") == "push":
+        try:
+            from .resolve_staged_release import StageError, resolve
+        except ImportError:
+            from resolve_staged_release import StageError, resolve
+        try:
+            if resolve(root, environ) != "code_only":
+                raise ReleaseError("Push is not an exact approved code-only stage")
+        except StageError as exc:
+            raise ReleaseError(str(exc)) from exc
+        expected_sha = environ["GITHUB_SHA"]
+    else:
+        expected_sha = validate_dispatch_environment(environ)
     actual_sha = _git(root, "rev-parse", "HEAD").lower()
     if actual_sha != expected_sha:
         raise ReleaseError("Checked-out code does not match the dispatched main commit")
