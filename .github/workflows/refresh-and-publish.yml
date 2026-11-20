@@ -163,20 +163,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Resolve validated refresh or code-only release mode
+        id: release-mode
+        env:
+          MANUAL_RELEASE_MODE: ${{ inputs.release_mode }}
+        run: python scripts/resolve_staged_release.py
       - name: Retrieve and validate official Toronto data
-        if: inputs.release_mode != 'code_only'
+        if: steps.release-mode.outputs.mode != 'code_only'
         run: python scripts/update_dinesafe.py
       - name: Validate output is public and usable
-        if: inputs.release_mode != 'code_only'
+        if: steps.release-mode.outputs.mode != 'code_only'
         run: python scripts/verify_snapshot.py
       - name: Verify unchanged last-good data for code-only release
-        if: inputs.release_mode == 'code_only'
+        if: steps.release-mode.outputs.mode == 'code_only'
         run: python scripts/verify_code_only_release.py
       - name: Generate source-linked DineSafe RSS
         run: python scripts/build_rss.py
       - name: Generate weekly source-linked DineSafe brief
         run: |
-          if [ "${{ inputs.release_mode }}" = "code_only" ]; then
+          if [ "${{ steps.release-mode.outputs.mode }}" = "code_only" ]; then
             python scripts/build_weekly_brief.py --preserve-archive
           else
             python scripts/build_weekly_brief.py
@@ -188,11 +193,11 @@ jobs:
           git config user.name "Scarb.TO data publisher"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/briefs/ docs/community-data/
-          if [ "${{ inputs.release_mode }}" != "code_only" ]; then
+          if [ "${{ steps.release-mode.outputs.mode }}" != "code_only" ]; then
             git add docs/data/
           fi
           if ! git diff --cached --quiet; then
-            if [ "${{ inputs.release_mode }}" = "code_only" ]; then
+            if [ "${{ steps.release-mode.outputs.mode }}" = "code_only" ]; then
               git commit -m "publish weekly DineSafe brief"
             else
               git commit -m "data: refresh validated Scarborough DineSafe snapshot"

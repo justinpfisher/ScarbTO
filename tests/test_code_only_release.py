@@ -30,9 +30,9 @@ class CodeOnlyReleaseTests(unittest.TestCase):
         self.assertEqual(
             PINNED_BASELINE,
             {
-                "commit": "962a8ba32cd26ec1983f4fc6ee53065341978485",
-                "tree": "7e6e84b5c8e4ceac912e01fc99c53205f4c3721e",
-                "run_id": 43476494235,
+                "commit": "08af44cd8ba935a9752bf665d2100ad898668e61",
+                "tree": "650a9120c3c5a8a8495a9183669e5dbe2f959076",
+                "run_id": 44593838514,
             },
         )
 
@@ -235,8 +235,13 @@ class CodeOnlyReleaseTests(unittest.TestCase):
         self.assertIn("default: refresh", workflow)
         self.assertIn("needs: test", workflow)
         self.assertIn("fetch-depth: 0", workflow)
-        self.assertIn("if: inputs.release_mode != 'code_only'", workflow)
-        self.assertIn("if: inputs.release_mode == 'code_only'", workflow)
+        self.assertIn("MANUAL_RELEASE_MODE: ${{ inputs.release_mode }}", workflow)
+        self.assertEqual(workflow.count("inputs.release_mode"), 1)
+        self.assertEqual(workflow.count("steps.release-mode.outputs.mode"), 6)
+        self.assertEqual(workflow.count("if: steps.release-mode.outputs.mode != 'code_only'"), 2)
+        self.assertEqual(workflow.count("if: steps.release-mode.outputs.mode == 'code_only'"), 1)
+        self.assertLess(workflow.index("id: release-mode"),
+                        workflow.index("run: python scripts/update_dinesafe.py"))
         self.assertIn("run: python scripts/update_dinesafe.py", workflow)
         self.assertIn("run: python scripts/verify_snapshot.py", workflow)
         self.assertIn("run: python scripts/verify_code_only_release.py", workflow)
