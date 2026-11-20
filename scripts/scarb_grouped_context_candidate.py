@@ -425,10 +425,9 @@ def context_prompts(packets,models,contexts,authors=None,*,prompt_version=contra
   v.need(len(v.encoded(body))<=48000,'Context exceeds input bound');return body
  return bind(bodies) if authors is None else tuple(bind(x) for x in bodies)
 
-def compile_admitted_mixed_draft(bundle,config):
- """Pure disabled-by-empty-registry candidate. Not a production-reader artifact."""
+def _collect_admitted_editorial_entries(bundle,config,current):
  v.need(set(bundle)=={'solo_v1','solo_v2','grouped'},'Mixed input fields')
- current=seam.current_canonical_requests();entries={}
+ entries={}
  for key,checker in [('solo_v1',v.receipt_check),('solo_v2',solo.receipt_check)]:
   for identity,receipt in bundle[key].items():
    v.need(identity in current and identity not in entries,'Unknown or duplicate solo ID')
@@ -447,8 +446,28 @@ def compile_admitted_mixed_draft(bundle,config):
    entries[identity]={'text':text,'packet_sha256':v.digest(packet),'receipt_sha256':digest,'origin':'scarb-grouped-projection-2'}
    if env['version']=='scarb-grouped-run-envelope-3':
     entries[identity].update(origin='scarb-grouped-projection-3',provenance={'version':env['version'],'prompt_version':env['prompt_version'],'manifest_sha256':digest,'packet_id':identity})
+ return entries
+
+
+def compile_admitted_mixed_draft(bundle,config):
+ """Pure disabled-by-empty-registry candidate. Not a production-reader artifact."""
+ current=seam.current_canonical_requests()
+ entries=_collect_admitted_editorial_entries(bundle,config,current)
  v.need(set(entries)==set(current),'Missing full 736-item current catalogue')
  return {'version':'scarb-mixed-production-draft-1','entries':entries}
+
+
+def compile_disabled_fixed_mixed_draft(bundle,config,state,fixed_records):
+ """Offline-only proof; no production artifact version, writer or reader."""
+ from scripts import scarb_fixed_wording_candidate as fixed
+ current=seam.current_canonical_requests()
+ editorial=_collect_admitted_editorial_entries(bundle,config,current)
+ v.need(isinstance(fixed_records,dict),'Fixed evidence must be keyed by canonical ID')
+ fixed.require_complete_partition(set(current),set(editorial),set(fixed_records))
+ entries=dict(editorial)
+ for identity,record in fixed_records.items():
+  entries[identity]=fixed.verify_reviewed_private_record(state,current[identity],record)
+ return {'version':'scarb-disabled-fixed-mixed-proof-1','entries':entries}
 
 
 def compile_mixed_catalogue(bundle,config):
