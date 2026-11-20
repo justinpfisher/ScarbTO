@@ -339,10 +339,13 @@ def weekly_html_context(packet):
          'meaning':'Future editable weekly HTML copy only. Existing archived editions and RSS identities are unchanged.'}
 
 EDITORIAL_ENTRY_PINS={
+ 'docs/index.html':('93283867eba047a32a2866994fb2f496e16aaf5eabc8772407a8823a923eb753','2ec549f9cb4a193c5bae436545533ab093a4ade4e95526648fc825aaf0391db9'),
  'docs/community/index.html':('db2475b3831c70edc8b7fd49ba5e7450c2ddbf8c66183292e62d7390ec02dfac','6690986d1ad8779abe76ecac3db1253882748efcef016be7b47e54f01e2ae1b2'),
  'docs/embed/index.html':('072ad58e394b381d3f7ff0f2e6a73c85703f31abe3dbcf747f466a66f27e4ea5','a32967347bacdc06f4266bb6f08209e2ad11f6bb665f29d07c0e28af6468b9e3'),
 }
 EDITORIAL_ENTRY_STATES={
+ 'static.home-title':('a014d351e20bf0b97d4e77311dc626b9ba756deb3a7558f7187476732fb3e6c2','docs/index.html','h1','Lead with curiosity about Scarborough and the stories readers can uncover in its data; this is an invitation, not a claim that any particular finding has been verified.'),
+ 'static.home-intro':('7f72fd883cae81f02c687cb26fa99b415473b21cafe693d77949a0a8d24e6c36','docs/index.html','p','Keep the first-person curiosity and invite readers to pick a thread and follow it. The map brings together places, inspection results and neighbourhood boundaries with their dates and sources; do not promise complete data, current safety, firsthand reporting or a particular new finding.'),
  'static.community-title':('e5f7ea55c31fcfd47029c843fecde099a155f39e6fe5a9e9fc4c26a5d725b16e','docs/community/index.html','h1','Invite the reader to make a neighbourhood update from local records, not to publish automatically or claim new findings.'),
  'static.community-intro':('0f3f850aebea58410d23f54f53e62da3aefc0ea7f6f38c3b1258de1651bc49c3','docs/community/index.html','p','Invite the reader to choose their part of Scarborough and assemble dated, source-linked findings for print or their website. Evidence remains attached and the user chooses what to share.'),
  'static.embed-intro':('40f5c7b5399918193e75dcb074a10de457fb27ac61c18f695de3d56748321931','docs/embed/index.html','p','Introduce records for this area, not a sitewide census or firsthand discovery. Keep the clear positive invitation to explore the source trail, and retain source dates and links.'),
