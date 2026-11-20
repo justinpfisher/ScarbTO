@@ -115,6 +115,48 @@ def _home_selector_binding(packet):
             'files':{HOME_SOURCE:sorted(HOME_PINS),producer:list(pins)}}
 
 
+HOME_STATIC_TABLE = {
+    'shell.shell-b04b38d4-003': ('d3dd53ec5d8832973f2fac00b7f597459f4b961d4d217ea7ea3088f2d22312c0', 'a', '<a class="skip-link" href="#results">', None, 'Skip to results', 869, 884, 'body', None),
+    'shell.shell-b04b38d4-031': ('485c0dc1642b9af5cc4b7b66e2452b2029480f55147002546af60879e050dfae', 'a', '<a href="/neighbourhoods/">', None, 'neighbourhood directory', 4143, 4166, 'noscript', None),
+    'shell.shell-b04b38d4-032': ('f5f4f99f8c8e81b7f141333c60f28f1ee42e2a2713e8823919159de39cc6fc4e', 'div', '<div class="view-tabs" role="group" aria-label="Browse mode">', 'aria-label', 'Browse mode', 4306, 4317, 'div', 'filter-options'),
+    'shell.shell-b04b38d4-033': ('c9d4e38928bb4e0fc44b8d4d4872e702860d68269031f315f01cdd604411d9bf', 'button', '<button class="tab active" data-mode="recent" type="button" aria-pressed="true">', None, 'Browse updates', 4410, 4424, 'div', None),
+    'shell.shell-b04b38d4-034': ('1ca6b2e343ebf33f43d007825e51a791b516d2b57fd2bc5c422c4b0230b2f72e', 'button', '<button class="tab" data-mode="all" type="button" aria-pressed="false">', None, 'All places', 4515, 4525, 'div', None),
+    'shell.shell-b04b38d4-050': ('21773475ec46114a50a34d125ad4c7094f0011f423d0d282209b33d1a2c3b4c4', 'button', '<button class="chip selected" data-status="all" aria-pressed="true" type="button">', None, 'All', 6181, 6184, 'div', None),
+    'shell.shell-b04b38d4-062': ('139899b7c6708058991702f60fc8196fef6ad8a017d5f866cdcf826ce532c241', 'div', '<div class="map-legend" id="map-legend" role="group" aria-label="Map key">', 'aria-label', 'Map key', 7980, 7987, 'div', None),
+    'shell.shell-b04b38d4-076': ('dcbb24fe5b9ef4b597bdc19134ca36d8124bae5a42d4e3b9ac6110f76a66934c', 'summary', '<summary>', None, 'About these records', 9675, 9694, 'details', 'source-provenance'),
+    'shell.shell-b04b38d4-094': ('deb71257f5be759a32ddadef581185b6efcbd8d4774a5a6fc161e63e8c8222c1', 'a', '<a href="https://github.com/justinpfisher/ScarbTO/actions" target="_blank" rel="noopener noreferrer">', None, 'Update history', 11923, 11937, 'div', None),
+    'shell.shell-b04b38d4-100': ('a701a857d508ffeb4726b5b6c384811f4621f6a391d84473f5b477baff84e210', 'a', '<a href="/community/">', None, 'create a community publication', 12115, 12145, 'div', None),
+}
+HOME_STATIC_TABLE_PINS = {'docs/index.html': ('2ec549f9cb4a193c5bae436545533ab093a4ade4e95526648fc825aaf0391db9', '93283867eba047a32a2866994fb2f496e16aaf5eabc8772407a8823a923eb753'), 'docs/app.mjs': ('00dd1b611bb2ff8e1ff47fd14c76ff53ad8c590426e5359e05bef43ce0368f8a', 'f5d46d07bd8a2c670831fa4b60c87930f4af76ee02c8dfc90b002dc8dc007b9d'), 'config/scarb-static-shells.json': ('10529fd88e53b47fb2eb1f831e6e239f2052c75036400f289de3e31b14a8e4c0', '638245570ac56062ffb412203db9f4abb43100d4891772806d7557261521e9bb'), 'docs/area-selection.mjs': ('7f6ac42ebe9c174d28f02d97244267b2baa9efd6f538bd98cecb4d57bcc18313', 'b1616d798b2d9867e9e37cd880a5d2cbd3e12398312afa4b5ca86bdadebc9e33'), 'docs/logic.mjs': ('4987676f9449ffb8cae83f86f782270b2e81154165f1d0c28f5fc0857a6da10c', 'fb5a1f8c91db61fcd4b43beedc08c76f3d9e9c94f3fc45a06620b0f50f2c904f')}
+
+
+def _home_static_binding(packet):
+    from scripts.scarb_static_materialize import discover
+    identity = packet['id']
+    digest, tag, opening, attribute, label, start, end, parent, parent_id = HOME_STATIC_TABLE[identity]
+    v.need(v.digest(packet) == digest and packet['kind'] == 'functional'
+           and packet['locks'] == {} and packet['draft'] == label, 'Changed fixed static packet')
+    sources = {p:(ROOT / p).read_bytes() for p in HOME_STATIC_TABLE_PINS}
+    v.need(all(hashlib.sha256(raw).hexdigest() in HOME_STATIC_TABLE_PINS[p] for p,raw in sources.items()),
+           'Fixed static source or controller changed')
+    source = sources[HOME_SOURCE].decode().replace('\r\n','\n')
+    shell = json.loads(sources['config/scarb-static-shells.json'])[HOME_SOURCE]
+    slot = {'start':start,'end':end,'draft':label,'attribute':bool(attribute)}
+    v.need(slot in discover(shell['source']) and
+           {**slot,'id':identity} in shell['slots'] and shell['source'] == source,
+           'Fixed static slot inventory changed')
+    if attribute:
+        a = opening.index(attribute+'="')+len(attribute)+2
+        v.need(opening[a:a+len(label)] == label and source[start-a:start-a+len(opening)] == opening,
+               'Fixed static accessible name changed')
+    else:
+        v.need(source[start-len(opening):end+len(tag)+3] == opening+label+'</'+tag+'>',
+               'Fixed static text consumer changed')
+    return {'id':identity,'packet_sha256':digest,'text':label,'locks':{},'consumer':opening,
+            'source_range':[start,end],'attribute':attribute,'parent':{'tag':parent,'id':parent_id},
+            'scope':'static HTML only','files':{p:list(pins) for p,pins in HOME_STATIC_TABLE_PINS.items()}}
+
+
 def _directory_binding(packet):
     import html
     import re
@@ -144,6 +186,8 @@ def _source(path):
 
 
 def exact_binding(packet):
+    if packet.get('id') in HOME_STATIC_TABLE:
+        return _home_static_binding(packet)
     if packet.get('id') in HOME_SELECTORS:
         return _home_selector_binding(packet)
     if packet.get('id') in HOME_BOUNDARY:
@@ -188,6 +232,8 @@ def verify_from_private_state(state, packet, record, independent_sha256):
     from scripts import scarb_packet_consumption_candidate as history
     identity = packet.get('id')
     family = HOME_SELECTORS if identity in HOME_SELECTORS else (HOME_BOUNDARY if identity in HOME_BOUNDARY else DIRECTORY_WORDING)
+    if identity in HOME_STATIC_TABLE:
+        family = HOME_STATIC_TABLE
     v.need(identity in family and v.digest(packet) == family[identity][0],
            'Unknown or changed fixed packet')
     history.assert_unconsumed(state, {identity: v.digest(packet)}, expected_root=history.protected_root())
