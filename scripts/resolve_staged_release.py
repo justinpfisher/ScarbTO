@@ -8,17 +8,17 @@ import re
 import subprocess
 import sys
 
-BASE = "08af44cd8ba935a9752bf665d2100ad898668e61"
+BASE = "94b0835d9f7465d41736335424b3bf87fc567fc9"
 DATA_TREE = "650a9120c3c5a8a8495a9183669e5dbe2f959076"
-CLAIM = "[scarb-stage:directory-v1]"
+CLAIM = "[scarb-stage:directory-voice-v2]"
 SELF = "scripts/resolve_staged_release.py"
 # Git blob identities are of canonical committed bytes, not native worktree bytes.
 # The resolver's own exact bytes are independently reviewed as part of the commit,
 # not self-hashed. Its workflow and all separate production controls are pinned here.
 PROJECTION = {
     ".github/workflows/refresh-and-publish.yml": "8864aea26cbfc4b074d9bbaef9528d52095f1cad",
-    "docs/neighbourhoods/index.html": "e636c4dc2f727da50b2e8dbcd37833690a74bae7",
-    "scripts/build_neighbourhood_pages.mjs": "f6ceb3e0eda9c349892c46cce9a1eb2c65a1f856",
+    "docs/neighbourhoods/index.html": "5488e75958c3be33bd1f675be94c8326d9be814c",
+    "scripts/build_neighbourhood_pages.mjs": "1272a68e9b565d3544a5e56dda66bed13090f8ea",
     "scripts/verify_code_only_release.py": "c26843e11e06cedfe83b247c15b05e3d40b0157a",
     "tests/test_code_only_release.py": "502ffc7041e07f85a8db3f93e2aba227301171d4",
 }
@@ -66,7 +66,7 @@ def resolve(repo: Path, environ: dict[str, str]) -> str:
     ):
         raise StageError("Claimed directory stage does not match the required exact main push")
     changed = set(_git(repo, "diff", "--name-only", "--no-renames", BASE, sha).splitlines())
-    if changed != set(PROJECTION) | {SELF}:
+    if changed != {SELF, "docs/neighbourhoods/index.html", "scripts/build_neighbourhood_pages.mjs"}:
         raise StageError("Claimed directory stage has unexpected accompanying changes")
     for path, blob in PROJECTION.items():
         if _git(repo, "ls-tree", sha, "--", path) != f"100644 blob {blob}\t{path}":
