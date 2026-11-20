@@ -84,6 +84,37 @@ def _home_boundary_binding(packet):
             'files': {HOME_SOURCE: sorted(HOME_PINS)}}
 
 
+HOME_SELECTORS = {
+    'shell.shell-b04b38d4-025': ('9899d61296142cd92e3b3421bf09bbc182e003b3ca13caea1b70b387e736e912', 'h2', '<h2 id="saved-areas-title">', 'Your saved areas', 3574, 3590, 'saved-areas-title', 'docs/saved-areas.mjs', ('33a703b709c3bea547cbd565aac77f663b04035f2c6036596e9a2e12cba6d6b7', '73825cb71f9e4260e1fbdce6ada30ddf88788c625baa20a539bc045cc00c368f')),
+    'shell.shell-b04b38d4-027': ('72da1460e0566c2c7e61563282c696e635f43d0c21e6a14451438e71ad35341b', 'label', '<label for="saved-area-choice">', 'Choose a public area to save', 3723, 3751, 'saved-area-choice', 'docs/saved-areas.mjs', ('33a703b709c3bea547cbd565aac77f663b04035f2c6036596e9a2e12cba6d6b7', '73825cb71f9e4260e1fbdce6ada30ddf88788c625baa20a539bc045cc00c368f')),
+    'shell.shell-b04b38d4-028': ('4ddbfac8358333d8b2eb615d068733e64fa872e99c54439b7f9e5055b553b5ae', 'option', '<option value="">', 'Choose an area', 3827, 3841, 'saved-area-choice', 'docs/saved-areas.mjs', ('33a703b709c3bea547cbd565aac77f663b04035f2c6036596e9a2e12cba6d6b7', '73825cb71f9e4260e1fbdce6ada30ddf88788c625baa20a539bc045cc00c368f')),
+    'shell.shell-b04b38d4-029': ('1a2470bb55dadab15327d2d46b2653ce781c1bc242e7bba644cb86e5c24e0e8f', 'button', '<button id="save-public-area" type="button" disabled>', 'Save area', 3923, 3932, 'save-public-area', 'docs/saved-areas.mjs', ('33a703b709c3bea547cbd565aac77f663b04035f2c6036596e9a2e12cba6d6b7', '73825cb71f9e4260e1fbdce6ada30ddf88788c625baa20a539bc045cc00c368f')),
+    'shell.shell-b04b38d4-041': ('092e64244345b959b9cb569ffc0f0633d1dbce64010cc4034d33e300b92a4a6a', 'label', '<label for="neighbourhood">', 'Neighbourhood', 5519, 5532, 'neighbourhood', 'docs/app.mjs', ('00dd1b611bb2ff8e1ff47fd14c76ff53ad8c590426e5359e05bef43ce0368f8a', 'f5d46d07bd8a2c670831fa4b60c87930f4af76ee02c8dfc90b002dc8dc007b9d')),
+    'shell.shell-b04b38d4-043': ('bc9bab7c73e93dfaa3185be75087a5ec57b49f6149933b13fd5f5753e6f0beff', 'label', '<label for="window">', 'Time period', 5659, 5670, 'window', 'docs/app.mjs', ('00dd1b611bb2ff8e1ff47fd14c76ff53ad8c590426e5359e05bef43ce0368f8a', 'f5d46d07bd8a2c670831fa4b60c87930f4af76ee02c8dfc90b002dc8dc007b9d')),
+    'shell.shell-b04b38d4-047': ('c2329b01c057380dd1dd29272357bbdbc633802bf3a7cf9b39f5ac575d9155c5', 'option', '<option value="all">', 'Any date', 5871, 5879, 'window', 'docs/app.mjs', ('00dd1b611bb2ff8e1ff47fd14c76ff53ad8c590426e5359e05bef43ce0368f8a', 'f5d46d07bd8a2c670831fa4b60c87930f4af76ee02c8dfc90b002dc8dc007b9d')),
+}
+
+
+def _home_selector_binding(packet):
+    identity = packet['id']
+    digest, tag, opening, label, start, end, element, producer, pins = HOME_SELECTORS[identity]
+    v.need(v.digest(packet) == digest and packet['kind'] == 'functional'
+           and packet['locks'] == {} and packet['draft'] == label, 'Changed fixed selector packet')
+    raw = (ROOT / HOME_SOURCE).read_bytes()
+    v.need(hashlib.sha256(raw).hexdigest() in HOME_PINS, 'Fixed selector source changed')
+    source = raw.decode('utf8').replace('\r\n', '\n')
+    v.need(source[start-len(opening):end+len(tag)+3] == opening+label+'</'+tag+'>'
+           and source.count('id="'+element+'"') == 1, 'Fixed selector consumer changed')
+    if tag == 'option':
+        at = source.index('id="'+element+'"')
+        v.need(at < start < source.index('</select>',at), 'Wrong fixed selector option consumer')
+    v.need(hashlib.sha256((ROOT / producer).read_bytes()).hexdigest() in pins,
+           'Fixed selector behavior changed')
+    return {'id':identity,'packet_sha256':digest,'text':label,'locks':{},'consumer':opening,
+            'source_range':[start,end],'control_id':element,'scope':'static HTML only',
+            'files':{HOME_SOURCE:sorted(HOME_PINS),producer:list(pins)}}
+
+
 def _directory_binding(packet):
     import html
     import re
@@ -113,6 +144,8 @@ def _source(path):
 
 
 def exact_binding(packet):
+    if packet.get('id') in HOME_SELECTORS:
+        return _home_selector_binding(packet)
     if packet.get('id') in HOME_BOUNDARY:
         return _home_boundary_binding(packet)
     if packet.get('id') != ITEM:
@@ -154,7 +187,7 @@ def verify_from_private_state(state, packet, record, independent_sha256):
     """Offline bridge only. Reuse the existing private history gate; never accept a caller's exclusion list."""
     from scripts import scarb_packet_consumption_candidate as history
     identity = packet.get('id')
-    family = HOME_BOUNDARY if identity in HOME_BOUNDARY else DIRECTORY_WORDING
+    family = HOME_SELECTORS if identity in HOME_SELECTORS else (HOME_BOUNDARY if identity in HOME_BOUNDARY else DIRECTORY_WORDING)
     v.need(identity in family and v.digest(packet) == family[identity][0],
            'Unknown or changed fixed packet')
     history.assert_unconsumed(state, {identity: v.digest(packet)}, expected_root=history.protected_root())
