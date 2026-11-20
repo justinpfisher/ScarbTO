@@ -66,3 +66,17 @@ def verify_from_private_state(state, packet, record, independent_sha256):
            'Unknown or changed fixed packet')
     history.assert_unconsumed(state, {ITEM: PACKET}, expected_root=history.protected_root())
     return verify_fixed_evidence(packet, record, independent_sha256, excluded_ids=frozenset())
+
+
+
+# Only an independently reviewed repository change can populate this allowlist.
+# No real receipt has been admitted. The disabled bridge cannot mint authority.
+from types import MappingProxyType
+TRUSTED_FIXED_REVIEWS = MappingProxyType({})
+
+
+def verify_reviewed_private_record(state, packet, record):
+    """Disabled private readback; do not invoke from a production artifact writer."""
+    pin = TRUSTED_FIXED_REVIEWS.get((packet.get('id'), v.digest(packet)))
+    v.need(isinstance(pin, str) and len(pin) == 64, 'No admitted independent fixed wording review')
+    return verify_from_private_state(state, packet, record, pin)
