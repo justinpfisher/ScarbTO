@@ -157,6 +157,49 @@ def _home_static_binding(packet):
             'scope':'static HTML only','files':{p:list(pins) for p,pins in HOME_STATIC_TABLE_PINS.items()}}
 
 
+COMMUNITY_PROOF = {
+    'shell.shell-861ddc17-038': ('7d1c92831839d9452ed3ff3fe5f76e907af4326d7ba1aec45fc428adadaaddc9', '<button type="submit">', 'button', 'Prepare a proof', 4293, 4308, "el('settings').addEventListener('submit',event=>{event.preventDefault();try{", 'Explicit form submit prepares a draft proof only.'),
+    'shell.shell-861ddc17-039': ('70d8363d09b9faad25ad73efbf2960f250b04238dee7c3cb9cfdad1c704acdbc', '<button id="save-settings" type="button">', 'button', 'Download settings', 4358, 4375, "download(p,'scarb-community-settings.json')", 'Explicit settings JSON download; may also save a local profile, no finalisation.'),
+    'shell.shell-861ddc17-041': ('e9326cc9d229d82e7abbf915a602ad7cb9f8cea71bc2fe4e0ac1e2ba92a630a8', '<h2>', 'h2', 'Your proof', 4548, 4558, "el('proof-section').hidden=false;", 'Static heading within the proof section; not evidence a proof was generated.'),
+    'shell.shell-861ddc17-042': ('8a4251f52bebbacd56fc03fb4d26abedc5175b8cff5600b5db5efd63fb00ce54', '<button id="map" type="button">', 'button', 'Download a separate attributed map', 4686, 4720, "if(draft)downloadBlob(attributedMap(draft),'scarb-community-map.svg')", 'Explicit attributed map download only if a draft exists.'),
+    'shell.shell-861ddc17-043': ('91875c8d41e04b1204dfe734d56fc4718c5626b075814ca8d58ea645bc4b926f', '<button id="pdf" type="button">', 'button', 'Download print PDF', 4760, 4778, "for(const kind of ['pdf','png'])el(kind).onclick=async()=>{if(!draft)return;", 'Explicit draft PDF download; checks draft identity and does not publish.'),
+    'shell.shell-861ddc17-045': ('022567e9f300fd8bda3ccc9a60699532c809916320813dc9da5e87c88d7416f4', '<button id="text" type="button">', 'button', 'Download editable text', 4881, 4903, "el('text').onclick=()=>{if(draft)download", 'Explicit editable draft text with source footer.'),
+    'shell.shell-861ddc17-046': ('b5e00e6cafcceec2f8c4c66e95c5b4717b82f4655971b1ec153fcd1d1a6acd3e', '<button id="finalise" type="button">', 'button', "I've reviewed this proof: finalise and download receipt", 4948, 5003, "el('finalise').onclick=async()=>{if(!draft)return;", 'Distinct explicit review and finalisation action for a local receipt; does not imply publication or organisational approval.'),
+}
+COMMUNITY_PROOF_PINS = {'docs/community/index.html': ('6690986d1ad8779abe76ecac3db1253882748efcef016be7b47e54f01e2ae1b2', 'db2475b3831c70edc8b7fd49ba5e7450c2ddbf8c66183292e62d7390ec02dfac'), 'docs/community-editor.mjs': ('29edbef327ec665d6d1131ef196b5ab62297ad83e15b00c32d1f95c456e8930d', 'aa42f50a99bfccd09b9451c13472dd2112b07e5c6792708c40ef2b62517c9829'), 'docs/community-exports.mjs': ('71f3fb64c0c8885c3eb7a3eb0cfe01b1e8fe1ab515b6b2271dac50865dc8c50e', '875a4cc72cb069a9fbc9095627d68c1eca2f3d49567108baa660c9bbb07b3d83'), 'docs/community-publishing.mjs': ('449de3e327eede3acf9d3a85b21c11cb6fafb5005e79e01555d021962866d859', 'e96f90e970e77a6d8e5a9ab1b0e64f2bb616e8013455dd982c16f1b90472e89d'), 'config/scarb-static-shells.json': ('10529fd88e53b47fb2eb1f831e6e239f2052c75036400f289de3e31b14a8e4c0', '638245570ac56062ffb412203db9f4abb43100d4891772806d7557261521e9bb')}
+
+
+def _community_proof_binding(packet):
+    from scripts.scarb_static_materialize import discover
+    identity = packet['id']
+    digest, opening, tag, label, start, end, action, meaning = COMMUNITY_PROOF[identity]
+    v.need(v.digest(packet) == digest and packet['kind'] == 'functional'
+           and packet['locks'] == {} and packet['draft'] == label, 'Changed fixed Community packet')
+    sources = {p:(ROOT / p).read_bytes() for p in COMMUNITY_PROOF_PINS}
+    v.need(all(hashlib.sha256(raw).hexdigest() in COMMUNITY_PROOF_PINS[p] for p,raw in sources.items()),
+           'Fixed Community source or controller changed')
+    source = sources['docs/community/index.html'].decode().replace('\r\n','\n')
+    controller = sources['docs/community-editor.mjs'].decode()
+    shell = json.loads(sources['config/scarb-static-shells.json'])['docs/community/index.html']
+    slot = {'start':start,'end':end,'draft':label,'attribute':False}
+    v.need(slot in discover(shell['source']) and {**slot,'id':identity} in shell['slots']
+           and shell['source'] == source, 'Fixed Community parsed slot changed')
+    v.need(source[start-len(opening):end+len(tag)+3] == opening+label+'</'+tag+'>'
+           and controller.count(action) == 1, 'Fixed Community control or handler changed')
+    parent = 'settings' if identity.endswith(('-038','-039')) else 'proof-section'
+    closing = '</form>' if parent == 'settings' else '</section>'
+    position = source.index('id="'+parent+'"')
+    v.need(position < start < source.index(closing,position), 'Wrong Community parent consumer')
+    if identity.endswith('-046'):
+        v.need('if(draft!==activeDraft)' in controller and 'await finaliseEdition(prepared)' in controller
+               and "localStorage.setItem('scarb-community-finalised'" in controller
+               and 'does not prove organisational approval or newspaper publication' in source,
+               'Local finalisation boundary changed')
+    return {'id':identity,'packet_sha256':digest,'text':label,'locks':{},'consumer':opening,
+            'source_range':[start,end],'parent_id':parent,'handler':action,'meaning':meaning,
+            'scope':'static HTML only','files':{p:list(pins) for p,pins in COMMUNITY_PROOF_PINS.items()}}
+
+
 def _directory_binding(packet):
     import html
     import re
@@ -186,6 +229,8 @@ def _source(path):
 
 
 def exact_binding(packet):
+    if packet.get('id') in COMMUNITY_PROOF:
+        return _community_proof_binding(packet)
     if packet.get('id') in HOME_STATIC_TABLE:
         return _home_static_binding(packet)
     if packet.get('id') in HOME_SELECTORS:
@@ -234,6 +279,8 @@ def verify_from_private_state(state, packet, record, independent_sha256):
     family = HOME_SELECTORS if identity in HOME_SELECTORS else (HOME_BOUNDARY if identity in HOME_BOUNDARY else DIRECTORY_WORDING)
     if identity in HOME_STATIC_TABLE:
         family = HOME_STATIC_TABLE
+    if identity in COMMUNITY_PROOF:
+        family = COMMUNITY_PROOF
     v.need(identity in family and v.digest(packet) == family[identity][0],
            'Unknown or changed fixed packet')
     history.assert_unconsumed(state, {identity: v.digest(packet)}, expected_root=history.protected_root())
