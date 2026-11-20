@@ -56,3 +56,13 @@ def require_complete_partition(canonical, editorial, fixed):
     """Sets of exact catalogue IDs from already-verified, independent evidence lanes."""
     v.need(len(canonical) == 736 and not (editorial & fixed)
            and (editorial | fixed) == canonical, 'Complete disjoint 736-item catalogue required')
+
+
+
+def verify_from_private_state(state, packet, record, independent_sha256):
+    """Offline bridge only. Reuse the existing private history gate; never accept a caller's exclusion list."""
+    from scripts import scarb_packet_consumption_candidate as history
+    v.need(packet.get('id') == ITEM and v.digest(packet) == PACKET,
+           'Unknown or changed fixed packet')
+    history.assert_unconsumed(state, {ITEM: PACKET}, expected_root=history.protected_root())
+    return verify_fixed_evidence(packet, record, independent_sha256, excluded_ids=frozenset())
