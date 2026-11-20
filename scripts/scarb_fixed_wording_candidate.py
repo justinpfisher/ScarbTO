@@ -19,6 +19,60 @@ PINS = {
 }
 
 
+DIRECTORY_WORDING = {
+    'shell.shell-012700e3-009': ('a26b0c9784ef49578b31def33e9d87337143076f8e32242b6c5f372a187978c6', '129', 'Agincourt North', '/agincourt-north/', ('319b444d39ae5ecb59fc60a263373fb68e54a8cd9c8c445b6c6904a754de27ed', 'da5a2786ba781e0e370ff8231f5feba8a9bace623784c393002ca5f9993d1cc1')),
+    'shell.shell-012700e3-010': ('f9cf5563118746c830c9380b2d715492fe0420781718fc0ab2e9270824bdb839', '128', 'Agincourt South-Malvern West', '/agincourt-south-malvern-west/', ('5900d2cc6fff44cab71270c3d7d6933603d938870395d323a1f5c8c179b32cd2', 'fa4220314b35aab5d470fa46c70cc6a74e9d26835af2818f3733c074bd0e4451')),
+    'shell.shell-012700e3-011': ('1304a9f6c17a84b1df6e1e761f93b18d773dc4d1055576e1284fa2e405a05233', '157', 'Bendale South', '/bendale-south/', ('9ff62402b3138fbca6ba5ae5f796a63576438a458afdedef207d602df7b95141', 'f084a080faf86a925f1d6b77173b58c6215724af12f2206be570af19f84041bf')),
+    'shell.shell-012700e3-012': ('e349c825d3652f449c541e3e1996fb635119dbac89861424177469f566c5e404', '156', 'Bendale-Glen Andrew', '/bendale-glen-andrew/', ('25cb9d40967ded627b36d838b2fc74b60062f3bb8b77fd2151aa79e02f7f83f1', 'f6f34137202a3e5fed5d1968a235dc0b6522678cabd9e24b645b2b17e73aa2a7')),
+    'shell.shell-012700e3-013': ('86495560406bdfb54d39b0efea71859c490c88e6f25b82e728eea4eb8f99bdce', '122', 'Birchcliffe-Cliffside', '/birchcliffe-cliffside/', ('533b14a675e18e813af39b76c6114608ef2646fb196ecd4ba6132893a367e2e4', 'c368b213cb420e7a080d4d0169a65afdb063580d4f3a4ed2d0e327eb38f8cd1d')),
+    'shell.shell-012700e3-015': ('b2855b957722d91d3965b3b7c9f889f6128c3bb46592ead4b1c71fbf80dd4e3d', '120', 'Clairlea-Birchmount', '/clairlea-birchmount/', ('01e2189d58b5a0023eca3e7c9f59e736fe196e7d6f4293c6697680e86ecb92ed', '43002741e527a5d7aa801dd33bfb886e1c2e6aa54686443835dfc9db98b2f4e3')),
+    'shell.shell-012700e3-016': ('802f46512620c6eaeb882a8a3c1d583d9d56e6acb6793528ed3954fff7a5fdf6', '123', 'Cliffcrest', '/cliffcrest/', ('9ec09b2adaaf5c41a64d1c1b4e8c858c84c801b09d9adad50885810e0abf3d6e', 'cccd49cc2766bb344acfcbb175f56f7ef21367e8e6fd640c2c2fd529136cd9f4')),
+    'shell.shell-012700e3-017': ('16f960bf764f69657d8943697ac128ccdce9a5ab5633ea5a0c5aaaf7b4e93b15', '126', 'Dorset Park', '/dorset-park/', ('16e82ec38bdd896d4b754c83a150974d15e339ce870fb01e460f915b48ee1145', '37ed034796deceb4a5309350f3c2d47ba9c33c4e596eddaa5d9aca0e9cdf2592')),
+    'shell.shell-012700e3-018': ('be2ee395309d4ca9a326d71528bd155ab22f45d1490731bbeee3608df13173f1', '148', "East L'Amoreaux", '/east-l-amoreaux/', ('1dbedf2514fb1fd8f011ed08a38dbaf05d9f4ccfbccd8aa7064a08e83ecc3814', '27679994b0b4a7c7134ae4e0da4bfbef5bcb8311327d2adff105d4632165e612')),
+    'shell.shell-012700e3-019': ('5901a6a016b52cbb8ef7c71ca6faeb4f3c89cfc13ac734d53d988057dd2011e6', '138', 'Eglinton East', '/eglinton-east/', ('813c9dca306760d440ff196823ed96e666459c94c84cb0e2ad69b2fa37bc7295', '9253a499d7801cbeab637f3642112cde75690477ffb92aa5b5dcad024d860338')),
+    'shell.shell-012700e3-020': ('309ffae7d70cfc73acbec68b8f446c4aa04ccf5c0822df96a3c0a9d61b86dee9', '141', 'Golfdale-Cedarbrae-Woburn', '/golfdale-cedarbrae-woburn/', ('cf7c45f97227ebe14cce5c4469e3d262f397c69a919d75466322ec2e8b5568d8', 'f96ececb4cc33bb330832689d3b74bcbc544afd255f7f6be13acd2d3f2301a65')),
+    'shell.shell-012700e3-021': ('a7beafb61d4a736376726608fca5ab9a97fa0ee1ff23eba2b312ee3cccbf2f30', '140', 'Guildwood', '/guildwood/', ('2a3f993ec0c12a3bb0470d82ebb05d392d9177cec69f9581c7054e6f7eb2c9a9', '5317023ca53eca1b34607082a444bee72a541b3e8f916da5e8e1a68618004854')),
+    'shell.shell-012700e3-022': ('52665f01a030dd185a4a3027a4f9da8fc729840fa50629a73eccf57bff51c6a2', '134', 'Highland Creek', '/highland-creek/', ('a9beacf9f47715c745ad136a1f5fd6c08c31926ce38da1de10394f0e9c62cbd9', 'da24b3417769d582456e686d1cac0c51129162ec71f2e2e33b47eca021a8d9f9')),
+    'shell.shell-012700e3-023': ('c6a601b8b220aa5652bd3f74c61d3a6f15a52758109fc41d5f8e2c575f62e895', '125', 'Ionview', '/ionview/', ('0350a93366ad5b47d41b3bc2033ca631c9db30fbbcfcb96a5ac8c6911f55fa86', 'e1abd95690735b973b0eba70ca960914e943c35c2037c90327278aa18fc9afe3')),
+    'shell.shell-012700e3-024': ('7878dd9b86a64f6468bdc7e32e66056486e8da4053fa4174567d0c62c0b1bddb', '124', 'Kennedy Park', '/kennedy-park/', ('4ac17887988459bde5764de5a248c090004ddc46e82428cb7cc7558a42b710c4', '84e3097e270a004627585fed36a8a853892c81d9ff2c23666c595efb0b9a5ff7')),
+    'shell.shell-012700e3-025': ('4c80f3750c4b41337e684a9b49ff5fe54e939aec89d75276c45970f049b040cf', '147', "L'Amoreaux West", '/l-amoreaux-west/', ('816ced1144002c9f9a1a799129023049f3dfff6f8e3afbaa7ce1f146ee0e4bcc', '99423d5c19f7d53a5f2105a3f1376a339bc94298e4e1d2a05aa4a2e6ad63ad63')),
+    'shell.shell-012700e3-026': ('80f57f39cef6e560a20005d3d0c670c6ee32920d65010596de16ea2c68baa2b0', '146', 'Malvern East', '/malvern-east/', ('2db08fd860d30a71564f36497115e5168494c6754b5557b68a18d141931dc3cb', '4c7986341a765ce932b11c8b593332214f94e56b99b1b165384084d2d51c13c7')),
+    'shell.shell-012700e3-027': ('44d204ec3fa18e416ca5034c0e704ec66cbb2ab7a30f8929e981dccc7eb33308', '145', 'Malvern West', '/malvern-west/', ('47b71df1ee28e85c71bd46468599a92f1b205d623a2570a0ce77ac872855dc7e', 'cf0a3834fc6ce435b16fcf1a895eb50a4da2413fcff7f80a3e8d462bf86d710b')),
+    'shell.shell-012700e3-028': ('146bab4205e5ce8cc5c77bb88c7394ec9316755a3b380f698fa76c7c43cba52d', '130', 'Milliken', '/milliken/', ('3890431d1c56a2f68e7d5d58e956166a4bd84e7e962159b6a8a95e836c462051', 'ffb54fc311276a5635a7f976ae01a843f07086f351c424c82d8b08941561c6ca')),
+    'shell.shell-012700e3-029': ('9869156f1dab1044948b87bb1e7705020cf9987c5f1822e9f01174593ac1ca2a', '135', 'Morningside', '/morningside/', ('90d207cc69e1ca666a20bdaf7b03292073839149e95fe5c66bcb87e2e7e56708', 'e1781875295f1c52001d9ec523270d333459eb79889714536d9e89b181224fdf')),
+    'shell.shell-012700e3-030': ('cfda571b16727f352b183b68d61a6571ebf2291624e4aee1cf1608e01f9f7d32', '144', 'Morningside Heights', '/morningside-heights/', ('0ef25cf528b09d8aa8b1ae6d99931352bb9e57ce731781013a89acf46d4d5ca5', '58e0a15ecf54e60ce9eac00ed10ce8b2aee3bb44f995be9c5384baecd17e8e3d')),
+    'shell.shell-012700e3-031': ('45fd91412585580dd3804a4c81f1307493955d7a3dfa230f3ae00b6474964c13', '121', 'Oakridge', '/oakridge/', ('26a8ad941d0bb8659bb1c167a43f5b5479aac2bc70527386dcdcaed2d7c28613', 'd34c820c00837048a75dd4acd966592b819e970cdb46e866b36e85b311029569')),
+    'shell.shell-012700e3-033': ('157d05dd89d21ca1d2b3345871c827a8faa663de0c30747f529c2dd9f19763c3', '116', 'Steeles', '/steeles/', ('76d3adbd8e5342c255de9ff2cfd5d4342219c21e80b06b1e927cb81628e67ccc', 'f0f9b695c07f66b8c5982194255ff77763d3415ea1215a61114c5b5a326a9eaf')),
+    'shell.shell-012700e3-034': ('23357847a573e10d9354d153277ac7e842a46040833483e33c5f4df65c19d0ce', '118', "Tam O'Shanter-Sullivan", '/tam-o-shanter-sullivan/', ('3f49248f77785b666c1a7ba60fc4e61ecc2102dec9613dc17c2d5d04b25d123a', '74a2a835f610f3a2306f5737146769f6ddd9c1edd37940564864508847684446')),
+    'shell.shell-012700e3-035': ('c5ff38a2c0d64619e2d73f50a4f16b1ecf7458fed64ebc1dfee44eef127f5f06', '136', 'West Hill', '/west-hill/', ('1ba72890e92d8ca4ffb47d0dfafc2b3709e81d224fc1080b1267c8a98d472d2e', '8e841960358684fb4c5972794ae38304a73bedf35412e0aff9932b672fddc8c3')),
+    'shell.shell-012700e3-036': ('9818c294f0785d11a6f760fb06b79b6fd52874ebfeb182305d67d281785c3c91', '143', 'West Rouge', '/west-rouge/', ('5c18cad95a15dc9853c0dce327e76fe986d7963f0fd4f808e0c0a385e194e344', '77d3b34dbf152ffe7f563d8262422b3d6a3d7aa087c2210cec91b617ed66c850')),
+    'shell.shell-012700e3-037': ('c9e3d18bbb76ea308c7ecc536c939ff96f3272bee31d75be1192d81198748fa1', '119', 'Wexford/Maryvale', '/wexford-maryvale/', ('058d864a1be90bccadf750f5d68a6ee0db48e1195fa65e13ce127a19382870ce', '0e94a6656ec7a322c1a374814ec75f0a164fbceabfc1dca667013b7ab6dabb69')),
+    'shell.shell-012700e3-038': ('6dd946e801d44da8e68e264975f4962bdc85db73a80bacc1321e2e0d862a645c', '142', 'Woburn North', '/woburn-north/', ('792afe134c687dfec15fa939633bfce704416a991930ae2c66ef5613dfb00770', '99e3dbc3d6ab11de56aebd62b85cebb6ad9df27c57613478dcc07993bffba3a2')),
+}
+
+
+def _directory_binding(packet):
+    import html
+    import re
+    identity = packet.get('id')
+    v.need(identity in DIRECTORY_WORDING, 'Unknown fixed directory item')
+    digest, code, name, route, destination_pins = DIRECTORY_WORDING[identity]
+    v.need(v.digest(packet) == digest and packet['kind'] == 'functional'
+           and packet['locks'] == {} and packet['draft'] == name, 'Changed fixed directory packet')
+    matches = [row['AREA_NAME'] for row in json.loads(_source(SOURCE))['registry']
+               if row['AREA_SHORT_CODE'] == code]
+    v.need(matches == [name], 'Registry name differs')
+    anchors = re.findall(r'<a href="'+re.escape(route)+r'">([^<>]+)</a>', _source(DIRECTORY).decode())
+    v.need([html.unescape(value) for value in anchors] == [name], 'Fixed wording consumer differs')
+    dest = 'docs' + route + 'index.html'
+    v.need(hashlib.sha256((ROOT / dest).read_bytes()).hexdigest() in destination_pins,
+           'Fixed wording destination changed')
+    return {'id': identity, 'packet_sha256': digest, 'text': name, 'locks': {},
+            'official_registry_code': code, 'route': route,
+            'files': {SOURCE: sorted(PINS[SOURCE]), DIRECTORY: sorted(PINS[DIRECTORY]),
+                      dest: sorted(destination_pins)}}
+
+
 def _source(path):
     raw = (ROOT / path).read_bytes()
     v.need(hashlib.sha256(raw).hexdigest() in PINS[path], 'Fixed wording source changed')
@@ -26,6 +80,8 @@ def _source(path):
 
 
 def exact_binding(packet):
+    if packet.get('id') != ITEM:
+        return _directory_binding(packet)
     v.need(packet['id'] == ITEM and packet['kind'] == 'functional'
            and v.digest(packet) == PACKET, 'Unknown or changed fixed packet')
     rows = [row for row in json.loads(_source(SOURCE))['registry']
@@ -42,13 +98,13 @@ def exact_binding(packet):
 
 def verify_fixed_evidence(packet, record, independent_sha256, *, excluded_ids):
     """Caller must independently authenticate the exact reviewed record pin and exclusions."""
-    v.need(isinstance(excluded_ids, frozenset) and ITEM not in excluded_ids,
+    v.need(isinstance(excluded_ids, frozenset) and packet.get('id') not in excluded_ids,
            'Fixed item excluded by existing history')
     v.need(independent_sha256 and v.digest(record) == independent_sha256,
            'Exact independent fixed wording record required')
     v.need(record == {'version': 'scarb-fixed-wording-review-1', 'decision': 'verified-unchanged',
                       'binding': exact_binding(packet)}, 'Fixed wording evidence differs')
-    return {'text': record['binding']['text'], 'packet_sha256': PACKET,
+    return {'text': record['binding']['text'], 'packet_sha256': record['binding']['packet_sha256'],
             'receipt_sha256': independent_sha256, 'origin': 'scarb-fixed-wording-review-1'}
 
 
@@ -62,9 +118,16 @@ def require_complete_partition(canonical, editorial, fixed):
 def verify_from_private_state(state, packet, record, independent_sha256):
     """Offline bridge only. Reuse the existing private history gate; never accept a caller's exclusion list."""
     from scripts import scarb_packet_consumption_candidate as history
-    v.need(packet.get('id') == ITEM and v.digest(packet) == PACKET,
+    identity = packet.get('id')
+    v.need(identity in DIRECTORY_WORDING and v.digest(packet) == DIRECTORY_WORDING[identity][0],
            'Unknown or changed fixed packet')
-    history.assert_unconsumed(state, {ITEM: PACKET}, expected_root=history.protected_root())
+    history.assert_unconsumed(state, {identity: v.digest(packet)}, expected_root=history.protected_root())
+    # The native gate verifies the index and each immutable claim under this lock.
+    # An older digest for the same business ID is not a new fixed-wording candidate.
+    folder = Path(state) / 'grouped-consumption'
+    for claim in folder.glob('*.json'):
+        v.need(identity not in json.loads(claim.read_bytes())['bindings'],
+               'A prior attempt consumed this fixed wording ID')
     return verify_fixed_evidence(packet, record, independent_sha256, excluded_ids=frozenset())
 
 
