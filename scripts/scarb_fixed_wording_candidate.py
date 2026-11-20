@@ -51,6 +51,39 @@ DIRECTORY_WORDING = {
 }
 
 
+HOME_BOUNDARY = {
+    'shell.shell-b04b38d4-018': ('536e2a2d2400b4343cef677165d167a9d38e703cafd9c9f2614bf443f3835679', 'span', '<span class="area-controls-label">', 'Boundaries', 2497, 2507),
+    'shell.shell-b04b38d4-019': ('0da085162e0564da083e207a1afd69e38e6f07e2652e32ee3702895379801fbb', 'button', '<button type="button" class="area-toggle selected" data-area-overlay="off" aria-pressed="true">', 'Off', 2663, 2666),
+    'shell.shell-b04b38d4-020': ('4356b4d950813066d988c282726dd7ec003fb56569d40c61bd05974a1bdcf049', 'button', '<button type="button" class="area-toggle" data-area-overlay="neighbourhood" aria-pressed="false">', 'Neighbourhoods', 2785, 2799),
+    'shell.shell-b04b38d4-021': ('0867f567e041a9cacc64c9a26f9fb5a485eeb00ce796c2f42b5cf1a102a9fa1f', 'button', '<button type="button" class="area-toggle" data-area-overlay="ward" aria-pressed="false">', 'City wards', 2909, 2919),
+    'shell.shell-b04b38d4-022': ('ae9b7f25b84671d2d213be6abb8ef33a8e5a97fb581b2155c958afd5445de17b', 'label', '<label for="area-choice">', 'Choose an area', 3040, 3054),
+    'shell.shell-b04b38d4-023': ('1e04d7c99d2322dfafc0eb8ca08ef53f2f11e03df640ee0a11a65308b9cf2554', 'option', '<option value="">', 'Choose an area', 3104, 3118),
+}
+
+
+HOME_SOURCE = 'docs/index.html'
+HOME_PINS = {'93283867eba047a32a2866994fb2f496e16aaf5eabc8772407a8823a923eb753',
+             '2ec549f9cb4a193c5bae436545533ab093a4ade4e95526648fc825aaf0391db9'}
+
+
+def _home_boundary_binding(packet):
+    identity = packet['id']
+    digest, tag, opening, label, start, end = HOME_BOUNDARY[identity]
+    v.need(v.digest(packet) == digest and packet['kind'] == 'functional'
+           and packet['locks'] == {} and packet['draft'] == label, 'Changed fixed boundary packet')
+    raw = (ROOT / HOME_SOURCE).read_bytes()
+    v.need(hashlib.sha256(raw).hexdigest() in HOME_PINS, 'Fixed boundary source changed')
+    source = raw.decode('utf8').replace('\r\n', '\n')
+    v.need(source[start - len(opening):end + len(tag) + 3] == opening + label + '</' + tag + '>',
+           'Fixed boundary consumer changed')
+    v.need(source.index('id="area-choice"') < HOME_BOUNDARY['shell.shell-b04b38d4-023'][4]
+           < source.index('</select>', source.index('id="area-choice"')),
+           'Wrong area choice placeholder consumer')
+    return {'id': identity, 'packet_sha256': digest, 'text': label, 'locks': {},
+            'consumer': opening, 'source_range': [start, end],
+            'files': {HOME_SOURCE: sorted(HOME_PINS)}}
+
+
 def _directory_binding(packet):
     import html
     import re
@@ -80,6 +113,8 @@ def _source(path):
 
 
 def exact_binding(packet):
+    if packet.get('id') in HOME_BOUNDARY:
+        return _home_boundary_binding(packet)
     if packet.get('id') != ITEM:
         return _directory_binding(packet)
     v.need(packet['id'] == ITEM and packet['kind'] == 'functional'
@@ -119,7 +154,8 @@ def verify_from_private_state(state, packet, record, independent_sha256):
     """Offline bridge only. Reuse the existing private history gate; never accept a caller's exclusion list."""
     from scripts import scarb_packet_consumption_candidate as history
     identity = packet.get('id')
-    v.need(identity in DIRECTORY_WORDING and v.digest(packet) == DIRECTORY_WORDING[identity][0],
+    family = HOME_BOUNDARY if identity in HOME_BOUNDARY else DIRECTORY_WORDING
+    v.need(identity in family and v.digest(packet) == family[identity][0],
            'Unknown or changed fixed packet')
     history.assert_unconsumed(state, {identity: v.digest(packet)}, expected_root=history.protected_root())
     # The native gate verifies the index and each immutable claim under this lock.
