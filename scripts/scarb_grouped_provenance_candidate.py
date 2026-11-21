@@ -11,6 +11,17 @@ from scripts import scarb_grouped_fixture_envelope as contract
 # Deliberately empty: no real production-qualified grouped runner records exist.
 from types import MappingProxyType
 TRUSTED_GROUPED_RUNS=MappingProxyType({})
+_REVIEWED_DIRECTORY_APPEND_ROSTER=None
+
+# Admission-only successor from PR #76. The independently pinned registry
+# retains the eight-entry snapshots and their cost evidence exactly as issued.
+DIRECTORY_APPEND_ROSTER_SHA256='422a64fe4dd30d89241673cf8c0253975dff992f2c2f4f6f4e0ba4f55aea73ae'
+DIRECTORY_APPEND_ORIGINAL_SHA256='69a3d2983cbd4cb994259f71ee160771777fa4fe59c9329d6893014726ad9267'
+DIRECTORY_APPEND_ID='static.directory-intro'
+DIRECTORY_APPEND_PATH='accepted-v2/cbe5543b72291c2809fde977a7d203943b4c0170929ca34678354453af609f1c.json'
+DIRECTORY_APPEND_FILE_SHA256='2fa9ff2f87c0a285b4a0eb3eb1b6831c6c6e0ce22b5e994af34958f9fde2550e'
+DIRECTORY_APPEND_PACKET_SHA256='850f969b52836daefced3ddb9392ed7d192ff20a43e89229a462a8d1015149c9'
+DIRECTORY_APPEND_RECEIPT_SHA256='f9be7e137fefd35cfd45d1d8645933e20eb851b9f8636bf541abb3fba8760326'
 FILES={'envelope.json','journal.json','seal.json','funding.json','prices.json','budget.json','ledger-before.json','ledger-after.json'}
 def file_hash(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -96,8 +107,15 @@ def _verify_pinned(root,pin,current_packets,*, replay_enrolled_history=False):
             contexts, _ = _historical_map_context(pin,current_packets,{path:(ROOT/path).read_bytes() for path in HISTORICAL_MAP_LF})
         else:
             contexts=current_contexts(current_packets)
-        from scripts.scarb_group21_source_compatibility import historical_context
-        contexts=historical_context(pin,contexts,env['source_context'])
+        from scripts.scarb_group21_source_compatibility import (
+            NEIGHBOURHOOD_TRANSITIONS, historical_context, reviewed_neighbourhood_context,
+        )
+        if replay_enrolled_history and pin['manifest_sha256'] in NEIGHBOURHOOD_TRANSITIONS:
+            contexts=reviewed_neighbourhood_context(
+                pin,contexts,env['source_context'],env['author_request'],env['review_request'],
+            )
+        else:
+            contexts=historical_context(pin,contexts,env['source_context'])
         v.need(env['source_context']==contexts and pin.get('source_context_sha256')==v.digest(contexts),'Current source context mismatch')
         a,r=context_prompts(current_packets,pin['requested_models'],contexts,authors,prompt_version=prompt_version)
     else:
@@ -119,15 +137,57 @@ def _verify_pinned(root,pin,current_packets,*, replay_enrolled_history=False):
     return {'version':'scarb-grouped-verified-provenance-1','manifest_sha256':pin['manifest_sha256'],
             'packet_bindings':expected,'models':env['models'],'text_sha256':{i:v.digest(t) for i,t in texts.items()},'cost_proof':cost_proof}
 
+def verify_directory_append_inputs(state,current,runs,members,packet_hashes):
+    """Check the one reviewed append after the external registry is authenticated."""
+    from scripts.scarb_packet_consumption_candidate import grouped_claim_bindings
+    v.need(len(runs)==69 and all(
+        pin['solo_state_sha256']==DIRECTORY_APPEND_ORIGINAL_SHA256 for pin in runs.values()
+    ),'Directory append requires the exact original grouped roster')
+    packet=current.get(DIRECTORY_APPEND_ID)
+    v.need(isinstance(packet,dict) and packet.get('id')==DIRECTORY_APPEND_ID
+           and v.digest(packet)==DIRECTORY_APPEND_PACKET_SHA256,
+           'Directory append requires its exact current canonical packet')
+    v.need(DIRECTORY_APPEND_ID not in members and DIRECTORY_APPEND_PACKET_SHA256 not in packet_hashes,
+           'Directory append overlaps grouped roster')
+    claims=list(grouped_claim_bindings(state))
+    v.need(bool(claims) and all(
+        DIRECTORY_APPEND_ID not in bindings and DIRECTORY_APPEND_PACKET_SHA256 not in bindings.values()
+        for bindings in claims
+    ),'Directory append overlaps grouped claims or their inventory is missing')
+    path=state/DIRECTORY_APPEND_PATH
+    v.need(path.is_file() and not path.is_symlink() and path.resolve()==path,
+           'Directory append receipt path differs')
+    raw=path.read_bytes()
+    v.need(hashlib.sha256(raw).hexdigest()==DIRECTORY_APPEND_FILE_SHA256,'Directory append receipt bytes differ')
+    receipt=json.loads(raw)
+    v.need(receipt.get('version')==f.VERSION and receipt.get('origin')=='openai-api-reviewed'
+           and receipt.get('key')==path.stem and receipt.get('packet_sha256')==DIRECTORY_APPEND_PACKET_SHA256
+           and receipt.get('sha256')==DIRECTORY_APPEND_RECEIPT_SHA256
+           and v.digest({k:value for k,value in receipt.items() if k!='sha256'})==DIRECTORY_APPEND_RECEIPT_SHA256,
+           'Directory append receipt identity differs')
+
+
+def _verify_current_solo_state(pin):
+    from scripts.scarb_grouped_membership_candidate import snapshot
+    v.need(pin.get('membership_version')==1,'Current solo holds/acceptances differ')
+    live=snapshot(pin['solo_state_root'])
+    sealed=pin.get('solo_state_sha256')
+    if TRUSTED_GROUPED_RUNS is _REVIEWED_DIRECTORY_APPEND_ROSTER:
+        append={'sha256':DIRECTORY_APPEND_FILE_SHA256,'packet_sha256':DIRECTORY_APPEND_PACKET_SHA256}
+        v.need(len(live)==9 and live.get(DIRECTORY_APPEND_PATH)==append
+               and sealed==DIRECTORY_APPEND_ORIGINAL_SHA256,'Current solo holds/acceptances differ')
+        live={path:record for path,record in live.items() if path!=DIRECTORY_APPEND_PATH}
+    v.need(v.digest(live)==sealed,'Current solo holds/acceptances differ')
+
+
 def verify_grouped_provenance(root,current_packets):
     path=Path(root)/'manifest.json'
     v.need(path.is_file(),'Trusted grouped record is absent')
     digest=file_hash(path)
     v.need(digest in TRUSTED_GROUPED_RUNS,'No trusted production grouped run enrolled; diagnostic and fixture promotion refused')
-    from scripts.scarb_grouped_membership_candidate import snapshot
     pin=TRUSTED_GROUPED_RUNS[digest]
     v.need(pin.get('expected_purpose','production-grouped-review')=='production-grouped-review','Synthetic runner cannot be admitted')
-    v.need(pin.get('membership_version')==1 and v.digest(snapshot(pin['solo_state_root']))==pin.get('solo_state_sha256'),'Current solo holds/acceptances differ')
+    _verify_current_solo_state(pin)
     env=json.loads((Path(root)/'envelope.json').read_text(encoding='utf8'))
     v.need(env.get('version') in {'scarb-grouped-run-envelope-2','scarb-grouped-run-envelope-3'},'Context-bound grouped version required for actual admission')
     return _verify_pinned(root,TRUSTED_GROUPED_RUNS[digest],current_packets,replay_enrolled_history=True)

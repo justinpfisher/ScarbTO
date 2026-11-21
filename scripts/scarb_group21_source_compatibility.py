@@ -1,4 +1,4 @@
-"""One exact source-copy correction compatibility proof; not a generic hash exception."""
+"""Exact source transitions for independently reviewed grouped runs."""
 import copy,hashlib
 from pathlib import Path
 from scripts import scarb_ai_voice as v
@@ -102,3 +102,107 @@ def historical_context(pin,current,recorded):
    item['source_sha256'][path]=before
  # Existing exact older transitions remain responsible for their original scope.
  return _historical_context(pin,prior,recorded)
+
+
+# PR #72 directory-only builder transition. These digests bind the 11 admitted
+# manifest, packet-map, source-context and prompt pairs from independent review.
+NEIGHBOURHOOD_TRANSITIONS={
+ "1ed1e0cb9e60cc27cce57766e1fe07720eb5484c3606f48a3e5c046e4ac6df59": {
+  "packets": "12e27759595481d87954f939513f287159ff997450b56161d69c8f9716ae78d3",
+  "before": "43a7269bc236221947e420dac4a97418ee48a351e6e5f7001173c496caf978a3",
+  "after": "b3561405641d8fea074a18955f1f62d68f2bde5a00078d15315bd2abb97fcaa9",
+  "author": "f4c1e95b1aa40849b21edf6fa5a8868abb1e1c0aa263fb30ea2701eeca5580f6",
+  "reviewer": "a1f9912cb03d7c9a5eeb1315ff973d106ffe074121bdbbb278585ac65fc4810d",
+ },
+ "3e0f3b243c01df4dbac76e628dac4fb85085bcd35ccb3179c066b6f5e7ca6fe7": {
+  "packets": "5eb8f8eae4540a327d906cab178d9f208d1faae0c0460ff0ce7d2b0fbd467237",
+  "before": "9435a965bbf5b1e099e46838a208e714cd4349fa9d0421131b856bf7b98973f7",
+  "after": "bd939b6f902f629492c44b6a1603d4b624dfdd36fcc6462dac2a8422ba76652f",
+  "author": "061c3ffe83cc178dc2c50094cc749550588e02308cb0972279c7309379d25a47",
+  "reviewer": "5f7f8d6b7ce3de0a7d16baf5395f83f4eba6000ca5d9d5db6dbaa009420884d8",
+ },
+ "5452dc2c5e2623a87420db6bd7b2713eecf7f4feea717e8aca80946f30f7b6b2": {
+  "packets": "78f58fb5e29cc145631541bc6e62001eac6907254e370df1ba93d9c73d7f344e",
+  "before": "d902035e3000731654e92b39154045343a4ac333607050c8d17adabf169f96ff",
+  "after": "3417948f58be476579eaf5c12c71cb52e54d37c10cb00e1c98ce4ad71e09e96d",
+  "author": "fe9d63cee51311128fbeb3db6cfeb471ec23411284e79671726709c9ec47452b",
+  "reviewer": "8b0ab0a1992954f11019f7ded09d6ffa8f805770a8cd0b429fd38fd1fd4a9350",
+ },
+ "5a968ccea1704eeee4b05eae7a6bbbdf52eca3e6e91622e8277ac90d547363e2": {
+  "packets": "d00ca2f4588114e8f70ef6c134ad737e64204c4d9862df2ee4c81693804766de",
+  "before": "d5a337ced2534d7b8c2a83f7872d9c8769158346edae96494997a2b494fce14a",
+  "after": "d19a1f426b8f3fca1282a440cb5bd2f7c837796b107ce0320bc45cce72403a49",
+  "author": "e543a85142d0ba975152c5434bd78ac838f92cd18c02c9afc22afa1208831f1f",
+  "reviewer": "3f632df11edaa8239c665c1c55091ab3c110f6f3587c5e3cd9d8c1eb3be75864",
+ },
+ "86d3669625fee1335b3c71f789ba74e74f2ceef906b960bf09a46e7de3f7a76b": {
+  "packets": "4e549216477f1be3a3e89d5206fe6b808570aadc029d7559a59bb690826c184f",
+  "before": "ad232304bac121f2b31bd33f4cfe620704cba65576399bee521775d8c6978c62",
+  "after": "78ef1da42208fe67bd43d0e6e55b2ff95d1a290cd9a47894e75df40836d52713",
+  "author": "be868d1c4765cbd7d895fa67702c8f957cd6354f3df68f63390d779f9c3fb033",
+  "reviewer": "b831bfa465c39570bb3132f95a888cb99e0740d54f82834af4a9214b30765b83",
+ },
+ "a75c5e593400de9b7f8b128bb33cf0022697c9863fa9895ffc0d0ad68f55145b": {
+  "packets": "a924d97516eb72e83e2bc4d38804f3d4523f502553d1958c891be608202b8e36",
+  "before": "092e240d9e7769749980e153e560ce0bc54838cc50995d688eafb609945a1388",
+  "after": "7ff2e9bd8dd8c33af292d85f6fc5f9fcf5cc2729a8e93ac16c74dd6139aa5119",
+  "author": "8a761c57fa9461c25d4fc410448bba927fd3a010a7601c85ad9777d5a39f907d",
+  "reviewer": "9167ca238ff660c6a5e67e257c7bf30a3778de9935efb2b138b7823f6157e9f0",
+ },
+ "a92c5728d188285d7eb63e31e7a3e60307585e83da720045038509c8f2cbbe11": {
+  "packets": "e64264fc6fd2a5da866c91dd595e6e99893864eb7268e92e6881cbaa51b819a3",
+  "before": "ca68349950d4e4132dfc64ef3ea741d798ce2e35adc7b7b644c644b826f763d6",
+  "after": "e04037c1a1091d659be77e28f92846450ade05c727e565d559a369d48d4dc8ba",
+  "author": "7e3c3ef5086b40bafbacad95e5dd9c8917a41b2e2cd4a6d29ba438c3887723c8",
+  "reviewer": "451555bfb5573b320984bd4e896526dd8f3ab03eae74bfc7b59792742f1c2c55",
+ },
+ "b429edd5a23975a176d7937024a351f95e11b9cbd9ab58da0daf8bb47e60d4a9": {
+  "packets": "55ec4960aec9497dc7d73c6625a16ff12dedf57f0e0c62f149de0c18b7c46845",
+  "before": "28669b25f28b2de51c4cf2ed2c78c538cb2f2f7080312373f62812aa82d0e8be",
+  "after": "32eefdaff5e7f4013d5a555053ce1fb2870579d80d86da62631a2a63c8f0bdbf",
+  "author": "aa77d86fea9dd09b0b290c54363d0617243db05653cef230e2985a78bf1ce71a",
+  "reviewer": "8bd2713964fe54b7cd13c54424f5dfb80412d85e5589539b538f3513653a0d8a",
+ },
+ "ba4a07ed8003c49b397479992e65114bdc8db8907a2e0f327c1757d564b1164d": {
+  "packets": "3c3abd8c0063b28e02a3065b02352debb74c6b144b583a539782442fe90cbfbf",
+  "before": "a2a6a110ba114659a111f2d1f471217d93a618198f8fc777b4a0226aea232541",
+  "after": "d7ac0291d2eb421f59a7e194af759dc587661f8b2c50064c8aefca8658bc6438",
+  "author": "d34bb37faf131dfaad7c54f92a33c0d750b26be35625b88605d0849e49b2b507",
+  "reviewer": "b94e40d6f616b1fb5acf4a8ec9cb79d4270f29fda228cf60ab9ae49e2f2e1a30",
+ },
+ "be657013da784989abb4968aebc3027b1078f6ef984973452db1abe816466546": {
+  "packets": "b856ee6d7150ae664e8cb9c78029fe4b4461114c589f24e844e9c02d36fd9021",
+  "before": "d45c76b04285086f6554b6f33cb7360b1b38e209a5f551e6e8ab75e6918a6800",
+  "after": "6579b599f467459b56cb044b51ae10e483a3ba72342807dd88b5341dafd450a5",
+  "author": "2b2fb93f6a78eca2ea34bdbb50248d36922ee883025f5f66ed8e0a22ae7deedf",
+  "reviewer": "8af20058850c146cea6f8a2f43889c107eb014df19c90287bf60f3e2646fadc6",
+ },
+ "cea1fe804a7795a9f934632d16871237f00bf7b87aea2d17a80c944b5d243d8b": {
+  "packets": "defa57a550a0350e02ebbe725e9159ed09543927765d75bd1fbb1597a5679ed4",
+  "before": "87cd3475bac2627053b836c665b18be9df025ea5b18e353034c8192e06982308",
+  "after": "d1c1752a9a55b45113d3b220a6a5ac465be107b1436830cb1094cf092e2db5b9",
+  "author": "56dd0401472e94def10b1275ef107c55914bb21cdc80cdc70472edd0b5a4aeee",
+  "reviewer": "c6aea7d76fc6b4e247a6a00f77552583c7c8a5945c2bb9f218517da9691fcab9",
+ },
+}
+
+def reviewed_neighbourhood_context(pin,current,recorded,author_request,review_request):
+ """Reconstruct the sealed context only after validating today's exact sources."""
+ from scripts import scarb_grouped_context_candidate as c, scarb_grouped_fixture_envelope as contract
+ approval=NEIGHBOURHOOD_TRANSITIONS.get(pin.get('manifest_sha256'))
+ v.need(approval is not None,'No reviewed neighbourhood source transition')
+ bindings=pin.get('packet_bindings',{})
+ v.need(len(bindings)==2 and set(bindings)==set(current)==set(recorded)
+        and v.digest(bindings)==approval['packets'],'Neighbourhood transition membership differs')
+ v.need(pin.get('source_context_sha256')==v.digest(recorded)==approval['before']
+        and v.digest(current)==approval['after'],'Neighbourhood transition context differs')
+ v.need(pin.get('prompt_version')==contract.CITATION_PROMPT
+        and v.digest(author_request)==approval['author']
+        and v.digest(review_request)==approval['reviewer'],'Neighbourhood sealed prompts differ')
+ verified=c.verify_neighbourhood_sources()
+ previous={**verified,c.NEIGHBOURHOOD_BUILDER:c.NEIGHBOURHOOD_PREVIOUS_BUILDER_SHA256}
+ v.need(all(item.get('source_sha256')==verified for item in current.values()),
+        'Neighbourhood current source bindings differ')
+ restored={identity:{**item,'source_sha256':previous} for identity,item in current.items()}
+ v.need(restored==recorded,'Unrelated neighbourhood context changed')
+ return restored

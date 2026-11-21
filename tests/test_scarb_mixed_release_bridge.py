@@ -138,6 +138,115 @@ class MixedReleaseBridgeTests(unittest.TestCase):
      with stage.private_grouped_registry(state,path,digest):self.fail('bad roster admitted')
     self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
 
+class ReviewedDirectoryAppendTests(unittest.TestCase):
+ @classmethod
+ def setUpClass(cls):
+  cls.current=c.seam.current_canonical_requests()
+
+ def setUp(self):
+  from scripts import stage_scarb_ai_inputs as stage
+  from scripts.scarb_grouped_membership_candidate import snapshot
+  from hashlib import sha256
+  self.stage=stage
+  self.sha=lambda raw:sha256(raw).hexdigest()
+  temporary=tempfile.TemporaryDirectory()
+  self.addCleanup(temporary.cleanup)
+  self.state=Path(temporary.name).resolve()
+  self.roster=self.state/'fixture-roster.json'
+  self.path=self.state/c.provenance.DIRECTORY_APPEND_PATH
+  self.path.parent.mkdir()
+  for n in range(1,9):
+   (self.path.parent/f'original-{n}.json').write_bytes(c.v.encoded({'packet_sha256':f'{n:064x}'}))
+  self.original=c.v.digest(snapshot(self.state))
+  directory=c.provenance.DIRECTORY_APPEND_ID
+  self.packet=c.v.digest(self.current[directory])
+  directory_receipt={'version':c.solo.VERSION,'origin':'openai-api-reviewed','key':self.path.stem,
+                     'packet_sha256':self.packet}
+  self.receipt_hash=c.v.digest(directory_receipt)
+  self.receipt=c.v.encoded({**directory_receipt,'sha256':self.receipt_hash})
+  self.path.write_bytes(self.receipt)
+  fixture_ids=[identity for identity in self.current if identity!=directory][:69]
+  self.by_root={}
+  runs={}
+  for n,identity in enumerate(fixture_ids,1):
+   manifest=f'{n:064x}'
+   pin={key:'a'*64 for key in ('funding_sha256','ledger_before_sha256','membership_before_sha256',
+          'prices_sha256','runner_sha256','source_context_sha256')}
+   bindings={identity:c.v.digest(self.current[identity])}
+   pin.update(manifest_sha256=manifest,solo_state_sha256=self.original,solo_state_root=str(self.state),
+              membership_version=1,cost_version=2,expected_purpose='production-grouped-review',
+              requested_models={},returned_models={},reservation_nusd=1,month_cap_nusd=1,packet_bindings=bindings)
+   runs[manifest]=pin
+   self.by_root[self.state/'grouped-runs'/c.v.digest(bindings)]=pin
+  self.roster.write_bytes(c.v.encoded({'version':'scarb-private-grouped-registry-1','runs':runs}))
+  self.roster_sha=self.sha(self.roster.read_bytes())
+  self.claim_folder=self.state/'grouped-consumption'
+  self.claim_folder.mkdir()
+  self.claim_index=self.state/'grouped-consumption-index.json'
+  self.add_claim(next(iter(runs.values()))['packet_bindings'])
+  self.enterContext(patch.multiple(c.provenance,DIRECTORY_APPEND_ROSTER_SHA256=self.roster_sha,
+               DIRECTORY_APPEND_ORIGINAL_SHA256=self.original,DIRECTORY_APPEND_FILE_SHA256=self.sha(self.receipt),
+               DIRECTORY_APPEND_PACKET_SHA256=self.packet,DIRECTORY_APPEND_RECEIPT_SHA256=self.receipt_hash))
+  self.verify=self.enterContext(patch.object(c.provenance,'verify_grouped_provenance',
+              side_effect=lambda root,packets:c.provenance._verify_current_solo_state(self.by_root[root])))
+
+ def add_claim(self,bindings):
+  name=c.v.digest(bindings)+'.json'
+  raw=c.v.encoded({'version':'scarb-grouped-consumption-1','bindings':bindings})
+  (self.claim_folder/name).write_bytes(raw)
+  claims={path.name:self.sha(path.read_bytes()) for path in self.claim_folder.iterdir()}
+  self.claim_index.write_bytes(c.v.encoded({'root':str(self.state),'claims':claims}))
+
+ def registry(self,digest=None):
+  return self.stage.private_grouped_registry(self.state,self.roster,digest or self.roster_sha)
+
+ def test_exact_append_and_unrelated_roster_keeps_equality(self):
+  with self.registry():
+   self.assertEqual(len(c.provenance.TRUSTED_GROUPED_RUNS),69)
+  self.assertEqual(self.verify.call_count,69)
+  self.assertIsNone(c.provenance._REVIEWED_DIRECTORY_APPEND_ROSTER)
+  # A differently serialized roster may have valid external authorization,
+  # but that authorization does not carry this exact append decision.
+  self.roster.write_bytes(self.roster.read_bytes()+b'\n')
+  other=self.sha(self.roster.read_bytes())
+  with self.assertRaisesRegex(c.v.VoiceError,'Current solo'):
+   with self.registry(other):self.fail('unreviewed roster received the append')
+  self.path.unlink()
+  with self.registry(other):
+   self.assertEqual(len(c.provenance.TRUSTED_GROUPED_RUNS),69)
+
+ def test_missing_altered_extra_original_or_receipt_is_refused(self):
+  original=self.path.parent/'original-1.json'
+  extra=self.path.parent/'extra.json'
+  original_bytes=original.read_bytes()
+  for defect in ('missing-append','changed-append','missing-original','changed-original','extra','relocated'):
+   with self.subTest(defect=defect),self.assertRaises(c.v.VoiceError):
+    try:
+     if defect=='missing-append':self.path.unlink()
+     elif defect=='changed-append':self.path.write_bytes(self.receipt+b' ')
+     elif defect=='missing-original':original.unlink()
+     elif defect=='changed-original':original.write_bytes(original_bytes+b' ')
+     elif defect=='extra':extra.write_bytes(c.v.encoded({'packet_sha256':'f'*64}))
+     else:self.path.rename(extra)
+     with self.registry():self.fail('changed solo inventory was admitted')
+    finally:
+     self.path.write_bytes(self.receipt)
+     original.write_bytes(original_bytes)
+     extra.unlink(missing_ok=True)
+   self.assertIsNone(c.provenance._REVIEWED_DIRECTORY_APPEND_ROSTER)
+   self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
+
+ def test_current_packet_and_claim_disjointness_are_required(self):
+  directory=c.provenance.DIRECTORY_APPEND_ID
+  changed={**self.current,directory:{**self.current[directory],'draft':'fixture drift'}}
+  with patch.object(c.seam,'current_canonical_requests',return_value=changed):
+   with self.assertRaisesRegex(c.v.VoiceError,'exact current canonical packet'):
+    with self.registry():self.fail('changed directory packet was admitted')
+  self.add_claim({'fictional.other-id':self.packet})
+  with self.assertRaisesRegex(c.v.VoiceError,'overlaps grouped claims'):
+   with self.registry():self.fail('claimed packet was admitted')
+
+
 class PrivateRegistryPromptVersionTests(unittest.TestCase):
  def fixture(self, version):
   from tests.test_scarb_grouped_publication_versions import PublicationVersionTests

@@ -19724,7 +19724,7 @@
       [
         "<module>",
         "literal",
-        "Pick a neighbourhood and follow its map. This directory has {{COUNT}} pages using names from the City of Toronto neighbourhood registry. This is Scarb.TO's retained map selection, not an official City membership list or a claim about current inspection conditions."
+        "Malvern West is in the directory. So is Agincourt South-Malvern West. I know it’s only a name on a list, but now I want both maps open. There are {{COUNT}} pages here, with names from the City of Toronto’s neighbourhood registry. Scarb.TO chose which ones to include. It’s not the City’s official list of Scarborough neighbourhoods, and it doesn’t tell you what an inspection would find today."
       ],
       [
         "<module>",
@@ -22740,7 +22740,7 @@
         "expression_sha256": "d6261804d6fd0900aba0f355e9dab7d8c6fb50df5efcaea1320d13b10080d4ed",
         "bindings": {
           "own": "0839c545dda95ad90d0567134eb9a63bf8924de954c52316933f10e5a7384297",
-          "SCARB_COPY": "574ad93ad43a86b44e884fa6a9d2bfe0ae0e3dfacfc2bcb2233cd1c921b6741f",
+          "SCARB_COPY": "8ad092ba3f62469bb8ca53ced2c295dc5d21932f8df2cbce0b41c337a01888d8",
           "template": "f18f5c0d37e351e5f23211809451958b0d0de9d8c46f1b8d2f2e966f84c21aaa"
         }
       },
@@ -23914,6 +23914,11 @@
       [
         "<module>",
         "literal",
+        "./scarb_directory_evidence.mjs"
+      ],
+      [
+        "<module>",
+        "literal",
         ".."
       ],
       [
@@ -24109,6 +24114,41 @@
       [
         "buildPageFiles",
         "literal",
+        "directory-intro"
+      ],
+      [
+        "buildPageFiles",
+        "literal",
+        "&"
+      ],
+      [
+        "buildPageFiles",
+        "literal",
+        "&amp;"
+      ],
+      [
+        "buildPageFiles",
+        "literal",
+        "<"
+      ],
+      [
+        "buildPageFiles",
+        "literal",
+        "&lt;"
+      ],
+      [
+        "buildPageFiles",
+        "literal",
+        ">"
+      ],
+      [
+        "buildPageFiles",
+        "literal",
+        "&gt;"
+      ],
+      [
+        "buildPageFiles",
+        "literal",
         "en-CA"
       ],
       [
@@ -24150,11 +24190,6 @@
         "buildPageFiles",
         "template",
         "</ul><p class=\"source-note\">These pages follow the City's neighbourhood boundaries, not association or newspaper coverage. Scarb.TO matches source coordinates to those boundaries; a record's location can be imperfect. Different source IDs stay separate.</p><p><a href=\"https://open.toronto.ca/dataset/neighbourhoods/\">City of Toronto neighbourhood boundaries</a>, under the <a href=\"https://open.toronto.ca/open-data-licence/\">Open Government Licence - Toronto</a>.</p></main><footer><p>Scarb.TO is an independent, AI-assisted guide to public records, not an official City service. Inspection results describe their recorded date, not conditions today.</p></footer></div></body></html>\n"
-      ],
-      [
-        "buildPageFiles",
-        "literal",
-        "directory-intro"
       ],
       [
         "runBuild",
@@ -24294,7 +24329,7 @@
       {
         "owner": "<module>",
         "name": "buildPageFiles",
-        "ast_sha256": "ce1c078e597ee03f7a0eced574e12e7c39e8fa5f27207e43b8e7c788b4d0b544"
+        "ast_sha256": "8c776e064cf729a91fa15459cc8657a3ca874d46aa136cc0127977e554d673b2"
       },
       {
         "owner": "<module>",

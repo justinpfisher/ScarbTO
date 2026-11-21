@@ -1,6 +1,7 @@
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {materializeShell} from './build_scarb_static.mjs';
+import {buildPageFiles, normalizeGeneratedText} from './build_neighbourhood_pages.mjs';
 import {createScarbAiResolver} from '../docs/scarb-ai-copy.mjs';
 import {currentEventPackets,parseDataModule} from './scarb_current_events.mjs';
 /**
@@ -123,8 +124,11 @@ export function isRetainedIndex(read) {
   // The existing committed release input is durable previous evidence. Compare
   // bytes, not today's voice catalogue or wall clock. This also works after a
   // later normal release persists a newer index and its archive manifest.
+  const pending=spawnSync('git',['rev-parse','--verify','MERGE_HEAD'],{cwd:ROOT,encoding:'utf8',windowsHide:true});
+  if(pending.error)throw pending.error;
+  const revision=pending.status===0?pending.stdout.trim():'HEAD';
   const committed=path=>{
-    const result=spawnSync('git',['show','HEAD:'+path],{cwd:ROOT,encoding:'utf8',windowsHide:true});
+    const result=spawnSync('git',['show',revision+':'+path],{cwd:ROOT,encoding:'utf8',windowsHide:true});
     if(result.error || result.status!==0)throw Error('Committed archive evidence unavailable');
     return result.stdout.replaceAll('\r\n','\n');
   };
@@ -176,6 +180,11 @@ export function checkVoiceGateway(read = path => readFileSync(resolve(ROOT, path
   if(accepted)for(const [path,record] of Object.entries(shells)) {
     if(read(path).replaceAll('\r\n','\n')!==materializeShell(record,accepted))throw Error('Published shell differs from accepted materialization: '+path);
   }
+  if(!accepted) {
+    const path='docs/neighbourhoods/index.html';
+    const directory=buildPageFiles().get(path);
+    if(normalizeGeneratedText(read(path))!==directory)throw Error('Directory differs from its qualified generator');
+  }
   const reviewed=JSON.parse(read('scripts/scarb-reviewed-markup.json'));
   for (const path of Object.keys(SURFACES)) {
     if(path==='docs/briefs/index.html' && !retainedIndex)continue;
@@ -188,7 +197,7 @@ export function checkVoiceGateway(read = path => readFileSync(resolve(ROOT, path
   for (const path of Object.keys(SURFACES)) {
     // Frozen historical prose is authenticated by its retained exact bytes,
     // not falsely reinterpreted as today's accepted catalogue output.
-    if(path==='docs/briefs/index.html'){count+=SURFACES[path].length;continue;}
+    if(path==='docs/briefs/index.html')continue;
     count += inspectMarkup(path, read(path));
   }
   const sourcePaths = [
@@ -215,8 +224,12 @@ export function checkVoiceGateway(read = path => readFileSync(resolve(ROOT, path
   }
   for (const path of Object.keys(SURFACES)) {
     const content = read(path);
-    if (!/<a\b[^>]*href="(?:\/|https:\/\/scarb\.to\/)"[^>]*aria-label="Scarb\.TO home"/.test(content) ||
-        !/<span\b[^>]*class="(?:brand-name|scarb-brand-title)"[^>]*>Scarb\.TO<\/span>/.test(content)) {
+    const hasHomeLink=/<a\b[^>]*href="(?:\/|https:\/\/scarb\.to\/)"[^>]*aria-label="Scarb\.TO home"/.test(content);
+    const hasWordmark=/<span\b[^>]*class="(?:brand-name|scarb-brand-title)"[^>]*>Scarb\.TO<\/span>/.test(content);
+    const retainedWeeklyWordmark=path==='docs/briefs/index.html' && retainedIndex &&
+      /<img class="brand-lockup" src="\/assets\/brand\/scarbto-connected\.svg" alt="">/.test(content) &&
+      /<a href="https:\/\/scarb\.to\/">Scarb\.TO home<\/a>/.test(content);
+    if (!hasHomeLink || !(hasWordmark || retainedWeeklyWordmark)) {
       throw new Error('Visible Scarb.TO wordmark/home link missing from ' + path);
     }
   }

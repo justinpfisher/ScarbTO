@@ -71,14 +71,23 @@ def private_grouped_registry(state, path, expected_sha256):
         need(len(set(bindings.values()))==len(bindings) and not packet_hashes.intersection(bindings.values()),"Duplicate registry packet hashes")
         members.update(bindings);packet_hashes.update(bindings.values())
         roots[identity]=state/'grouped-runs'/digest(bindings)
-    need(not provenance.TRUSTED_GROUPED_RUNS,"Nested or ambient registry grant refused")
+    need(not provenance.TRUSTED_GROUPED_RUNS and provenance._REVIEWED_DIRECTORY_APPEND_ROSTER is None,
+         "Nested or ambient registry grant refused")
+    reviewed_append=expected_sha256==provenance.DIRECTORY_APPEND_ROSTER_SHA256
+    if reviewed_append:
+        provenance.verify_directory_append_inputs(state,current,value['runs'],members,packet_hashes)
+    trusted=MappingProxyType(value['runs'])
     previous=provenance.TRUSTED_GROUPED_RUNS
     try:
-        provenance.TRUSTED_GROUPED_RUNS=MappingProxyType(value['runs'])
-        for identity,pin in value['runs'].items():
+        provenance.TRUSTED_GROUPED_RUNS=trusted
+        if reviewed_append:
+            provenance._REVIEWED_DIRECTORY_APPEND_ROSTER=trusted
+        for identity,pin in trusted.items():
             provenance.verify_grouped_provenance(roots[identity],[current[k] for k in pin['packet_bindings']])
         yield
-    finally:provenance.TRUSTED_GROUPED_RUNS=previous
+    finally:
+        provenance._REVIEWED_DIRECTORY_APPEND_ROSTER=None
+        provenance.TRUSTED_GROUPED_RUNS=previous
 
 
 def _generator_inputs(packets: list, config: dict, state: Path, candidate: Path, *, shells=None, event_source=None, authoring_version="v1", mixed_bundle=None) -> dict[str, bytes]:
