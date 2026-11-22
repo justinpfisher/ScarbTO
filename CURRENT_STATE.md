@@ -1,6 +1,26 @@
 # Scarb.TO — current verified state
 
-**Current checkpoint:** 12 November 2026. This is a point-in-time record, not a live monitor.
+**Current checkpoint:** 22 November 2026 UTC. Earlier checkpoints are retained below.
+
+## Verified release checkpoint - 22 November 2026
+
+**Eleven more DineSafe finding explanations are live.** [PR #78](https://github.com/justinpfisher/ScarbTO/pull/78) was squashed into main as `92eeb6f8004770d2a14a56f5a9e3467f6337cabc`. The [automatic code-only run 44976554654](https://github.com/justinpfisher/ScarbTO/actions/runs/44976554654) passed trusted GMKtec tests, unchanged-data verification, and Pages deployment. It skipped the City fetch.
+
+Live readback matched 15 files byte for byte. The eleven reviewed explanations were verified across 118 retained findings. The other 79 lookups, source details, City outcomes, dates, fallback, City data, and weekly archives were preserved.
+
+**Seven DineSafe finding explanation corrections are live.** [PR #77](https://github.com/justinpfisher/ScarbTO/pull/77) was squashed into main as `622a82fdf5c8b35f29cdd3e1831a25d8d15da048`. The [automatic code-only run 44971500448](https://github.com/justinpfisher/ScarbTO/actions/runs/44971500448) passed trusted GMKtec tests, unchanged-data verification, and Pages deployment. It skipped the City fetch.
+
+Live readback matched 14 served files byte for byte, including the translations, their runtime consumers, the last-good data and weekly archives. The seven corrected explanations matched the reviewed wording for 43 retained source findings. The other 82 lookup results and the fallback matched the prior release. The retained snapshot still has 3,370 establishments and 350 activity records. Its publication and source timestamps, weekly editions, and correction registry were preserved.
+
+[PR #72](https://github.com/justinpfisher/ScarbTO/pull/72) remains the integration draft. Its local evidence covers 255 of 736 current catalogue IDs. The complete catalogue gate still applies.
+
+**Owner decision, November 17, 2026 — candidate, not live:** The 2× Scarb personality and mandatory source-preserving Voice Gateway now supersede generic rewrites. Work is prepared on a separate candidate branch for Dot's existing qualification/release queue. No verification on GMKtec, independent review or production adoption is implied; full producer coverage remains to be proved. See [SCARB_VOICE_GATEWAY.md](SCARB_VOICE_GATEWAY.md).
+
+## Draft integration checkpoint - 17 November 2026, 23:59 UTC
+
+The existing PR #72 candidate now has locally integrated JS, Python/future-brief/RSS and static-shell producer wiring, protected-slot authoring, receipt-attested staging and the retained-geography homepage preview. Exact implementation tree `43dd04f161f4824e21c45f6302b88895da2a5be7` passed 172 Python unit tests and 127 JavaScript unit tests on GMKtec. The marked-copy gateway checked 15 entries and source checks covered 4,216 JS contracts. Its 736 current request packets retain byte hash `7114021b3dc8ef9aa3aef5bfdd10e9a92bdb5bb9f814c865fece50716ed2f6fb`. The canonical homepage shell was synchronized to the approved corrected intro; a collector encoding regression was corrected before this checkpoint. Brand browser tests remain imported by the main browser suite rather than invoked twice.
+
+This is a draft engineering checkpoint, not release qualification: accepted copy remains absent, the new geography preview is explicitly test-only, generation defaults remain disabled, and no source refresh or archive rewriting occurred. Earlier rendered/PDF checks bind their earlier trees, not this final tree. Fresh exact-head rendered/export tests, independent review, genuine accepted writer/reviewer output, merge, deployment and live verification remain outstanding. Existing held trials and funding limits are preserved. Updating this draft does not dispatch a model, schedule a retry, or publish the site.
 
 ## Current release status - 12 November 2026
 

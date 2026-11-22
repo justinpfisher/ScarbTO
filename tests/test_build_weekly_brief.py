@@ -87,7 +87,7 @@ class WeeklyBriefTests(unittest.TestCase):
         self.assertIn('datetime="2026-11-09T01:30:00+00:00">Sunday, November 8, 2026</time>', page)
         self.assertIn("Exact recording time", page)
         self.assertIn("not the inspection time", page)
-        self.assertIn("Explore the week's patterns", page)
+        self.assertIn("Explore the week&#x27;s patterns", page)
         manifest = json.loads((self.output / "editions.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["editions"][0]["event_count"], 2)
 
@@ -250,7 +250,7 @@ class WeeklyBriefTests(unittest.TestCase):
         rolled_index_bytes = (self.output / "index.html").read_bytes()
         rolled_old_page = old_page.read_bytes()
         self.assertNotIn("render_version", rolled_old)
-        self.assertEqual(new_record["render_version"], 3)
+        self.assertEqual(new_record["render_version"], 4)
         self.assertEqual(rolled_old["revision"], 4)
         self.assertEqual(rolled_old["generated_at"], original_generated_at)
         self.assertEqual(rolled_old["content_sha256"], original_content_hash)
@@ -321,7 +321,7 @@ class WeeklyBriefTests(unittest.TestCase):
         write_archive(self.history, [event("a", "2026-11-03T10:00:00+00:00")])
         build_weekly_brief(self.history, self.output, self.corrections, as_of=self.as_of)
         manifest = json.loads((self.output / "editions.json").read_text(encoding="utf-8"))
-        for version in (0, 4, True, "3", None):
+        for version in (0, 5, True, "3", None):
             with self.subTest(version=version):
                 candidate = json.loads(json.dumps(manifest))
                 candidate["editions"][0]["render_version"] = version

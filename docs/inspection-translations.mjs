@@ -30,11 +30,11 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "fail to ensure food handler in food premise practices good personal hygiene - sec. 33(1)(b)",
-    "A food handler was not following good personal hygiene practices."
+    "The inspection found a failure to ensure that food handlers practised good personal hygiene."
   ],
   [
     "fail to ensure food handler in food premise protects against contamination by hair - sec.  33(1)(d)",
-    "A food handler was not taking the required precautions to keep hair from contaminating food."
+    "The inspection found a failure to ensure that food handlers protected against contamination by hair."
   ],
   [
     "fail to ensure food handler in food premise wears clean outer garments - sec. 33(1)(c)",
@@ -86,7 +86,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "fail to provide thermometer in hot-holding equipment - sec. 30(b)",
-    "The inspection finding was that equipment used to keep food hot did not have the required thermometer."
+    "Equipment used to keep food hot did not have the required thermometer."
   ],
   [
     "fail to provide thermometer in refrigeration equipment - sec. 30(b)",
@@ -114,7 +114,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "food premise not maintained to keep food-handling room free from materials not regularly used - sec. 7(1)(f)",
-    "The inspection finding says the food-handling room was not kept free of materials that were not regularly used."
+    "Materials not regularly used were being kept in a food-handling room."
   ],
   [
     "food premise not maintained to permit cleaning of ceilings - sec. 7(1)(d)",
@@ -122,7 +122,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "food premise not maintained to permit cleaning of walls  - sec. 7(1)(d)",
-    "The inspection finding says the premises were not maintained to permit cleaning of the walls."
+    "The premises were not maintained so that the walls could be cleaned."
   ],
   [
     "food premise not maintained to permit sanitary maintenance of ceilings - sec. 7(1)(d)",
@@ -130,7 +130,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "food premise not maintained to permit sanitary maintenance of walls - sec. 7(1)(d)",
-    "The premises were not maintained to allow the walls to be kept sanitary."
+    "The premises were not maintained so that the walls could be kept sanitary."
   ],
   [
     "food premise not maintained with ceilings in good repair in food-handling room - sec. 7(1)(g)",
@@ -146,7 +146,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "food premise not maintained with clean walls in food-handling room - sec. 7(1)(g)",
-    "The inspection finding says the food premise was not maintained with clean walls in a food-handling room."
+    "Walls in a food-handling room were not clean."
   ],
   [
     "food premise not maintained with floors in good repair in food-handling room - sec. 7(1)(g)",
@@ -162,7 +162,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "food premise not maintained with smooth floor surface where food handled - sec. 7(1)(c)(i)",
-    "The floor where food was handled was not maintained with a smooth surface as required."
+    "The floor surface where food was handled was not smooth as required."
   ],
   [
     "food premise not maintained with smooth floor surface where utensils cleaned - sec. 7(1)(c)(ii)",
@@ -194,7 +194,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "operate food premise - appliances not constructed to permit maintenance in sanitary condition - sec. 9",
-    "The inspection finding says the appliances were not constructed to allow them to be kept sanitary."
+    "Appliances were not built in a way that allowed them to be kept sanitary."
   ],
   [
     "operate food premise - equipment not arranged to permit cleaning - sec. 9",
@@ -238,7 +238,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "operate food premise - furniture not constructed to permit cleaning - sec. 9",
-    "The inspection finding says the furniture was not constructed to permit cleaning."
+    "Furniture was not built in a way that allowed it to be cleaned."
   ],
   [
     "operate food premise - furniture not constructed to permit maintenance in sanitary condition - sec. 9",
@@ -266,7 +266,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "operate mobile food premise -- no gauge on waste tank - sec. 4(1)(d)",
-    "The inspection finding says the mobile food premises had no gauge on the waste tank."
+    "The mobile food premises did not have a gauge on the waste tank."
   ],
   [
     "sanitize utensils in chlorine solution of less than 100 p.p.m. of available chlorine - sec. 19(b)",
@@ -286,7 +286,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "thermometer in refrigeration equipment not easily readable - sec. 30(b)",
-    "The inspection finding was that the thermometer in refrigeration equipment was not easy to read."
+    "The thermometer in refrigeration equipment was not easy to read."
   ],
   [
     "use equipment not suitable for intended purpose - sec. 8(1)(d)",
@@ -302,11 +302,11 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "use food equipment not of sound and tight construction - sec. 8(1)(a)",
-    "Food equipment was not of sound, tight construction."
+    "Food equipment being used was not of sound, tight construction."
   ],
   [
     "use multi-service articles not of readily cleanable form - sec. 8(1)(c)",
-    "Reusable articles were not designed so they could be readily cleaned."
+    "Multi-service articles that were not readily cleanable were being used."
   ],
   [
     "use multi-service articles not suitable for intended purpose - sec. 8(1)(d)",
@@ -342,7 +342,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "use utensils not of readily cleanable form - sec.  8(1)(c)",
-    "Utensils were not designed so they could be readily cleaned."
+    "Utensils being used were not designed so they could be readily cleaned."
   ],
   [
     "use utensils not of readily cleanable material - sec.  8(1)(c)",

@@ -19,6 +19,11 @@ from email.utils import format_datetime
 from pathlib import Path
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from scripts.scarb_voice import copy as voice_copy, rss_description, compose_copy
+from scripts.scarb_accepted_copy import event_explanation_or_notice
 
 FEED_URL = "https://scarb.to/feed.xml"
 SITE_URL = "https://scarb.to/"
@@ -28,9 +33,9 @@ LICENCE_URL = "https://open.toronto.ca/open-data-licence/"
 MAX_ITEMS = 50
 EVENT_ID_RE = re.compile(r"^[0-9a-f]{20}$")
 EVENT_KINDS = {
-    "first_seen": "Added to Scarb.TO",
-    "status_changed": "DineSafe status changed",
-    "new_inspection": "New DineSafe inspection",
+    "first_seen": voice_copy("first_seen"),
+    "status_changed": voice_copy("status_changed"),
+    "new_inspection": voice_copy("new_inspection"),
 }
 
 
@@ -178,21 +183,16 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
     atom_ns = "http://www.w3.org/2005/Atom"
     ET.register_namespace("atom", atom_ns)
     channel = ET.SubElement(root, "channel")
-    ET.SubElement(channel, "title").text = "Scarb.TO food inspection updates"
+    ET.SubElement(channel, "title").text = voice_copy("rss-title")
     ET.SubElement(channel, "link").text = SITE_URL
     ET.SubElement(channel, f"{{{atom_ns}}}link", {
         "href": FEED_URL,
         "rel": "self",
         "type": "application/rss+xml",
     })
-    ET.SubElement(channel, "description").text = (
-        "Scarborough's food inspection records have plenty to explore. Here are the DineSafe updates I've gathered, with the City source so you can dig in too. "
-        "Inspection dates come from City records; added dates show when I first recorded each change. "
-        "The City status may have changed since. "
-        "A place newly added here is not necessarily a new business. Scarb.TO's editorial voice is AI-assisted, not first-hand reporting. "
-        "Contains information licensed under the Open Government Licence – Toronto. "
-        f"Licence: {LICENCE_URL}"
-    )
+    ET.SubElement(channel, "description").text = " ".join([
+        voice_copy("rss-intro"), voice_copy("rss-limits"), voice_copy("licence"), compose_copy("rss-licence-link", {"URL": LICENCE_URL})
+    ])
     ET.SubElement(channel, "language").text = "en-CA"
     ET.SubElement(channel, "lastBuildDate").text = format_datetime(built_at.astimezone(timezone.utc))
 
@@ -204,18 +204,10 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
         guid = ET.SubElement(item, "guid", {"isPermaLink": "false"})
         guid.text = f"urn:scarbto:dinesafe:{event['id']}"
         ET.SubElement(item, "pubDate").text = format_datetime(event["detected_at"])
-        details = [f"Neighbourhood matched by Scarb.TO: {event['neighbourhood']}."]
-        details.append("I match source coordinates to City neighbourhood boundaries; this is not a neighbourhood label supplied by DineSafe. Inaccurate source coordinates can put a place in the wrong neighbourhood.")
-        if event["previous_status"]:
-            details.append(f"Previous DineSafe status: {event['previous_status']}.")
-        details.extend([
-            f"City source dataset: {event['source_url']}.",
-            f"DineSafe result when added: {event['status']}.",
-            f"Inspection date: {reader_date(date.fromisoformat(event['inspection_date']))}.",
-            f"Added to Scarb.TO: {reader_date(event['detected_at'].astimezone(ZoneInfo('America/Toronto')).date())}. This is when I first recorded the update, not the inspection date.",
-            "This is a dated result, not a current safety assessment. Check the City's DineSafe record for anything newer.",
-        ])
-        ET.SubElement(item, "description").text = " ".join(details)
+        explanation = event_explanation_or_notice({**event, "feed": "dinesafe"})
+        ET.SubElement(item, "description").text = ((explanation + " ") if explanation else "") + rss_description(
+            event, inspection_date=reader_date(date.fromisoformat(event["inspection_date"])),
+            observed_date=reader_date(event["detected_at"].astimezone(ZoneInfo('America/Toronto')).date()))
         ET.SubElement(item, "category").text = "DineSafe"
 
     return ET.tostring(root, encoding="utf-8", xml_declaration=True)
@@ -223,7 +215,19 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
 
 def write_feed(history_dir: Path, output: Path, *, built_at: datetime | None = None) -> int:
     events = load_events(history_dir)
-    xml = build_feed(events, built_at=built_at or datetime.now(timezone.utc))
+    build_time = built_at or datetime.now(timezone.utc)
+    if built_at is None and output.is_file():
+        try:
+            previous = output.read_bytes()
+            prior_root = ET.fromstring(previous)
+            prior_date = prior_root.findtext("channel/lastBuildDate")
+            from email.utils import parsedate_to_datetime
+            prior_time = parsedate_to_datetime(prior_date)
+            if build_feed(events, built_at=prior_time) == previous:
+                return min(len(events), MAX_ITEMS)
+        except (ET.ParseError, TypeError, ValueError, OverflowError):
+            pass  # A malformed existing feed is rebuilt only from validated committed events.
+    xml = build_feed(events, built_at=build_time)
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary_path: Path | None = None
     try:

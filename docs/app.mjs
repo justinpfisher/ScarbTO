@@ -1,3 +1,6 @@
+import {COPY_QUALIFICATION} from './scarb-current-copy.mjs';
+import {currentEventCopy} from './scarb-event-copy.mjs';
+import {staticCopy} from './scarb-voice.mjs';
 import {readerDate, readerDateTime} from './reader-date.mjs';
 import {viewFromSearch,searchFromView} from './view-state.mjs';
 import {renderInspectionFindings} from './inspection-findings.mjs';
@@ -52,7 +55,7 @@ let snapshot = null, beachPreview = null, map = null, selectedId = null, shapes 
 let neighbourhoodShapesPromise = null;
 let neighbourhoodFitRequestId = 0;
 let features = [], visiblePlaces = [], visibleActivity = [], usingActivity = false, usingBeach = false, listLimit = 80;
-let dineSafeStatus={text:'Loading the City records.',className:''}, dineSafeLoadState='loading', dineSafeLoadError='', beachPreviewState='loading';
+let dineSafeStatus={text:staticCopy('app-01'),className:''}, dineSafeLoadState='loading', dineSafeLoadError='', beachPreviewState='loading';
 const selectedCallsClient = new SelectedCallsClient();
 let selectedCallsViewState = {status:'unavailable',reason:'not loaded',counts:[]};
 let selectedCallsExpiryTimer=null, selectedCallsExpiryDeadlineMono=null, selectedCallsExpiryFetchedAt=null;
@@ -125,39 +128,39 @@ function syncDataStatus() {
   const status=$('data-status');
   const provenance=$('source-provenance-content');
   provenance?.replaceChildren();
-  const sourceDetail=(label,value)=>{if(provenance&&value)provenance.append(els('p','',`${label}: ${value}`));};
+  const sourceDetail=(label,value)=>{if(provenance&&value)provenance.append(els('p','',staticCopy('app-dynamic-01',{ VALUE0:(label), VALUE1:(value) })));};
   status.classList.remove('error','warning');
   if(state.mode==='selected-calls'){
     if(selectedCallsViewState.status==='available')status.classList.add('warning');else if(selectedCallsViewState.reason!=='loading')status.classList.add('error');
     status.textContent=selectedCallsViewState.status==='available'
-      ? `TPS last changed these records ${readerDateTime(selectedCallsViewState.sourceEditedAt)}; checked ${readerDateTime(selectedCallsViewState.fetchedAt)}. Older counts are removed.`
-      : selectedCallsViewState.reason==='loading'?'Loading selected TPS call counts for Divisions 41, 42 and 43.'
+      ? staticCopy('app-dynamic-02',{ VALUE0:(readerDateTime(selectedCallsViewState.sourceEditedAt)), VALUE1:(readerDateTime(selectedCallsViewState.fetchedAt)) })
+      : selectedCallsViewState.reason==='loading'?staticCopy('app-02')
       : selectedCallsMessage(selectedCallsViewState);
-    sourceDetail('Source', 'Toronto Police Service selected calls, Divisions 41, 42 and 43. These are not all calls, confirmed crimes or neighbourhood incidents.');
-    sourceDetail('Source last changed',selectedCallsViewState.sourceEditedAt);
-    sourceDetail('Successfully checked',selectedCallsViewState.fetchedAt);
+    sourceDetail(staticCopy('app-audit-source'), staticCopy('app-03'));
+    sourceDetail(staticCopy('app-04'),selectedCallsViewState.sourceEditedAt);
+    sourceDetail(staticCopy('app-05'),selectedCallsViewState.fetchedAt);
     return;
   }
   if(state.mode==='beach'){
-    if(beachPreviewState==='loading')status.textContent='Loading the historical beach samples.';
+    if(beachPreviewState==='loading')status.textContent=staticCopy('app-06');
     else if(beachPreview){
       const latest=beachPreview.records.reduce((value,row)=>row.collectionDate>value?row.collectionDate:value,'0000-00-00');
-      status.textContent=`Historical City samples through ${readerDate(latest)}. Not current swimming advice.`;
-      sourceDetail('City sample records checked',beachPreview.retrieved_on);
-      sourceDetail('Latest sample date',latest);
+      status.textContent=staticCopy('app-dynamic-03',{ VALUE0:(readerDate(latest)) });
+      sourceDetail(staticCopy('app-07'),beachPreview.retrieved_on);
+      sourceDetail(staticCopy('app-08'),latest);
       status.classList.add('warning');
     }else{
-      status.textContent='I could not load the historical beach samples. They are not current swimming advice.';
+      status.textContent=staticCopy('app-09');
       status.classList.add('error');
     }
     return;
   }
   if(dineSafeStatus.className)status.classList.add(dineSafeStatus.className);
   status.textContent=dineSafeStatus.text;
-  sourceDetail('Source','City of Toronto DineSafe Open Data');
-  sourceDetail('Scarb.TO successful check',snapshot?.published_at);
-  sourceDetail('City catalogue timestamp (source timezone unspecified)',snapshot?.source?.last_refreshed);
-  sourceDetail('Meaning','The check time is not the inspection time or evidence of a new City update. Results describe the dated inspection, not current conditions.');
+  sourceDetail(staticCopy('app-audit-source'),staticCopy('app-10'));
+  sourceDetail(staticCopy('app-11'),snapshot?.published_at);
+  sourceDetail(staticCopy('app-12'),snapshot?.source?.last_refreshed);
+  sourceDetail(staticCopy('app-audit-meaning'),staticCopy('app-13'));
 }
 function setDineSafeStatus(text,className='') {
   dineSafeStatus={text,className};
@@ -166,12 +169,12 @@ function setDineSafeStatus(text,className='') {
 function syncMapAccessibilityLabel(){
   const beachMode=state.mode==='beach',selectedCallsMode=state.mode==='selected-calls';
   const mapLabel=selectedCallsMode
-    ?'Map background only; selected calls are not mapped individually'
+    ?staticCopy('app-14')
     :beachMode
-      ?'Map showing the beach reference point, not the individual sampling locations'
+      ?staticCopy('app-15')
       :statusMarkerImagesAvailable
-        ?'Interactive map of places with DineSafe records. Shapes and letters identify inspection outcomes alongside colour. Each outcome is written out in the matching list.'
-        :'Interactive map of places with DineSafe records. Letters identify inspection outcomes alongside colour. Each outcome is written out in the matching list.';
+        ?staticCopy('app-16')
+        :staticCopy('app-17');
   $('map').setAttribute('aria-label',mapLabel);
 }
 function syncControls() {
@@ -203,7 +206,7 @@ function syncMapLegend(){
   $('map-legend').classList.toggle('collapsed',mapLegendCollapsed);
   $('map-legend').classList.toggle('marker-shape-fallback',!statusMarkerImagesAvailable);
   button.setAttribute('aria-expanded',String(!mapLegendCollapsed));
-  button.setAttribute('aria-label',mapLegendCollapsed?'Show map key':'Hide map key');
+  button.setAttribute('aria-label',mapLegendCollapsed?staticCopy('app-audit-show-key'):staticCopy('app-audit-hide-key'));
   const icon=button.querySelector('span');if(icon)icon.textContent=mapLegendCollapsed?'+':'−';
 }
 function populateNeighbourhoods() {
@@ -226,25 +229,25 @@ function performFilters() {
   listLimit=80;
   if(state.mode==='selected-calls'){
     usingBeach=false;visiblePlaces=[];visibleActivity=[];usingActivity=false;
-    $('results-kicker').textContent='Toronto Police Service · counts when you open this view';
-    $('results-title').textContent='Police calls by division';
-    $('results-caption').textContent='These are selected calls published by TPS, not all crime, police activity, or officer presence. Opening this view asks TPS/Esri for division totals only. I do not request or map individual calls or locations.';
+    $('results-kicker').textContent=staticCopy('app-18');
+    $('results-title').textContent=staticCopy('app-19');
+    $('results-caption').textContent=staticCopy('app-20');
     updateSource();renderList();areaExplorer?.sync();return;
   }
   if(state.mode==='beach'){
     usingBeach=true;visiblePlaces=[];visibleActivity=[];usingActivity=false;
-    $('results-kicker').textContent='Toronto Open Data · dated samples';
-    $('results-title').textContent=beachPreview?.beach_name||'Beach samples';
-    $('results-caption').textContent='These water samples open another trail through the records. Here are a few records from the City catalogue to explore by date. They are historical measurements, not current swimming advice.';
+    $('results-kicker').textContent=staticCopy('app-21');
+    $('results-title').textContent=beachPreview?.beach_name||staticCopy('app-audit-beach-label');
+    $('results-caption').textContent=staticCopy('app-22');
     updateSource();renderList();
     return;
   }
   usingBeach=false;
   if(!snapshot?.ready){
     visiblePlaces=[];visibleActivity=[];usingActivity=false;
-    $('results-kicker').textContent='Official inspections';
-    $('results-title').textContent='Places to explore';
-    $('results-caption').textContent='Explore the map or browse the list. Your filters work in both.';
+    $('results-kicker').textContent=staticCopy('app-23');
+    $('results-title').textContent=staticCopy('app-24');
+    $('results-caption').textContent=staticCopy('app-25');
     updateSource();renderList();
     return;
   }
@@ -256,11 +259,11 @@ function performFilters() {
   usingActivity=state.mode==='recent' && visibleActivity.length>0;
   const activeIds=new Set(visibleActivity.map(e=>e.establishment_id));
   visiblePlaces=usingActivity ? eligible.filter(e=>activeIds.has(e.id)) : filterEstablishments(snapshot.establishments||[],state);
-  $('results-kicker').textContent=state.mode==='recent'?(usingActivity?'Added to Scarb.TO':'Latest City inspection records'):'Places with DineSafe records';
-  $('results-title').textContent=state.mode==='recent'?(usingActivity?'Recent changes':'Recently inspected'):'Places to explore';
-  $('results-caption').textContent=usingActivity?'This is where the records get interesting: compare them from day to day and the changes come into view. Here’s what I found in DineSafe. The inspection date may be earlier than when a record first appeared here.':
-    state.mode==='recent'?'Here’s another way into the records: places with recent inspection dates. That doesn’t mean their records are new; check the City’s record for current details.':
-    'Pick a place and explore its latest DineSafe inspection record with me. Each one links back to the City source.';
+  $('results-kicker').textContent=state.mode==='recent'?(usingActivity?staticCopy('app-26'):staticCopy('app-27')):staticCopy('app-28');
+  $('results-title').textContent=state.mode==='recent'?(usingActivity?staticCopy('app-audit-recent'):staticCopy('app-29')):staticCopy('app-24');
+  $('results-caption').textContent=usingActivity?staticCopy('app-30'):
+    state.mode==='recent'?staticCopy('app-31'):
+    staticCopy('app-32');
   updateSource();renderList();areaExplorer?.sync();
 }
 function renderList({focusMore = false, revealSelection = false} = {}) {
@@ -272,29 +275,29 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
     selectedCallsViewState=view;syncDataStatus();
     if(view.status==='available'){
       list.append(els('p','selected-calls-label',view.label));
-      $('results-count').textContent=`${view.counts.reduce((sum,row)=>sum+row.count,0).toLocaleString('en-CA')} selected calls`;
-      for(const row of view.counts){const item=els('div','selected-call-row');item.append(els('span','',`Division ${row.division.slice(1)}`),els('strong','',row.count.toLocaleString('en-CA')));list.append(item);}
-      list.append(els('p','selected-calls-attribution','Contains information licensed under the Open Government Licence – Ontario.'));
+      $('results-count').textContent=staticCopy('app-dynamic-04',{ VALUE0:(view.counts.reduce((sum,row)=>sum+row.count,0).toLocaleString('en-CA')) });
+      for(const row of view.counts){const item=els('div','selected-call-row');item.append(els('span','',staticCopy('app-dynamic-05',{ VALUE0:(row.division.slice(1)) })),els('strong','',row.count.toLocaleString('en-CA')));list.append(item);}
+      list.append(els('p','selected-calls-attribution',staticCopy('app-33')));
     }else{
-      $('results-count').textContent=view.reason==='loading'?'Loading':'Unavailable';
+      $('results-count').textContent=view.reason==='loading'?staticCopy('app-audit-loading'):staticCopy('app-audit-unavailable');
       const message=selectedCallsMessage(view);
-      list.append(els('p','empty',message));list.append(els('p','selected-calls-attribution','Contains information licensed under the Open Government Licence – Ontario.'));
+      list.append(els('p','empty',message));list.append(els('p','selected-calls-attribution',staticCopy('app-33')));
     }
-    const source=els('a','record-source-link','See the TPS selected-calls map');source.href='https://experience.arcgis.com/experience/a22f5295933e48a5b0a4c90cd3c4cae1';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
+    const source=els('a','record-source-link',staticCopy('app-34'));source.href='https://experience.arcgis.com/experience/a22f5295933e48a5b0a4c90cd3c4cae1';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
     finishListRedraw(list,previousFocus);return;
   }
   if(usingBeach){
-    $('results-count').textContent=beachPreview?`${beachPreview.rows_included} sample records`:beachPreviewState==='loading'?'Loading':'Unavailable';
+    $('results-count').textContent=beachPreview?staticCopy('app-dynamic-06',{ VALUE0:(beachPreview.rows_included) }):beachPreviewState==='loading'?staticCopy('app-audit-loading'):staticCopy('app-audit-unavailable');
     if(!beachPreview){
-      const message=beachPreviewState==='loading'?'Loading the historical City beach samples.':'I could not load the historical City beach samples.';
+      const message=beachPreviewState==='loading'?staticCopy('app-35'):staticCopy('app-36');
       list.append(els('p','empty',message));
-      const source=els('a','record-source-link','See the City beach records');source.href='https://open.toronto.ca/dataset/toronto-beaches-water-quality/';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
+      const source=els('a','record-source-link',staticCopy('app-37'));source.href='https://open.toronto.ca/dataset/toronto-beaches-water-quality/';source.target='_blank';source.rel='noopener noreferrer';list.append(source);
       finishListRedraw(list,previousFocus);return;
     }
     list.append(renderBeachSamplePreview(document,beachPreview));
     finishListRedraw(list,previousFocus);return;
   }
-  if(!snapshot?.ready){const message=dineSafeLoadState==='error'?`I could not load the published records (${dineSafeLoadError}). The update history below may have more detail.`:dineSafeLoadState==='loading'?'Loading the City records checked for Scarb.TO.':'There are no checked DineSafe records here yet. Places will appear once the first set is ready.';list.append(els('p','empty',message));$('results-count').textContent=dineSafeLoadState==='error'?'Unavailable':'0 in view';finishListRedraw(list,previousFocus);return;}
+  if(!snapshot?.ready){const message=dineSafeLoadState==='error'?staticCopy('app-dynamic-07',{ VALUE0:(dineSafeLoadError) }):dineSafeLoadState==='loading'?staticCopy('app-38'):staticCopy('app-39');list.append(els('p','empty',message));$('results-count').textContent=dineSafeLoadState==='error'?staticCopy('app-audit-unavailable'):staticCopy('app-audit-zero');finishListRedraw(list,previousFocus);return;}
   const bounds=map?.loaded()?map.getBounds():null;
   const inView=e=>!bounds||bounds.contains([e.longitude,e.latitude]);
   const matches=visiblePlaces.filter(inView);
@@ -308,12 +311,12 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
   } else {
     records=matches.sort((a,b)=>b.inspection_date.localeCompare(a.inspection_date)||a.name.localeCompare(b.name));
   }
-  $('results-count').textContent=`${records.length.toLocaleString('en-CA')} records in view`;
+  $('results-count').textContent=staticCopy('app-dynamic-08',{ VALUE0:(records.length.toLocaleString('en-CA')) });
   if(!records.length){
-    list.append(els('p','empty','No places match this view. There is more to explore: try fewer filters or show all of Scarborough. Missing results do not mean nothing has happened here.'));
+    list.append(els('p','empty',staticCopy('app-40')));
     const actions=els('div','empty-actions');
-    const reset=els('button','empty-action','Clear filters');reset.type='button';reset.addEventListener('click',()=>$('reset').click());actions.append(reset);
-    if(map){const fit=els('button','empty-action','Fit Scarborough');fit.type='button';fit.addEventListener('click',fitAll);actions.append(fit);}
+    const reset=els('button','empty-action',staticCopy('app-audit-clear'));reset.type='button';reset.addEventListener('click',()=>$('reset').click());actions.append(reset);
+    if(map){const fit=els('button','empty-action',staticCopy('app-audit-fit'));fit.type='button';fit.addEventListener('click',fitAll);actions.append(fit);}
     list.append(actions);finishListRedraw(list,previousFocus);return;
   }
   for(const entry of pageRecords(records,listLimit,selectedId)) {
@@ -323,14 +326,17 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
     button.type='button';button.dataset.id=entry.id;button.setAttribute('aria-expanded',String(entry.id===selectedId));
     const head=els('div','record-top');head.append(els('span','record-title',entry.name));
     head.append(els('span','status-label '+outcomeClass(entry.status),entry.status));
-    button.append(head,els('div','record-address',displayAddress(entry.address)||'Address unavailable'));
+    button.append(head,els('div','record-address',displayAddress(entry.address)||staticCopy('app-41')));
     const meta=els('div','record-meta');
-    meta.append(els('span','inspection-date','Inspection: '+localDate(entry.inspection_date)));
+    meta.append(els('span','inspection-date',staticCopy('app-audit-inspection-prefix')+localDate(entry.inspection_date)));
     if(entry.neighbourhood)meta.append(els('span','',entry.neighbourhood));
     if(entry.event){
-      const title={first_seen:'Added to Scarb.TO',new_inspection:'New inspection recorded',status_changed:`Changed from ${entry.event.previous_status||'unknown'}`} [entry.event.kind] || 'Updated';
+      const title={first_seen:staticCopy('app-26'),new_inspection:staticCopy('app-42'),status_changed:staticCopy('app-dynamic-09',{ VALUE0:(entry.event.previous_status||staticCopy('app-audit-unknown')) })} [entry.event.kind] || staticCopy('app-audit-updated');
       meta.append(els('span','',title));
-      meta.append(els('span','observed-date','Added to Scarb.TO: '+publishedAt(entry.event.detected_at)));
+      meta.append(els('span','observed-date',staticCopy('app-43')+publishedAt(entry.event.detected_at)));
+      const explanation=currentEventCopy(entry.event);
+      if(explanation)meta.append(els('span','event-explanation',explanation));
+      else if(COPY_QUALIFICATION==='accepted-input')meta.append(els('span','event-explanation',staticCopy('event-prose-unavailable')));
     }
     button.append(meta);
     button.addEventListener('click',()=>selectPlace(entry.id,true));
@@ -344,16 +350,16 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
       const related=relatedSourceRecords(snapshot.establishments,entry);
       if(related.length){
         const identity=els('details','related-source-records');
-        identity.append(els('summary','', 'Similar names in the source'));
-        identity.append(els('p','', 'Other source records have this name and address. Their IDs differ, so I have kept them separate. This is not proof that they are the same business.'));
-        identity.append(els('p','',`This source record ID: ${entry.id}`));
+        identity.append(els('summary','', staticCopy('app-44')));
+        identity.append(els('p','', staticCopy('app-45')));
+        identity.append(els('p','',staticCopy('app-dynamic-10',{ VALUE0:(entry.id) })));
         for(const other of related){
-          const link=els('a','record-source-link',`${other.name}: ${other.status}, inspected ${localDate(other.inspection_date)} (ID ${other.id})`);
+          const link=els('a','record-source-link',staticCopy('app-dynamic-11',{ VALUE0:(other.name), VALUE1:(other.status), VALUE2:(localDate(other.inspection_date)), VALUE3:(other.id) }));
           link.href=cityDineSafeRecordUrl(other.id);link.target='_blank';link.rel='noopener noreferrer';identity.append(link);
         }
         detail.append(identity);
       }
-      const source=els('a','record-source-link','See the City DineSafe record');
+      const source=els('a','record-source-link',staticCopy('app-46'));
       source.dataset.id=entry.id;source.href=cityDineSafeRecordUrl(entry.id);source.target='_blank';source.rel='noopener noreferrer';
       detail.append(source);card.append(detail);
     }
@@ -361,7 +367,7 @@ function renderList({focusMore = false, revealSelection = false} = {}) {
   }
   if(records.length>listLimit){
     const remaining=records.length-listLimit;
-    const more=els('button','more-results',`Show next ${Math.min(80,remaining).toLocaleString('en-CA')} matches`);
+    const more=els('button','more-results',staticCopy('app-dynamic-12',{ VALUE0:(Math.min(80,remaining).toLocaleString('en-CA')) }));
     more.type='button';more.addEventListener('click',()=>{listLimit=Math.min(listLimit+80,records.length);renderList({focusMore:true});});
     list.append(more);
   }
@@ -423,14 +429,14 @@ function setMapUnavailable(error) {
   panel?.classList.add('map-unavailable');
   const fallback=$('map-fallback');
   fallback.hidden=false;
-  fallback.textContent='The map could not load, but you can keep exploring. Search, filter and open the source records in the list below.';
+  fallback.textContent=staticCopy('app-47');
   $('map').setAttribute('aria-hidden','true');
   $('fit').hidden=true;
   $('fit').disabled=true;
   const legend=$('map-legend');
   if(legend)legend.hidden=true;
   const hint=document.querySelector('.mobile-hint');
-  if(hint)hint.textContent='The map could not load, but your filters still work on the list.';
+  if(hint)hint.textContent=staticCopy('app-48');
   if(error)console.warn('Interactive map unavailable:',error?.message||error);
   performFilters();
 }
@@ -529,7 +535,7 @@ function bindControls(){
   $('toggle-filters').addEventListener('click',()=>{
     const expanded=document.querySelector('.filters').classList.toggle('expanded');
     $('toggle-filters').setAttribute('aria-expanded',String(expanded));
-    $('toggle-filters').textContent=expanded?'Hide filters':'Filters';
+    $('toggle-filters').textContent=expanded?staticCopy('app-audit-hide-filters'):staticCopy('app-audit-filters');
   });
 }
 async function loadSelectedCalls(){
@@ -576,17 +582,17 @@ async function loadDineSafeSnapshot() {
     // later when the user switches away from Beach mode.
     snapshot=candidate;
     dineSafeLoadState=candidate.ready?'ready':'not-ready';dineSafeLoadError='';
-    if(!candidate.ready){setDineSafeStatus('Waiting for the first checked City records','warning');performFilters();return;}
+    if(!candidate.ready){setDineSafeStatus(staticCopy('app-49'),'warning');performFilters();return;}
     populateNeighbourhoods();
     const stale=isStale(candidate.published_at);
     setDineSafeStatus(stale
-      ? `These food inspection records may be out of date. Last checked ${publishedAt(candidate.published_at)}. Check the City's record for anything newer.`
-      : `Food inspection records checked ${publishedAt(candidate.published_at)}. These aren't live results.`,
+      ? staticCopy('app-dynamic-13',{ VALUE0:(publishedAt(candidate.published_at)) })
+      : staticCopy('app-dynamic-14',{ VALUE0:(publishedAt(candidate.published_at)) }),
       stale?'warning':'');
     performFilters();
   }catch(error){
     snapshot=null;dineSafeLoadState='error';dineSafeLoadError=error.message;
-    setDineSafeStatus('I could not load the City records. No DineSafe results are shown.','error');
+    setDineSafeStatus(staticCopy('app-50'),'error');
     performFilters();
   }
 }

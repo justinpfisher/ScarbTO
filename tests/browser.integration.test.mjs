@@ -1,3 +1,4 @@
+import {staticCopy} from '../docs/scarb-voice.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -31,8 +32,9 @@ test('UI source text retains intended separators and badge text', async () => {
   assert.ok(html.includes('DineSafe Open Data</a> and are provided under the <a'));
   assert.match(html, /href="https:\/\/open\.toronto\.ca\/dataset\/dinesafe\/"[^>]*>City of Toronto DineSafe Open Data<\/a>/);
   assert.match(html, /href="https:\/\/open\.toronto\.ca\/open-data-licence\/"[^>]*>Open Government Licence - Toronto<\/a>/);
-  assert.ok(app.includes("Toronto Open Data " + String.fromCharCode(0x00b7) + " dated samples"));
-  assert.match(html, /I love following the data trails here/);
+  assert.equal(staticCopy("app-21"), "Toronto Open Data " + String.fromCharCode(0x00b7) + " dated samples");
+  assert.ok(app.includes("staticCopy('app-21')"));
+  assert.ok(html.includes(staticCopy('home-intro')));
   assert.doesNotMatch(html, /I may like the history a little more than most/);
   assert.match(html, /Each view names the source it uses/);
 });
@@ -448,7 +450,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   await beachSurvivesDineSafeError.page.getByText(/I could not load the published records \(HTTP 503\)/).waitFor();
   assert.equal(await beachSurvivesDineSafeError.page.locator('#results-title').textContent(), 'Places to explore');
   assert.equal(await beachSurvivesDineSafeError.page.locator('#results-kicker').textContent(), 'Official inspections');
-  assert.equal(await beachSurvivesDineSafeError.page.locator('#results-caption').textContent(), 'Explore the map or browse the list. Your filters work in both.');
+  assert.equal(await beachSurvivesDineSafeError.page.locator('#results-caption').textContent(), 'Start with a place you know. I have linked its map point and dated records so you can follow the trail either way; your filters work in both.');
   assert.equal(await beachSurvivesDineSafeError.page.locator('#results-count').textContent(), 'Unavailable');
   await beachSurvivesDineSafeError.page.waitForFunction(() => !window.__scarbMap.querySourceFeatures('places').some(feature => feature.properties.id === 'beach:10'));
   assert.deepEqual(beachSurvivesDineSafeError.pageErrors, []);
@@ -468,7 +470,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   await switchingView.page.getByText(/There are no checked DineSafe records here yet/).waitFor();
   assert.equal(await switchingView.page.locator('#results-title').textContent(), 'Places to explore');
   assert.equal(await switchingView.page.locator('#results-kicker').textContent(), 'Official inspections');
-  assert.equal(await switchingView.page.locator('#results-caption').textContent(), 'Explore the map or browse the list. Your filters work in both.');
+  assert.equal(await switchingView.page.locator('#results-caption').textContent(), 'Start with a place you know. I have linked its map point and dated records so you can follow the trail either way; your filters work in both.');
   assert.equal(await switchingView.page.locator('#results-count').textContent(), '0 in view');
   await switchingView.page.waitForFunction(() => !window.__scarbMap.querySourceFeatures('places').some(feature => feature.properties.id === 'beach:10'));
   assert.deepEqual(switchingView.pageErrors, []);
@@ -480,7 +482,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
   await rejectedView.page.getByRole('button', {name: 'All places'}).click();
   await rejectedView.page.getByText(/I could not load the published records \(Unsupported schema\)/).waitFor();
   assert.equal(await rejectedView.page.locator('#results-title').textContent(), 'Places to explore');
-  assert.equal(await rejectedView.page.locator('#results-caption').textContent(), 'Explore the map or browse the list. Your filters work in both.');
+  assert.equal(await rejectedView.page.locator('#results-caption').textContent(), 'Start with a place you know. I have linked its map point and dated records so you can follow the trail either way; your filters work in both.');
   assert.equal(await rejectedView.page.locator('.record-item[data-id="should-not-render"]').count(), 0);
   await rejectedView.page.waitForFunction(() => !window.__scarbMap.querySourceFeatures('places').some(feature => feature.properties.id === 'beach:10'));
   assert.deepEqual(rejectedView.pageErrors, []);
@@ -763,6 +765,9 @@ test('resetting during a selected-call request aborts it and prevents late rende
 
 test('all five verified Namma findings render with original source details', {timeout:60_000}, async t=>{
   const fixture=JSON.parse(await readFile(new URL('./fixtures/namma-findings.json',import.meta.url),'utf8'));
+  const observedTemperature=fixture.rows.find(row=>row.unique_id==="2913ed6f8436882ab0b231bfcf48292c");
+  assert.ok(observedTemperature);
+  observedTemperature.typeDesc="Maintain potentially hazardous foods at internal temperature between 4°C and 60°C -  Sec. 27(1)";
   const first=fixture.rows[0];
   const entry={id:first.estId,name:first.estName,address:first.address,status:first.inspectionStatus,inspection_date:first.inspectionDate,latitude:Number(first.latitude),longitude:Number(first.longitude),neighbourhood:'Scarborough Village',inspection_findings:fixture.rows.map(r=>({row_id:r.unique_id,wording:r.typeDesc,severity:r.severity,category:r.deficiencyDesc,inspection_date:r.inspectionDate,observation:r.observation,outcome:r.OutcomeDesc}))};
   const {server,origin}=await startStaticServer();const browser=await chromium.launch();
@@ -771,6 +776,7 @@ test('all five verified Namma findings render with original source details', {ti
   await view.page.locator('#window').selectOption('all');
   await view.page.getByRole('button',{name:/NAMMA MADURAI/}).click();
   assert.equal(await view.page.locator('.inspection-findings>ul>li').count(),5);
+  assert.match(await view.page.locator('.inspection-findings').textContent(),/held at an internal temperature between 4°C and 60°C/);
   assert.match(await view.page.locator('.inspection-findings').textContent(),/does not establish that contamination/);
   await view.page.getByText('Original findings and source details',{exact:true}).click();
   for(const row of fixture.rows)assert.ok((await view.page.locator('.inspection-originals').textContent()).includes(row.typeDesc));

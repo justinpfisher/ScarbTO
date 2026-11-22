@@ -6,6 +6,13 @@ test('Namma finding is explained without claiming actual contamination',()=>{
   assert.match(text,/could adversely affect/);assert.match(text,/does not establish/);
   assert.equal(explainFinding('Other finding - Sec. 7(1)(a)(iii)'),null);
 });
+test('observed City temperature spacing variant preserves all locked meaning',()=>{
+  const observed='Maintain potentially hazardous foods at internal temperature between 4°C and 60°C -  Sec. 27(1)';
+  const pinned='maintain potentially hazardous foods at internal temperature between 4°c and 60°c - sec. 27(1)';
+  assert.equal(explainFinding(observed),explainFinding(pinned));
+  assert.equal(explainFinding(observed),'Food requiring temperature control was held at an internal temperature between 4°C and 60°C.');
+  for(const changed of [observed.replace('4°C','5°C'),observed.replace('60°C','61°C'),observed.replace('27(1)','27(2)'),observed.replace('internal','ambient'),'Unrecognized inspection wording'])assert.equal(explainFinding(changed),null);
+});
 test('all distinct source rows survive presentation, even identical wording',()=>{
   assert.equal(availableFindings({inspection_findings:[{row_id:'a',wording:'Same'},{row_id:'b',wording:'Same'},{wording:'None'}]}).length,2);
   assert.equal(availableFindings({inspection_detail:'Saved partial note'}).length,1);

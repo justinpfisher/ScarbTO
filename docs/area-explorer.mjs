@@ -1,3 +1,4 @@
+import {staticCopy} from './scarb-voice.mjs';
 import {readerDate} from './reader-date.mjs';
 import {areaFor, areaMatches, councillorFor, NEIGHBOURHOODS, WARDS, validateAreaFeatures, BOUNDARY_SOURCES} from './area-selection.mjs';
 import {fitBoundsFromFeatures} from './logic.mjs';
@@ -56,7 +57,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     group.hidden=overlay==='off';
     if (choiceMode!==overlay) {
       choice.replaceChildren();
-      const initial=make('option','','Choose an area');
+      const initial=make('option','',staticCopy('area-choice'));
       initial.value='';choice.append(initial);
       const dictionary=overlay==='ward'?WARDS:NEIGHBOURHOODS;
       if (overlay!=='off') {
@@ -106,13 +107,13 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     const isDineSafe=LIVE_MODES.has(getState().mode);
     const matching=isDineSafe
       ? getVisiblePlaces().filter(place=>areaMatches(place,{areaKind:area.kind,areaCode:area.code})).length : null;
-    const dine=section(content,'Food inspection results',places
+    const dine=section(content,staticCopy('area-results'),places
       ? places.length.toLocaleString('en-CA')+' DineSafe source records; '+(isDineSafe
         ? matching.toLocaleString('en-CA')+' currently match your DineSafe filters.'
         : 'the DineSafe area filter is paused while you view another source.')
-      : 'I could not load checked DineSafe records, so no record count is shown.');
-    addText(dine,'p','area-disclaimer','These are the latest inspections in the records I have, not a live list of every restaurant.');
-    addText(dine,'p','area-disclaimer','I match source coordinates to City boundary polygons. Coordinates can be imperfect; this is not an independent address check. Different source IDs remain separate records, even when names and addresses match.');
+      : staticCopy('area-unavailable'));
+    addText(dine,'p','area-disclaimer',staticCopy('area-inspection-limit'));
+    addText(dine,'p','area-disclaimer',staticCopy('area-coordinate-limit'));
     if (snapshot?.published_at) {
       const stamp=new Date(snapshot.published_at);
       const published=Number.isFinite(stamp.valueOf())
@@ -121,19 +122,19 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
       const catalogue=typeof snapshot.source?.last_refreshed==='string' ? readerDate(snapshot.source.last_refreshed) : 'not supplied';
       addText(dine,'p','area-disclaimer','Records checked for Scarb.TO: '+published+'; City catalogue date: '+catalogue+'.');
       if (Number.isFinite(stamp.valueOf()) && Date.now()-stamp.valueOf()>48*60*60*1000)
-        addText(dine,'p','area-disclaimer','These records may be out of date. Check the City record before relying on them.');
+        addText(dine,'p','area-disclaimer',staticCopy('area-stale'));
     }
-    if (!LIVE_MODES.has(getState().mode)) addText(dine,'p','area-disclaimer','This area filters DineSafe places only. Police division totals and historical beach samples cover different areas.');
+    if (!LIVE_MODES.has(getState().mode)) addText(dine,'p','area-disclaimer',staticCopy('area-topic-limit'));
     if (area.kind==='ward') {
       const rep=councillorFor(area.code);
-      const r=section(content,'City councillor',rep.name+' · '+rep.role);
+      const r=section(content,staticCopy('area-office-title'),rep.name+' · '+rep.role);
       if(rep.transition) addText(r,'p','area-disclaimer',rep.transition+' is councillor-elect; term begins Sunday, November 15, 2026.');
-      addLink(r,'City profile and contact details',rep.url);
-      addText(r,'p','area-disclaimer','I checked this officeholder information on Saturday, October 31, 2026. The City profile is the place to confirm any changes.');
+      addLink(r,staticCopy('area-office-link'),rep.url);
+      addText(r,'p','area-disclaimer',staticCopy('area-office-date'));
       content.prepend(r);
     } else {
       const names=area.wards.map(code=>'Ward '+code);
-      const r=section(content,'Your City councillor',names.length>1
+      const r=section(content,staticCopy('area-your-office-title'),names.length>1
         ? 'This neighbourhood spans '+names.join(' and ')+'. Your councillor depends on your exact address.'
         : 'Most of this neighbourhood lies in '+names.join(', ')+'. Check your address to find your councillor.');
       for (const code of area.wards) {
@@ -141,23 +142,23 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
         addLink(r,'Ward '+code+': '+rep.name+' · City office',rep.url);
       }
       addText(r,'p','area-disclaimer','Here’s a detail worth exploring: neighbourhood and ward lines can cross. These are the wards that overlap this neighbourhood on the City map, not a count of residents or a claim that the whole neighbourhood sits in each ward.');
-      addText(r,'p','area-disclaimer','I include 30 whole City neighbourhoods with most of their land area in Scarborough. The City does not assign them to a Scarborough district in this dataset. DineSafe places follow a separate rule: they must lie within the six Scarborough wards.');
-      const page=section(content,'Neighbourhood page','Keep exploring this neighbourhood, with its records and boundary sources together on one page.');
+      addText(r,'p','area-disclaimer',staticCopy('area-membership'));
+      const page=section(content,staticCopy('area-page-title'),staticCopy('area-page-intro'));
       addLink(page,'Open '+area.name+' neighbourhood page',neighbourhoodPagePath(area.code));
     }
-    const ridings=section(content,'Provincial & federal representatives',
-      'There is another set of boundaries to explore: provincial and federal ridings. They differ from City wards and neighbourhoods, so use your address to find the right MPP or MP.');
-    addLink(ridings,'Find your Ontario MPP','https://www.ola.org/en/members/current');
-    addLink(ridings,'Find your federal riding','https://www.elections.ca/Scripts/vis/FindED?L=e&PAGEID=20&QID=-1');
-    section(content,'Historical crime',area.kind==='ward'
-      ? 'There is no ward crime total here. TPS reports whole-neighbourhood quarterly summaries; dividing those up between wards would give a misleading number.'
-      : 'The quarterly TPS neighbourhood summaries are not ready to publish here. I do not show incident locations or current crime counts.');
-    const development=section(content,'Development & permits',
-      'Planning applications and issued permits tell you different things. I have not finished checking these sources for Scarb.TO, so I am not showing them or making claims about construction. You can still look up applications with the City.');
-    addLink(development,'City planning application information','https://www.toronto.ca/city-government/planning-development/application-information-centre/');
-    const boundary=section(content,'Boundary source','These boundaries come from the City of Toronto, under the Open Government Licence – Toronto.');
-    addLink(boundary,'See the City boundary records',BOUNDARY_SOURCES[area.kind]);
-    addLink(boundary,'Confirm your City ward by address','https://www.toronto.ca/city-government/council/members-of-council/');
+    const ridings=section(content,staticCopy('area-ridings-title'),
+      staticCopy('area-ridings'));
+    addLink(ridings,staticCopy('area-mpp'),'https://www.ola.org/en/members/current');
+    addLink(ridings,staticCopy('area-mp'),'https://www.elections.ca/Scripts/vis/FindED?L=e&PAGEID=20&QID=-1');
+    section(content,staticCopy('area-crime-title'),area.kind==='ward'
+      ? staticCopy('area-ward-crime')
+      : staticCopy('area-neighbourhood-crime'));
+    const development=section(content,staticCopy('area-development-title'),
+      staticCopy('area-development'));
+    addLink(development,staticCopy('area-planning-link'),'https://www.toronto.ca/city-government/planning-development/application-information-centre/');
+    const boundary=section(content,staticCopy('area-boundary-title'),'These boundaries come from the City of Toronto, under the Open Government Licence – Toronto.');
+    addLink(boundary,staticCopy('area-boundary-link'),BOUNDARY_SOURCES[area.kind]);
+    addLink(boundary,staticCopy('area-ward-address'),'https://www.toronto.ca/city-government/council/members-of-council/');
   }
   function syncOutline() {
     if (!map) return;
@@ -252,7 +253,7 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
   async function setOverlay(next,{restore=false,notify=!restore}={}) {
     if (!['off','neighbourhood','ward'].includes(next)) return;
     if (!restore && next!=='off' && !LIVE_MODES.has(getState().mode)) {
-      showNote('These boundaries and area filters work with DineSafe places only. Police division totals and beach samples cover different areas.');
+      showNote(staticCopy('area-other-topic'));
       return;
     }
     const previousOverlay=overlay;
@@ -263,8 +264,8 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
     const generation=++token;
     overlay=next;
     showNote(selectionCleared?(next==='off'
-      ? 'Boundaries are off and the map-selected area is cleared. Your other filters stay in place.'
-      : 'I cleared the previous map-selected area when you switched boundary types. Your other filters stay in place. Choose a new area for the map and list.'):'');
+      ? staticCopy('area-off')
+      : staticCopy('area-switched')):'');
     display();sync();
     if(notify && previousOverlay!==overlay)onOverlayChange?.(overlay);
     if (next!=='off' && !cache.has(next)) {
@@ -319,10 +320,10 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
       const matching=collection.features.filter(f=>f.properties.AREA_SHORT_CODE===area.code);
       const bounds=fitBoundsFromFeatures(matching);
       if(bounds) map.fitBounds([[bounds[0],bounds[1]],[bounds[2],bounds[3]]],{padding:42,maxZoom:13,duration:350});
-      else showNote('I could not find a usable boundary for this area.');
+      else showNote(staticCopy('area-boundary-missing'));
     } catch(error) {
       if(attempt!==fitAttempt) return;
-      showNote('The City boundary could not load. Your area filter is still in place.');
+      showNote(staticCopy('area-boundary-failed'));
       console.warn('Selected area boundary unavailable:',error?.message||error);
     }
   }
@@ -352,8 +353,8 @@ export function createAreaExplorer({getState, getSnapshot, getVisiblePlaces, onS
   sync();
   return {sync, attachMap, detachMap, updateMode:()=>{
     if (!LIVE_MODES.has(getState().mode) && overlay!=='off')
-      showNote('Boundaries are hidden for this view. Police division totals and historical beach samples do not describe whole neighbourhoods or wards.');
-    else if (el('area-note').textContent.startsWith('Boundaries are hidden for this view')) showNote('');
+      showNote(staticCopy('area-hidden'));
+    else if (el('area-note').textContent===staticCopy('area-hidden')) showNote('');
     display();sync();
   }, setOverlay, getOverlay:()=>overlay, select};
 }
