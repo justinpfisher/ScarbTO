@@ -8,8 +8,8 @@ import re
 import subprocess
 import sys
 
-BASE = "9c28b55b003951ea36dc581950f5c49dd3faedaf"
-CLAIM = "[scarb-stage:finding-wording-v1]"
+BASE = "622a82fdf5c8b35f29cdd3e1831a25d8d15da048"
+CLAIM = "[scarb-stage:finding-wording-v2]"
 APPLICATION = "docs/inspection-translations.mjs"
 PROTECTED_TREES = {
     "docs/data": "650a9120c3c5a8a8495a9183669e5dbe2f959076",
@@ -23,8 +23,8 @@ SELF = "scripts/resolve_staged_release.py"
 PROJECTION = {
     ".github/workflows/refresh-and-publish.yml": "8864aea26cbfc4b074d9bbaef9528d52095f1cad",
     "docs/app.mjs": "f74f37883a38691745eea083f841bb6775c11a35",
-    "docs/inspection-findings.mjs": "500d3ef83ea0ae7ee72c827f2a88cb12ceacfae4",
-    "docs/inspection-translations.mjs": "d26deb04c3dca84e4de042a25415eb6042f94783",
+    "docs/inspection-findings.mjs": "1d90f1aa060efa2fffa8638d5e3bebab36232153",
+    "docs/inspection-translations.mjs": "897a8d887bf2733404cba3d9824d046ad250cb24",
     "docs/neighbourhood-page.mjs": "13b26c60f614695b85e366062c6d2aed5c9b3b27",
     "scripts/verify_code_only_release.py": "c26843e11e06cedfe83b247c15b05e3d40b0157a",
     "tests/test_code_only_release.py": "502ffc7041e07f85a8db3f93e2aba227301171d4",
@@ -73,7 +73,7 @@ def resolve(repo: Path, environ: dict[str, str]) -> str:
     ):
         raise StageError("Claimed finding wording stage does not match the required exact main push")
     changed = set(_git(repo, "diff", "--name-only", "--no-renames", BASE, sha).splitlines())
-    if changed != {SELF, APPLICATION}:
+    if changed != {SELF, APPLICATION, "docs/inspection-findings.mjs"}:
         raise StageError("Claimed finding wording stage has unexpected accompanying changes")
     for path, blob in PROJECTION.items():
         if _git(repo, "ls-tree", sha, "--", path) != f"100644 blob {blob}\t{path}":

@@ -4,7 +4,7 @@ import {SOURCE_TRANSLATIONS} from './inspection-translations.mjs';
 export const FINDING_SOURCE='https://open.toronto.ca/dataset/dinesafe/';
 const translations=new Map([
   ...SOURCE_TRANSLATIONS,
-  ['food premise maintained in manner permitting adverse effect on food - sec. 7(1)(a)(iii)','Conditions at the premises could adversely affect the food. This finding does not establish that contamination or illness occurred.'],
+  ['food premise maintained in manner permitting adverse effect on food - sec. 7(1)(a)(iii)','The premises were maintained in a way that could adversely affect food. This finding does not establish that contamination or illness occurred.'],
   ['fail to maintain handwashing stations (liquid soap and paper towels) - sec. 7(3)(c)','Handwashing stations were not properly maintained with liquid soap and paper towels.'],
   ['fail to protect food from contamination or adulteration - sec. 26(1)','Food was not adequately protected from contamination or adulteration. This does not establish that contamination occurred.'],
   ['maintain potentially hazardous foods at internal temperature between 4°c and 60°c - sec. 27(1)','Food requiring temperature control was held between 4°C and 60°C.'],

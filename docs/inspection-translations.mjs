@@ -86,7 +86,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "fail to provide thermometer in hot-holding equipment - sec. 30(b)",
-    "Equipment used to keep food hot did not have the required thermometer."
+    "The inspection finding was that equipment used to keep food hot did not have the required thermometer."
   ],
   [
     "fail to provide thermometer in refrigeration equipment - sec. 30(b)",
@@ -114,7 +114,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "food premise not maintained to keep food-handling room free from materials not regularly used - sec. 7(1)(f)",
-    "Materials not regularly used were being kept in a food-handling room."
+    "The inspection finding says the food-handling room was not kept free of materials that were not regularly used."
   ],
   [
     "food premise not maintained to permit cleaning of ceilings - sec. 7(1)(d)",
@@ -122,7 +122,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "food premise not maintained to permit cleaning of walls  - sec. 7(1)(d)",
-    "The premises were not maintained so that the walls could be cleaned."
+    "The inspection finding says the premises were not maintained to permit cleaning of the walls."
   ],
   [
     "food premise not maintained to permit sanitary maintenance of ceilings - sec. 7(1)(d)",
@@ -130,7 +130,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "food premise not maintained to permit sanitary maintenance of walls - sec. 7(1)(d)",
-    "The premises were not maintained so that the walls could be kept sanitary."
+    "The premises were not maintained to allow the walls to be kept sanitary."
   ],
   [
     "food premise not maintained with ceilings in good repair in food-handling room - sec. 7(1)(g)",
@@ -146,7 +146,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "food premise not maintained with clean walls in food-handling room - sec. 7(1)(g)",
-    "Walls in a food-handling room were not clean."
+    "The inspection finding says the food premise was not maintained with clean walls in a food-handling room."
   ],
   [
     "food premise not maintained with floors in good repair in food-handling room - sec. 7(1)(g)",
@@ -162,7 +162,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "food premise not maintained with smooth floor surface where food handled - sec. 7(1)(c)(i)",
-    "The floor surface where food was handled was not smooth as required."
+    "The floor where food was handled was not maintained with a smooth surface as required."
   ],
   [
     "food premise not maintained with smooth floor surface where utensils cleaned - sec. 7(1)(c)(ii)",
@@ -194,7 +194,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "operate food premise - appliances not constructed to permit maintenance in sanitary condition - sec. 9",
-    "Appliances were not built in a way that allowed them to be kept sanitary."
+    "The inspection finding says the appliances were not constructed to allow them to be kept sanitary."
   ],
   [
     "operate food premise - equipment not arranged to permit cleaning - sec. 9",
@@ -238,7 +238,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "operate food premise - furniture not constructed to permit cleaning - sec. 9",
-    "Furniture was not built in a way that allowed it to be cleaned."
+    "The inspection finding says the furniture was not constructed to permit cleaning."
   ],
   [
     "operate food premise - furniture not constructed to permit maintenance in sanitary condition - sec. 9",
@@ -266,7 +266,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "operate mobile food premise -- no gauge on waste tank - sec. 4(1)(d)",
-    "The mobile food premises did not have a gauge on the waste tank."
+    "The inspection finding says the mobile food premises had no gauge on the waste tank."
   ],
   [
     "sanitize utensils in chlorine solution of less than 100 p.p.m. of available chlorine - sec. 19(b)",
@@ -286,7 +286,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "thermometer in refrigeration equipment not easily readable - sec. 30(b)",
-    "The thermometer in refrigeration equipment was not easy to read."
+    "The inspection finding was that the thermometer in refrigeration equipment was not easy to read."
   ],
   [
     "use equipment not suitable for intended purpose - sec. 8(1)(d)",
