@@ -327,6 +327,80 @@ class CanonicalFixedWordingTests(unittest.TestCase):
   self.assertFalse((self.state/'generation.lock').exists())
 
 
+
+ def community_layout_fixture(self):
+  from scripts.scarb_accepted_copy import fixed_community_layout_pins
+  bundle,editorial,_,directory=self.directory_bundle()
+  layout=fixed_community_layout_pins()
+  # Private review records stay outside the repository. These are rejected evidence.
+  bundle['fixed_records'].update({identity:{} for identity in layout})
+  editorial={key:item for key,item in editorial.items() if key not in layout}
+  projection={key:{**entry,'origin':'scarb-fixed-wording-review-1'}
+              for key,entry in {**self.pins,**directory,**layout}.items()}
+  return bundle,editorial,layout,projection
+
+ def test_community_layout_complete_catalogue_preserves_whitespace_and_shell(self):
+  from scripts import stage_scarb_ai_inputs as stage
+  bundle,editorial,layout,projection=self.community_layout_fixture()
+  # Stub private authentication only for the synthetic full-catalogue wiring test.
+  with patch.object(self.fixed,'verify_canonical_fixed_records',return_value=projection):
+   catalogue=self.compile(editorial=editorial,bundle=bundle)
+   candidate=self.state/'candidate.json'
+   candidate.write_bytes(c.v.encoded(catalogue))
+   path='docs/community/index.html'
+   with patch.object(c,'_collect_admitted_editorial_entries',return_value=editorial):
+    staged=stage.generator_inputs(list(self.current.values()),{},self.state,candidate,
+                                  shells={path:self.shells[path]},authoring_version='v3',mixed_bundle=bundle)
+  self.assertEqual(catalogue['version'],'scarb-ai-voice-mixed-4')
+  self.assertEqual(len(catalogue['entries']),736)
+  self.assertEqual(len(layout),9)
+  self.assertEqual(len(projection),67)
+  self.assertEqual({key for key,entry in catalogue['entries'].items()
+                    if entry['origin']=='scarb-fixed-wording-review-1'},set(projection))
+  self.assertEqual(staged[path],(c.ROOT/path).read_bytes().replace(b'\r\n',b'\n'))
+  self.assertEqual(json.loads(staged['accepted-copy.json']),catalogue)
+  resolve=accepted_resolver(catalogue,self.expected)
+  js=MixedReleaseBridgeTests.js(self,catalogue,self.expected)
+  self.assertEqual(js.returncode,0,js.stderr)
+  self.assertEqual(json.loads(js.stdout),{key:resolve(key) for key in self.expected})
+  self.assertEqual(resolve('shell.shell-861ddc17-026'),'Maximum words ')
+  self.assertEqual(resolve('shell.shell-861ddc17-035'),' Grayscale')
+
+ def test_community_layout_rejects_forged_malformed_and_overlapping_candidates(self):
+  bundle,editorial,layout,projection=self.community_layout_fixture()
+  identity='shell.shell-861ddc17-026'
+  outside='static.community-intro'
+  valid_scope=bundle['fixed_records']
+  with self.assertRaisesRegex(c.v.VoiceError,'packet or review map'):
+   self.compile(editorial=editorial,bundle=bundle)
+  widened={**valid_scope}
+  widened[outside]=widened.pop(identity)
+  swapped={**editorial,identity:editorial[outside]}
+  del swapped[outside]
+  cases=((widened,swapped),(valid_scope,{**editorial,identity:editorial[outside]}),
+         (valid_scope,{key:entry for key,entry in editorial.items() if key!=outside}),
+         (list(valid_scope),editorial),({**valid_scope,identity:None},editorial))
+  for evidence,edits in cases:
+   with self.assertRaises(c.v.VoiceError):
+    self.compile(editorial=edits,bundle={**bundle,'fixed_records':evidence})
+  with patch.object(self.fixed,'verify_canonical_fixed_records',return_value=projection):
+   catalogue=self.compile(editorial=editorial,bundle=bundle)
+  for issue in ('whitespace','receipt','provenance','older-version','different-origin','extra-fixed','malformed'):
+   altered=copy.deepcopy(catalogue)
+   entry=altered['entries'][identity]
+   if issue=='whitespace':entry['text']=entry['text'].strip()
+   elif issue=='receipt':entry['receipt_sha256']=layout['shell.shell-861ddc17-035']['receipt_sha256']
+   elif issue=='provenance':entry['provenance']={}
+   elif issue=='older-version':altered['version']='scarb-ai-voice-mixed-3'
+   elif issue=='different-origin':entry['origin']='openai-api-reviewed'
+   elif issue=='extra-fixed':altered['entries'][outside]['origin']='scarb-fixed-wording-review-1'
+   else:altered['entries'][identity]=None
+   with self.subTest(issue=issue):
+    with self.assertRaises(ValueError):accepted_resolver(altered,self.expected)
+    self.assertEqual(MixedReleaseBridgeTests.js(self,altered,self.expected).returncode,2)
+  self.assertFalse((self.state/'generation.lock').exists())
+
+
 class ReviewedDirectoryAppendTests(unittest.TestCase):
  @classmethod
  def setUpClass(cls):

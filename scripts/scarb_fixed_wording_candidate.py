@@ -169,18 +169,36 @@ COMMUNITY_PROOF = {
 COMMUNITY_PROOF_PINS = {'docs/community/index.html': ('6690986d1ad8779abe76ecac3db1253882748efcef016be7b47e54f01e2ae1b2', 'db2475b3831c70edc8b7fd49ba5e7450c2ddbf8c66183292e62d7390ec02dfac'), 'docs/community-editor.mjs': ('29edbef327ec665d6d1131ef196b5ab62297ad83e15b00c32d1f95c456e8930d', 'aa42f50a99bfccd09b9451c13472dd2112b07e5c6792708c40ef2b62517c9829'), 'docs/community-exports.mjs': ('71f3fb64c0c8885c3eb7a3eb0cfe01b1e8fe1ab515b6b2271dac50865dc8c50e', '875a4cc72cb069a9fbc9095627d68c1eca2f3d49567108baa660c9bbb07b3d83'), 'docs/community-publishing.mjs': ('449de3e327eede3acf9d3a85b21c11cb6fafb5005e79e01555d021962866d859', 'e96f90e970e77a6d8e5a9ab1b0e64f2bb616e8013455dd982c16f1b90472e89d'), 'config/scarb-static-shells.json': ('10529fd88e53b47fb2eb1f831e6e239f2052c75036400f289de3e31b14a8e4c0', '638245570ac56062ffb412203db9f4abb43100d4891772806d7557261521e9bb')}
 
 
-def _community_proof_binding(packet):
-    from scripts.scarb_static_materialize import discover
-    identity = packet['id']
-    digest, opening, tag, label, start, end, action, meaning = COMMUNITY_PROOF[identity]
-    v.need(v.digest(packet) == digest and packet['kind'] == 'functional'
-           and packet['locks'] == {} and packet['draft'] == label, 'Changed fixed Community packet')
+COMMUNITY_LAYOUT = frozenset({
+    'shell.shell-861ddc17-026',
+    'shell.shell-861ddc17-027',
+    'shell.shell-861ddc17-028',
+    'shell.shell-861ddc17-029',
+    'shell.shell-861ddc17-030',
+    'shell.shell-861ddc17-032',
+    'shell.shell-861ddc17-033',
+    'shell.shell-861ddc17-034',
+    'shell.shell-861ddc17-035',
+})
+
+
+def _community_sources():
     sources = {p:(ROOT / p).read_bytes() for p in COMMUNITY_PROOF_PINS}
     v.need(all(hashlib.sha256(raw).hexdigest() in COMMUNITY_PROOF_PINS[p] for p,raw in sources.items()),
            'Fixed Community source or controller changed')
     source = sources['docs/community/index.html'].decode().replace('\r\n','\n')
     controller = sources['docs/community-editor.mjs'].decode()
     shell = json.loads(sources['config/scarb-static-shells.json'])['docs/community/index.html']
+    return source, controller, shell
+
+
+def _community_proof_binding(packet):
+    from scripts.scarb_static_materialize import discover
+    identity = packet['id']
+    digest, opening, tag, label, start, end, action, meaning = COMMUNITY_PROOF[identity]
+    v.need(v.digest(packet) == digest and packet['kind'] == 'functional'
+           and packet['locks'] == {} and packet['draft'] == label, 'Changed fixed Community packet')
+    source, controller, shell = _community_sources()
     slot = {'start':start,'end':end,'draft':label,'attribute':False}
     v.need(slot in discover(shell['source']) and {**slot,'id':identity} in shell['slots']
            and shell['source'] == source, 'Fixed Community parsed slot changed')
@@ -198,6 +216,35 @@ def _community_proof_binding(packet):
     return {'id':identity,'packet_sha256':digest,'text':label,'locks':{},'consumer':opening,
             'source_range':[start,end],'parent_id':parent,'handler':action,'meaning':meaning,
             'scope':'static HTML only','files':{p:list(pins) for p,pins in COMMUNITY_PROOF_PINS.items()}}
+
+
+def _verify_community_layout_binding(packet, binding):
+    from scripts.scarb_static_materialize import discover
+
+    source, controller, shell = _community_sources()
+    identity = packet['id']
+    v.need(identity in COMMUNITY_LAYOUT and packet['kind'] == 'functional'
+           and isinstance(binding, dict) and source == shell['source'], 'Changed fixed Community layout packet')
+    slot = next((slot for slot in shell['slots'] if slot['id'] == identity), None)
+    v.need(slot is not None and not slot['attribute']
+           and {k: value for k, value in slot.items() if k != 'id'} in discover(source),
+           'Fixed Community layout slot differs')
+    start, end = slot['start'], slot['end']
+    form = source.index('id="settings"')
+    first = source.index('<label>Maximum words ', form)
+    last = source.index('</fieldset>', source.index('id="grayscale"', first))
+    text = v.text_check(packet, {'body': packet['draft'],
+                                'evidence_ids': [item['id'] for item in packet['evidence']]})
+    v.need(form < first <= start < end <= last < source.index('</form>', form)
+           and text == source[start:end] == slot['draft'], 'Fixed Community layout text or consumer differs')
+    expected = {'id': identity, 'packet_sha256': v.digest(packet), 'text': text, 'locks': packet['locks'],
+                'source_range': [start, end], 'parent_id': 'settings', 'scope': 'static HTML only',
+                'files': {p: list(pins) for p, pins in COMMUNITY_PROOF_PINS.items()}}
+    # The independent record digest binds the reviewer descriptions and exact handler.
+    v.need(binding.keys() == expected.keys() | {'consumer', 'handler', 'meaning'}
+           and all(binding[k] == value for k, value in expected.items())
+           and all(isinstance(binding[k], str) and binding[k] for k in ('consumer', 'handler', 'meaning'))
+           and controller.count(binding['handler']) == 2, 'Fixed Community layout evidence differs')
 
 
 def _directory_binding(packet):
@@ -285,8 +332,14 @@ def verify_fixed_evidence(packet, record, independent_sha256, *, excluded_ids):
            'Fixed item excluded by existing history')
     v.need(independent_sha256 and v.digest(record) == independent_sha256,
            'Exact independent fixed wording record required')
-    v.need(record == {'version': 'scarb-fixed-wording-review-1', 'decision': 'verified-unchanged',
-                      'binding': exact_binding(packet)}, 'Fixed wording evidence differs')
+    if packet.get('id') in COMMUNITY_LAYOUT:
+        v.need(isinstance(record, dict) and record.keys() == {'version', 'decision', 'binding'}
+               and record['version'] == 'scarb-fixed-wording-review-1'
+               and record['decision'] == 'verified-unchanged', 'Fixed wording evidence differs')
+        _verify_community_layout_binding(packet, record['binding'])
+    else:
+        v.need(record == {'version': 'scarb-fixed-wording-review-1', 'decision': 'verified-unchanged',
+                          'binding': exact_binding(packet)}, 'Fixed wording evidence differs')
     return {'text': record['binding']['text'], 'packet_sha256': record['binding']['packet_sha256'],
             'receipt_sha256': independent_sha256, 'origin': 'scarb-fixed-wording-review-1'}
 
@@ -307,8 +360,12 @@ def verify_from_private_state(state, packet, record, independent_sha256):
         family = HOME_STATIC_TABLE
     if identity in COMMUNITY_PROOF:
         family = COMMUNITY_PROOF
-    v.need(identity in family and v.digest(packet) == family[identity][0],
-           'Unknown or changed fixed packet')
+    digest = v.digest(packet)
+    if identity in COMMUNITY_LAYOUT:
+        v.need(independent_sha256 and TRUSTED_FIXED_REVIEWS.get((identity, digest)) == independent_sha256,
+               'Unknown or changed fixed Community layout packet')
+    else:
+        v.need(identity in family and digest == family[identity][0], 'Unknown or changed fixed packet')
     history.assert_unconsumed(state, {identity: v.digest(packet)}, expected_root=history.protected_root())
     # The native gate verifies the index and each immutable claim under this lock.
     # An older digest for the same business ID is not a new fixed-wording candidate.
@@ -382,6 +439,15 @@ TRUSTED_FIXED_REVIEWS = MappingProxyType({
     ('shell.shell-861ddc17-043', '91875c8d41e04b1204dfe734d56fc4718c5626b075814ca8d58ea645bc4b926f'): '69833791add70130a3833201f14dd88b307ebc49e37d8a0e933730ce60d2a4b6',
     ('shell.shell-861ddc17-045', '022567e9f300fd8bda3ccc9a60699532c809916320813dc9da5e87c88d7416f4'): 'fabc21e62f6ac56a1cb3f6543a8050d26bdf3cbfbdbb5876d492df8e38c172fe',
     ('shell.shell-861ddc17-046', 'b5e00e6cafcceec2f8c4c66e95c5b4717b82f4655971b1ec153fcd1d1a6acd3e'): '7815adb2f6d754495c8a9fe7538943eba64bb9f0124c038c3f4fcdb63b34c99d',
+    ('shell.shell-861ddc17-026', '488502cb5df64ce56dc9af6e276473adba4bef656e56d33150c36ab0a1527956'): 'd53e48cb95a134dc9eecf61c2c229febf7ad46b2de97c8c4f223e2da5ade2994',
+    ('shell.shell-861ddc17-027', 'ecc27c8f2296dc508eb07940ca9b8a257c9106c3ae2c9e96a3a4121b16fb2886'): 'bebfd8c431b9db93b17b8f8aa9a70ca01f1278d0a10ff57939481d9d01426d0a',
+    ('shell.shell-861ddc17-028', '057db0120f6d4507a559188d2398606751cf02e5f936e13d56dff59b75aabbb8'): '5acc769405420704acc616d7e1ba68357c874d80bcaacfc0ac752773c3269343',
+    ('shell.shell-861ddc17-029', '4a3fce76baeb14c835155d1da58047997ea0c8b47dc2e04f6b486fefd84474e0'): 'e73bec30aad0dc89be6942491b6a287b6f44cf40dbf5f5f19010c7ed2bf988c1',
+    ('shell.shell-861ddc17-030', '6474f4304f0a75e434f010c56b48ab54de89be95490e63d440f9402a7b7fc092'): '38f7ee159c0f8d7ec76560ccba209a3e218aca67a57ba8e76a6238b2be7429ff',
+    ('shell.shell-861ddc17-032', '83ae7fed23f8d38b1fa213e749c2639991841801b1a2d207038fb265f612c5f8'): '2045ee47f2cc84ba590c4f45309690645aea390b291e8f0a11a02ea16698538f',
+    ('shell.shell-861ddc17-033', 'a2da3806f466c3b818b5b86fb1cfae39d5385cad2fb13a68aef3212c0f14a8cd'): '61e9498dcabc1859f50df7a64da5bcf06a06d655f679e27314f5962b5a5f98aa',
+    ('shell.shell-861ddc17-034', '48455f4e2e7f21b36ce2414361878c856ca9c03261d22d4b6c67e178fff4e93a'): 'bed864f8046b05ed8032a0e08be91a72f680327d1e98010086083817bf7be2b9',
+    ('shell.shell-861ddc17-035', '7c80437905326441ea50108732818c48077eb8e8b684887065f8f6dcc7db40c8'): '22a60f718f4dc20bec0b708d564495737945a1f320a536b55bce1ae391576ffe',
 })
 
 
@@ -400,16 +466,19 @@ def _verify_fixed_maps(current, records, scope, packet_pin, review_pin):
 
 
 def verify_canonical_fixed_records(state, current, records):
-    """Verify the existing fixed scope, optionally with its exact directory extension."""
-    from scripts.scarb_accepted_copy import fixed_directory_pins, fixed_wording_pins
+    """Verify one exact fixed review scope under the shared private lock."""
+    from scripts.scarb_accepted_copy import fixed_community_layout_pins, fixed_directory_pins, fixed_wording_pins
     from scripts.scarb_packet_consumption_candidate import protected_root
 
-    v.need(isinstance(records, dict), 'Exact current fixed wording scope required')
+    v.need(isinstance(records, dict) and len(records) in (30, 58, 67), 'Exact current fixed wording scope required')
+    size = len(records)
     approved = fixed_wording_pins()
-    directory = fixed_directory_pins() if len(records) == 58 else {}
-    pins = {**approved, **directory}
-    v.need(len(approved) == 30 and len(directory) in (0, 28) and approved.keys().isdisjoint(directory)
-           and set(records) == set(pins) and len(current) == 736 and set(pins) <= set(current),
+    directory = fixed_directory_pins() if size in (58, 67) else {}
+    layout = fixed_community_layout_pins() if size == 67 else {}
+    pins = {**approved, **directory, **layout}
+    v.need(len(approved) == 30 and len(directory) in (0, 28) and len(layout) in (0, 9)
+           and len(pins) == len(approved) + len(directory) + len(layout) == size
+           and records.keys() == pins.keys() and len(current) == 736 and pins.keys() <= current.keys(),
            'Exact current fixed wording scope required')
     _verify_fixed_maps(current, records, approved,
         '618e8af83f273dc2199e23b1a244e0d2dec19c6ff1bdcc455076f21849b5740d',
@@ -418,6 +487,10 @@ def verify_canonical_fixed_records(state, current, records):
         _verify_fixed_maps(current, records, directory,
             'b22638ca3a028217d80d663b98be9c150fd27374c9a79b4dfa452c5652060ab7',
             'b4812957c0f47cbf731789be4cf5e1d23bab3a5c174404b9d106ba770545a2a3')
+    if layout:
+        _verify_fixed_maps(current, records, layout,
+            '4afd29278e8f5903f674379d0d95da66423a5f2e4bb79c513622931400b3ff1e',
+            '1c59db712a5c0cc9777b40529035c18f416d577d244d9fcc08e6fb6751123bc6')
     v.need(state is not None, 'Protected fixed wording state required')
     root = Path(state)
     v.need(root.is_dir() and not root.is_symlink() and root.resolve() == protected_root().resolve(),

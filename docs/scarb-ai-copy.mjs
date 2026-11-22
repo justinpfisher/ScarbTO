@@ -5,12 +5,18 @@
  */
 import fixedPins from './scarb-fixed-wording-pins.mjs';
 import directoryPins from './scarb-fixed-directory-pins.mjs';
+import layoutPins from './scarb-fixed-community-layout-pins.mjs';
 
 export function createScarbAiResolver(catalogue, expected) {
-  const directoryVersion = catalogue?.version === 'scarb-ai-voice-mixed-3';
+  const layoutVersion = catalogue?.version === 'scarb-ai-voice-mixed-4';
+  const directoryVersion = layoutVersion || catalogue?.version === 'scarb-ai-voice-mixed-3';
   const fixedVersion = directoryVersion || catalogue?.version === 'scarb-ai-voice-mixed-2';
   const mixed = fixedVersion || catalogue?.version === 'scarb-ai-voice-mixed-1';
-  const pins = directoryVersion ? {...fixedPins, ...directoryPins} : fixedVersion ? fixedPins : {};
+  const pins = {
+    ...(fixedVersion ? fixedPins : {}),
+    ...(directoryVersion ? directoryPins : {}),
+    ...(layoutVersion ? layoutPins : {}),
+  };
   if ((!mixed && catalogue?.version !== 'scarb-ai-voice-1') || !catalogue.entries || !expected ||
       Object.keys(catalogue.entries).length !== Object.keys(expected).length ||
       (mixed && Object.keys(expected).length !== 736) ||

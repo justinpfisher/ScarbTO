@@ -5212,8 +5212,20 @@
         "3417086eac16a6f6814489aae06d031e49186858288600ae50210d1baddb4aca"
       ],
       [
+        "fixed_community_layout_pins",
+        "scarb-fixed-community-layout-pins.mjs"
+      ],
+      [
+        "fixed_community_layout_pins",
+        "03c1e368325e21a84d163874cbbef9439c1f8c2a49490fe25cf3cf29b918a179"
+      ],
+      [
         "accepted_resolver",
         "version"
+      ],
+      [
+        "accepted_resolver",
+        "scarb-ai-voice-mixed-4"
       ],
       [
         "accepted_resolver",

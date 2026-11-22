@@ -29,9 +29,15 @@ def fixed_directory_pins():
                                    "3417086eac16a6f6814489aae06d031e49186858288600ae50210d1baddb4aca")
 
 
+def fixed_community_layout_pins():
+    return _fixed_pins_from_module("scarb-fixed-community-layout-pins.mjs",
+                                   "03c1e368325e21a84d163874cbbef9439c1f8c2a49490fe25cf3cf29b918a179")
+
+
 def accepted_resolver(catalogue, expected):
     version = catalogue.get("version") if isinstance(catalogue, dict) else None
-    directory_version = version == "scarb-ai-voice-mixed-3"
+    layout_version = version == "scarb-ai-voice-mixed-4"
+    directory_version = layout_version or version == "scarb-ai-voice-mixed-3"
     fixed_version = directory_version or version == "scarb-ai-voice-mixed-2"
     mixed = fixed_version or version == "scarb-ai-voice-mixed-1"
     if ((not mixed and version != "scarb-ai-voice-1")
@@ -41,6 +47,8 @@ def accepted_resolver(catalogue, expected):
     fixed_pins = fixed_wording_pins() if fixed_version else {}
     if directory_version:
         fixed_pins.update(fixed_directory_pins())
+    if layout_version:
+        fixed_pins.update(fixed_community_layout_pins())
     if not fixed_pins.keys() <= expected.keys():
         raise ValueError("AI copy catalogue does not match the qualified request manifest")
     entries = {}
