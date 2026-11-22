@@ -278,7 +278,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "sanitize utensils using agent for which test reagent not readily available - sec. 19(e)(iii)",
-    "The testing chemical needed to check the utensil sanitizer was not readily available."
+    "Utensils were sanitized using an agent for which the testing reagent was not readily available."
   ],
   [
     "thermometer in hot-holding equipment not easily readable - sec. 30(b)",
@@ -294,11 +294,11 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "use food equipment not of readily cleanable form - sec.  8(1)(c)",
-    "Food equipment was not designed so it could be readily cleaned."
+    "Food equipment being used was not designed so it could be readily cleaned."
   ],
   [
     "use food equipment not of readily cleanable material - sec.  8(1)(c)",
-    "Food equipment was not made of material that could be readily cleaned."
+    "Food equipment being used was not made of material that could be readily cleaned."
   ],
   [
     "use food equipment not of sound and tight construction - sec. 8(1)(a)",
@@ -322,7 +322,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "use shelves not of readily cleanable design - sec. 31",
-    "Shelves were not designed so they could be readily cleaned."
+    "Shelves being used were not designed so they could be readily cleaned."
   ],
   [
     "use towel used for other purpose for cleaning food contact surface - sec. 16(c)",
@@ -334,7 +334,7 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "use utensils not in good repair - sec. 8(1)(b)",
-    "Utensils were not in good repair."
+    "Utensils being used were not in good repair."
   ],
   [
     "use utensils not non-toxic in contact with food - sec. 8(2)(a)",
@@ -346,11 +346,11 @@ export const SOURCE_TRANSLATIONS=[
   ],
   [
     "use utensils not of readily cleanable material - sec.  8(1)(c)",
-    "Utensils were not made of material that could be readily cleaned."
+    "Utensils being used were not made of material that could be readily cleaned."
   ],
   [
     "use utensils not of sound and tight construction - sec. 8(1)(a)",
-    "Utensils were not of sound, tight construction."
+    "Utensils being used were not of sound, tight construction."
   ],
   [
     "use utensils not suitable for intended purpose - sec. 8(1)(d)",
