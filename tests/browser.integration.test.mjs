@@ -528,7 +528,7 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
     const page = await context.newPage();
     const pageErrors = [];
     page.on('pageerror', error => pageErrors.push(error.message));
-    await page.addInitScript(value => localStorage.setItem('scarbto-filters-v1', JSON.stringify({mode: value})), mode);
+    await page.addInitScript(value => localStorage.setItem('scarbto-filters-v1', JSON.stringify({mode: value, days: 'all'})), mode);
     await installLocalRoutes(page, origin, routeOptions);
     await page.goto(origin, {waitUntil: 'domcontentloaded'});
     await page.locator('#map-fallback:not([hidden])').waitFor();
