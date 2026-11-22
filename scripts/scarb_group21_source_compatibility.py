@@ -86,7 +86,7 @@ def _source_bytes(pin,path):
   return _finding22_sources(pin)[path]
  return raw
 
-def _finding22_context(pin,current,recorded,*,current_sources=None):
+def _finding22_source_context(pin,current,recorded,*,current_sources=None):
  bindings=FINDING22_PINS.get(pin.get('manifest_sha256'))
  restored=_finding22_sources(pin,current_sources=current_sources)
  v.need(set(current)==set(recorded)==set(bindings),'Finding22 membership differs')
@@ -98,6 +98,11 @@ def _finding22_context(pin,current,recorded,*,current_sources=None):
   for path,(before,after) in FINDING22_TRANSITIONS.items():
    v.need(item.get('source_sha256',{}).get(path)==after,'Finding22 context digest differs')
    item['source_sha256'][path]=before
+ return prior,restored
+
+
+def _finding22_context(pin,current,recorded,*,current_sources=None):
+ prior,restored=_finding22_source_context(pin,current,recorded,current_sources=current_sources)
  # Existing exact older transitions remain responsible for their original scope.
  if current_sources is not None:
   return community15_context(pin,prior,recorded,source=restored['docs/scarb-voice.mjs'])
@@ -126,11 +131,8 @@ DIRECTORY_OLD_LINE=b'  "directory-intro": "Pick a neighbourhood and follow its m
 DIRECTORY_NEW_LINE=b'  "directory-intro": "Malvern West is in the directory. So is Agincourt South-Malvern West. I know it\\u2019s only a name on a list, but now I want both maps open. There are {{COUNT}} pages here, with names from the City of Toronto\\u2019s neighbourhood registry. Scarb.TO chose which ones to include. It\\u2019s not the City\\u2019s official list of Scarborough neighbourhoods, and it doesn\\u2019t tell you what an inspection would find today.",'
 
 
-def _community15_directory_context(pin,current,recorded,voice):
+def _pre_directory_source_context(current,voice):
  voice_path='docs/scarb-voice.mjs'
- bindings=COMMUNITY15_PINS.get(pin.get('manifest_sha256'))
- v.need(bindings is not None and pin.get('packet_bindings')==bindings
-        and set(current)==set(recorded)==set(bindings),'Community15 directory transition scope differs')
  observed={}
  historical_sources={}
  for path,(lf_sha,crlf_sha) in COMMUNITY15_DIRECTORY_SOURCE_PAIRS.items():
@@ -139,23 +141,110 @@ def _community15_directory_context(pin,current,recorded,voice):
   lf=raw.replace(b'\r\n',b'\n')
   crlf=lf.replace(b'\n',b'\r\n')
   v.need(raw in (lf,crlf) and hashlib.sha256(lf).hexdigest()==lf_sha
-         and hashlib.sha256(crlf).hexdigest()==crlf_sha,'Community15 directory source differs: '+path)
+         and hashlib.sha256(crlf).hexdigest()==crlf_sha,'Finding directory source differs: '+path)
   historical_sources[path]=crlf
  v.need(all(entry.get('source_sha256')==observed for entry in current.values()),
-        'Community15 directory current context source differs')
+        'Finding directory current context source differs')
  voice_lf=voice.replace(b'\r\n',b'\n')
  v.need(voice_lf.count(DIRECTORY_NEW_LINE)==1 and DIRECTORY_OLD_LINE not in voice_lf,
-        'Community15 directory literal differs')
+        'Finding directory literal differs')
  previous_lf=voice_lf.replace(DIRECTORY_NEW_LINE,DIRECTORY_OLD_LINE,1)
  previous_crlf=previous_lf.replace(b'\n',b'\r\n')
  v.need(hashlib.sha256(previous_lf).hexdigest()==DIRECTORY_PREVIOUS_LF
         and hashlib.sha256(previous_crlf).hexdigest()==FINDING22_TRANSITIONS[voice_path][1],
-        'Community15 pre-directory bytes differ')
+        'Finding pre-directory bytes differ')
  historical_sources[voice_path]=previous_crlf
- prior={identity:{**entry,'source_sha256':{
-  path:hashlib.sha256(raw).hexdigest() for path,raw in historical_sources.items()
- }} for identity,entry in current.items()}
- return _finding22_context(pin,prior,recorded,current_sources=historical_sources)
+ source_hashes={path:hashlib.sha256(raw).hexdigest() for path,raw in historical_sources.items()}
+ prior={identity:{**entry,'source_sha256':source_hashes.copy()} for identity,entry in current.items()}
+ return prior,historical_sources
+
+
+def _community15_directory_context(pin,current,recorded,voice):
+ bindings=COMMUNITY15_PINS.get(pin.get('manifest_sha256'))
+ v.need(bindings is not None and pin.get('packet_bindings')==bindings
+        and set(current)==set(recorded)==set(bindings),'Community15 directory transition scope differs')
+ prior,sources=_pre_directory_source_context(current,voice)
+ return _finding22_context(pin,prior,recorded,current_sources=sources)
+
+
+# Exact remaining finding manifests from the read-only replay at f7134d2.
+# Bind each packet map and sealed context. The grouped provenance verifier
+# still authenticates the complete manifest and reconstructs both sealed prompts.
+DIRECTORY_FINDING_PINS={
+ '04eabc865f01c39746bf2de0c2abb955fe63a0052e0763db56ccda3cd55f5bb2': (
+  'e4de1163e426b35a58a99eb67255a44d3d6b8dfa54751909b563ba654bc79f8e',
+  '8288de4ddfdf5080867dd3b5883c4b6128dc9ab98086483b1cf5c1487d8cde50',
+ ),
+ '1dedada1d982947087e31386d3c8de8544f7ec45c0abf17b9c8f369141b74c76': (
+  'e9482a1c34b3f543ab5dc4a7b83c3caa7112130c2e8ad3f8c7cab63790c0842d',
+  '8938284728246a6263010398f55b723121902f7dc63a04a5e100f955e6f93f91',
+ ),
+ '243c1260991a7e730066ec3d57ace072f564c56a45d00a8ddf9d04f6df411c84': (
+  '90f4a260be93a2e2ad37656d21e5c806c6cebe81644c7ead2bcd2f3cbd6994d1',
+  '1f3687f568a9e77720bf516e9b6ab35c6b0782b9835bcefd85a5e49244f23065',
+ ),
+ '3d7139fcdcde3c8c8b93efe72892c4b4f33b35f4c73d30d549fd0faa5b478ef3': (
+  'c61433ac67a07294e0a2c44e15f7a256011de7d34a4eca7bae25c065093b7363',
+  'e0be330c169b871b9a91a1ae8838f93baa4fadf74231e3356e86f4a77ae2bb07',
+ ),
+ '43815c05be14a6e42085be0b11ff75b948d72b61c445a4ffe5c8fff4f4ec7ffd': (
+  'a70f6f57e906873287769b0ff2a1f29eb792869fe706688977e314cd3a70a3d6',
+  '01ef1a3c22197a476006e8cf7cc114b374089201adf05692c735fd639ca641f3',
+ ),
+ '6f1879ae33a8bf70829d26197c949ba546e58d5dee71ce442ca84e59c0dc40a2': (
+  'dbaf2ba0ba59db7afae8e44f95b729ec830f57c59c445077f50a774b673b5a86',
+  '3b3aa222ec580be176696e30e87df8638195775b7e2387b02a7126aecc977e5e',
+ ),
+ '707f254b478703e9bc9337818376d7a91881625f7b233c23918fb97c773835eb': (
+  '5c1aa81c8f4359e5cd0fbf78f991313de50d670d128e360a7401b3b63884b470',
+  '1a38b8e4970a424d1c1901c0a6694a1fd067162ca91a9f7092a1a59d8d8c087f',
+ ),
+ '99f40d9e24bd7d7ae32dceed98e90a7e4ed5bba53977bb72f75b80b6051b57bc': (
+  'df7e75aa413b4781ba2179d66796b3a7dac8741a73c42dc255963b719742aa87',
+  '0bd3a1c370316e11ea582cb8be1a80899a53a260249045c4ffb0dff240f18c81',
+ ),
+ '9e41f5878125adb2c7039d5e327d1f767f4f163e1720d3810f0af12258db7633': (
+  '0cdf36576ed8631308ed38c35312017a61f13187e882d68b46c41200aefc22ae',
+  '56d2abf273ac95d5dd4c6cfdceb2d86917da2370ca0417e30c3a87d4bfc2d86f',
+ ),
+ 'b3ffe0b831b0c9a7b6a3a1e7ca4e526302890bda3fdc475b496d2c7a7d5c9a18': (
+  '55f27f04d6ee97594cfe4d2ff4e3a67337b98b1958c6960b99b71da2de1f0a71',
+  '57816601ce4e361f9b3adb8c9759d6fe70259b072cf7bbfe220e3d04918b7318',
+ ),
+ 'e8337593a178e3d15d8d9f3ec04ba3f603d16f9eb1c77b37bb9774dc8b6230c1': (
+  '9a0f7b774cfb1ee7458c8c51f27792245e9e9bab7431753af440638b314603b2',
+  '55b093646c4bc5881991b1c8a80b896283dfa8350cb0bd277b396149f23f2426',
+ ),
+ 'f2a3d98adc7140d7ce26296a5c827775c0927085107f31fcd7cc5701fb07b28b': (
+  '326ca9af857b4b3c73bc6194006ddf278fb1f13c9f8f259b6b3e33b1b385a9e1',
+  '04551a62f21e8083a47e5f436e5a64f3f10f49f4b2ca24163da2268f7ccaa6aa',
+ ),
+ 'fe2eb333e9d6a9c78484e56fffcb60914963d625cafe7778b795590b8737fa55': (
+  '0f449e0a143c69d2987993fc627c8e80a6332cf17048fd055380558619d54fd7',
+  'ef3819c0c6849e462aeff97e9dd712563520d806ac6469fbd5a21c547ce7c705',
+ ),
+}
+
+
+def _directory_finding_context(pin,current,recorded,voice):
+ manifest=pin.get('manifest_sha256')
+ scope=DIRECTORY_FINDING_PINS.get(manifest)
+ bindings=pin.get('packet_bindings')
+ v.need(scope is not None and isinstance(bindings,dict)
+        and set(bindings)==set(current)==set(recorded)
+        and v.digest(bindings)==scope[0],'Finding directory transition scope differs')
+ v.need(pin.get('source_context_sha256')==v.digest(recorded)==scope[1],
+        'Finding directory sealed context differs')
+ prior,sources=_pre_directory_source_context(current,voice)
+ if manifest in FINDING22_PINS:
+  prior,_=_finding22_source_context(pin,prior,recorded,current_sources=sources)
+ else:
+  from scripts.scarb_grouped_projection_seam import current_canonical_requests
+  packets=current_canonical_requests()
+  v.need(all(identity in packets and v.digest(packets[identity])==expected
+             for identity,expected in bindings.items()),'Finding directory canonical packet changed')
+ v.need(prior==recorded,'Unrelated finding context changed')
+ return prior
 
 
 def historical_context(pin,current,recorded):
@@ -163,8 +252,12 @@ def historical_context(pin,current,recorded):
  path='docs/scarb-voice.mjs'
  voice=(ROOT/path).read_bytes()
  digest=hashlib.sha256(voice).hexdigest()
- if pin.get('manifest_sha256') in COMMUNITY15_PINS and digest in COMMUNITY15_DIRECTORY_SOURCE_PAIRS[path]:
-  return _community15_directory_context(pin,current,recorded,voice)
+ if digest in COMMUNITY15_DIRECTORY_SOURCE_PAIRS[path]:
+  manifest=pin.get('manifest_sha256')
+  if manifest in COMMUNITY15_PINS:
+   return _community15_directory_context(pin,current,recorded,voice)
+  if manifest in DIRECTORY_FINDING_PINS:
+   return _directory_finding_context(pin,current,recorded,voice)
  if digest==FINDING22_TRANSITIONS[path][1]:
   return _finding22_context(pin,current,recorded)
  return _historical_context(pin,current,recorded)
