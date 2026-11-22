@@ -1,5 +1,5 @@
 """Existing publication check for a newly generated index, never a retained one."""
-import hashlib,json,re,sys
+import hashlib,json,re,subprocess,sys
 from datetime import date,timedelta
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
@@ -36,6 +36,14 @@ def verify_retained_generated_index(markup, manifest, catalogue, expected):
 _PRE_GATEWAY_INDEX = '08af44cd8ba935a9752bf665d2100ad898668e61'
 _PRE_GATEWAY_SHA256 = '6c8b26fca32becd84967f9c330488e39881ff7e18b60aca8bc63909c39d03bd6'
 
+def _retained_git_bytes(raw, committed):
+    if raw == committed:
+        return raw
+    # Only the Windows checkout may expand committed LF to CRLF.
+    if sys.platform == 'win32' and b'\r' not in committed and raw == committed.replace(b'\n', b'\r\n'):
+        return committed
+    raise ValueError('Retained archive checkout differs from committed bytes')
+
 def verify_pre_gateway_index(revision, index_bytes, registry_bytes, committed_registry_bytes):
     if (revision != _PRE_GATEWAY_INDEX or
         hashlib.sha256(index_bytes).hexdigest() != _PRE_GATEWAY_SHA256 or
@@ -43,39 +51,42 @@ def verify_pre_gateway_index(revision, index_bytes, registry_bytes, committed_re
         raise ValueError('Retained pre-gateway index or its exact archive registry changed')
     return True
 
+def _git(*args):
+    result=subprocess.run(['git',*args],cwd=ROOT,capture_output=True,check=False)
+    if result.returncode:raise ValueError('Committed index provenance unavailable')
+    return result.stdout
+
+
 def historical_inputs():
-    import subprocess
-    def git(*args):
-        result=subprocess.run(['git',*args],cwd=ROOT,capture_output=True,check=False)
-        if result.returncode:raise ValueError('Committed index provenance unavailable')
-        return result.stdout
     # In the existing PR reconciliation, the retained archive comes from
     # the reviewed main side of the merge; the draft HEAD can be stale.
     pending=subprocess.run(['git','rev-parse','--verify','MERGE_HEAD'],cwd=ROOT,capture_output=True)
     baseline=pending.stdout.decode().strip() if pending.returncode==0 else 'HEAD'
-    revision=git('log','-1','--format=%H',baseline,'--','docs/briefs/index.html').decode().strip()
+    revision=_git('log','-1','--format=%H',baseline,'--','docs/briefs/index.html').decode().strip()
     if not re.fullmatch('[a-f0-9]{40}',revision):raise ValueError('Invalid index provenance revision')
     if revision==_PRE_GATEWAY_INDEX:
-        return revision,git('show',revision+':docs/briefs/editions.json')
-    catalogue=json.loads(git('show',revision+':docs/scarb-copy-inputs.json'))
-    expected=json.loads(git('show',revision+':docs/scarb-copy-manifest.json'))
-    return catalogue,expected
+        return baseline,revision,_git('cat-file','blob',revision+':docs/briefs/editions.json')
+    catalogue=json.loads(_git('show',revision+':docs/scarb-copy-inputs.json'))
+    expected=json.loads(_git('show',revision+':docs/scarb-copy-manifest.json'))
+    return baseline,catalogue,expected
 
 
 if __name__=='__main__':
     markup=(ROOT/'docs/briefs/index.html').read_text(encoding='utf-8')
     manifest=json.loads((ROOT/'docs/briefs/editions.json').read_text(encoding='utf-8'))
     if '--retained' in sys.argv:
-        catalogue,expected=historical_inputs()
+        baseline,catalogue,expected=historical_inputs()
         if catalogue==_PRE_GATEWAY_INDEX:
-            verify_pre_gateway_index(catalogue,
-                (ROOT/'docs/briefs/index.html').read_bytes(),
-                (ROOT/'docs/briefs/editions.json').read_bytes(),expected)
+            def retained_bytes(path):
+                return _retained_git_bytes((ROOT/path).read_bytes(),_git('cat-file','blob',f'{baseline}:{path}'))
+
+            verify_pre_gateway_index(catalogue,retained_bytes('docs/briefs/index.html'),
+                                     retained_bytes('docs/briefs/editions.json'),expected)
             for record in manifest['editions']:
                 route=record['path']
                 if not re.fullmatch(r'briefs/\d{4}-\d{2}-\d{2}/',route):
                     raise ValueError('Invalid retained edition path')
-                page=(ROOT/'docs'/route/'index.html').read_bytes()
+                page=retained_bytes('docs/'+route+'index.html')
                 if hashlib.sha256(page).hexdigest()!=record['html_sha256']:
                     raise ValueError('Retained edition differs from the issued archive')
         else:
