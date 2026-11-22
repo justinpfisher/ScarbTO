@@ -8,17 +8,24 @@ import re
 import subprocess
 import sys
 
-BASE = "94b0835d9f7465d41736335424b3bf87fc567fc9"
-DATA_TREE = "650a9120c3c5a8a8495a9183669e5dbe2f959076"
-CLAIM = "[scarb-stage:directory-voice-v2]"
+BASE = "9c28b55b003951ea36dc581950f5c49dd3faedaf"
+CLAIM = "[scarb-stage:finding-wording-v1]"
+APPLICATION = "docs/inspection-translations.mjs"
+PROTECTED_TREES = {
+    "docs/data": "650a9120c3c5a8a8495a9183669e5dbe2f959076",
+    "docs/briefs": "39b3b3c95ff0eaf3271711f46e0e8a95f0158edd",
+    "docs/community-data": "bb67fc65a5a4f0d757056400002a92325c27b731",
+}
 SELF = "scripts/resolve_staged_release.py"
 # Git blob identities are of canonical committed bytes, not native worktree bytes.
 # The resolver's own exact bytes are independently reviewed as part of the commit,
 # not self-hashed. Its workflow and all separate production controls are pinned here.
 PROJECTION = {
     ".github/workflows/refresh-and-publish.yml": "8864aea26cbfc4b074d9bbaef9528d52095f1cad",
-    "docs/neighbourhoods/index.html": "5488e75958c3be33bd1f675be94c8326d9be814c",
-    "scripts/build_neighbourhood_pages.mjs": "1272a68e9b565d3544a5e56dda66bed13090f8ea",
+    "docs/app.mjs": "f74f37883a38691745eea083f841bb6775c11a35",
+    "docs/inspection-findings.mjs": "500d3ef83ea0ae7ee72c827f2a88cb12ceacfae4",
+    "docs/inspection-translations.mjs": "d26deb04c3dca84e4de042a25415eb6042f94783",
+    "docs/neighbourhood-page.mjs": "13b26c60f614695b85e366062c6d2aed5c9b3b27",
     "scripts/verify_code_only_release.py": "c26843e11e06cedfe83b247c15b05e3d40b0157a",
     "tests/test_code_only_release.py": "502ffc7041e07f85a8db3f93e2aba227301171d4",
 }
@@ -62,20 +69,20 @@ def resolve(repo: Path, environ: dict[str, str]) -> str:
         or payload.get("forced") is not False
         or not re.fullmatch(r"[0-9a-f]{40}", sha)
         or _git(repo, "rev-list", "--parents", "-n", "1", "HEAD") != f"{sha} {BASE}"
-        or _git(repo, "rev-parse", "HEAD:docs/data") != DATA_TREE
+        or any(_git(repo, "rev-parse", f"HEAD:{path}") != tree for path, tree in PROTECTED_TREES.items())
     ):
-        raise StageError("Claimed directory stage does not match the required exact main push")
+        raise StageError("Claimed finding wording stage does not match the required exact main push")
     changed = set(_git(repo, "diff", "--name-only", "--no-renames", BASE, sha).splitlines())
-    if changed != {SELF, "docs/neighbourhoods/index.html", "scripts/build_neighbourhood_pages.mjs"}:
-        raise StageError("Claimed directory stage has unexpected accompanying changes")
+    if changed != {SELF, APPLICATION}:
+        raise StageError("Claimed finding wording stage has unexpected accompanying changes")
     for path, blob in PROJECTION.items():
         if _git(repo, "ls-tree", sha, "--", path) != f"100644 blob {blob}\t{path}":
-            raise StageError(f"Claimed directory stage has non-approved bytes or mode: {path}")
+            raise StageError(f"Claimed finding wording stage has non-approved bytes or mode: {path}")
     if not re.fullmatch(r"100644 blob [0-9a-f]{40}\t" + re.escape(SELF),
                         _git(repo, "ls-tree", sha, "--", SELF)):
-        raise StageError("Claimed directory stage resolver is not a regular committed source file")
+        raise StageError("Claimed finding wording stage resolver is not a regular committed source file")
     if _git(repo, "status", "--porcelain", "--untracked-files=all"):
-        raise StageError("Claimed directory stage checkout contains uncommitted input")
+        raise StageError("Claimed finding wording stage checkout contains uncommitted input")
     return "code_only"
 
 
