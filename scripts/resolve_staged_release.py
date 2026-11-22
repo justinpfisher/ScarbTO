@@ -34,6 +34,18 @@ PROJECTION = {
 }
 
 
+RSS_BASE = "6cf293fcd50eeb6021721ba191e061345f246ec8"
+RSS_CLAIM = "[scarb-stage:rss-stable-date-v1]"
+RSS_PROJECTION = {
+    ".github/workflows/refresh-and-publish.yml": "5476ff720dfd60ad3535b7564c75dfa583d764d1",
+    "scripts/build_rss.py": "17c0816193cc038abc5e957dafcd0c65ec799100",
+    "scripts/verify_code_only_release.py": "c26843e11e06cedfe83b247c15b05e3d40b0157a",
+    "tests/test_build_rss.py": "be3224146f786bd5eb9ae9dbba81bd0ffb790e30",
+    "tests/test_code_only_release.py": "502ffc7041e07f85a8db3f93e2aba227301171d4",
+}
+RSS_CHANGED = {SELF, ".github/workflows/refresh-and-publish.yml", "scripts/build_rss.py", "tests/test_build_rss.py"}
+
+
 class StageError(ValueError):
     pass
 
@@ -59,33 +71,43 @@ def resolve(repo: Path, environ: dict[str, str]) -> str:
             raise TypeError()
     except (AttributeError, KeyError, OSError, TypeError, ValueError) as exc:
         raise StageError("Cannot verify authenticated push event") from exc
-    if CLAIM not in message:
+    recovery_claimed = CLAIM in message
+    rss_claimed = RSS_CLAIM in message
+    if recovery_claimed and rss_claimed:
+        raise StageError("Push contains conflicting staged release markers")
+    if rss_claimed:
+        base, projection, expected_changed = RSS_BASE, RSS_PROJECTION, RSS_CHANGED
+        stage = "RSS stage"
+    elif recovery_claimed:
+        base, projection, expected_changed = BASE, PROJECTION, {SELF, BROWSER_TEST}
+        stage = "Community copy-limit recovery"
+    else:
         return "refresh"
     sha = environ.get("GITHUB_SHA", "")
     if (
         environ.get("GITHUB_REPOSITORY") != "justinpfisher/ScarbTO"
         or environ.get("GITHUB_REF") != "refs/heads/main"
         or payload.get("ref") != "refs/heads/main"
-        or payload.get("before") != BASE
+        or payload.get("before") != base
         or payload.get("after") != sha
         or head_commit.get("id") != sha
         or payload.get("forced") is not False
         or not re.fullmatch(r"[0-9a-f]{40}", sha)
-        or _git(repo, "rev-list", "--parents", "-n", "1", "HEAD") != f"{sha} {BASE}"
+        or _git(repo, "rev-list", "--parents", "-n", "1", "HEAD") != f"{sha} {base}"
         or any(_git(repo, "rev-parse", f"HEAD:{path}") != tree for path, tree in PROTECTED_TREES.items())
     ):
-        raise StageError("Claimed Community copy-limit recovery does not match the required exact main push")
-    changed = set(_git(repo, "diff", "--name-only", "--no-renames", BASE, sha).splitlines())
-    if changed != {SELF, BROWSER_TEST}:
-        raise StageError("Claimed Community copy-limit recovery has unexpected accompanying changes")
-    for path, blob in PROJECTION.items():
+        raise StageError(f"Claimed {stage} does not match the required exact main push")
+    changed = set(_git(repo, "diff", "--name-only", "--no-renames", base, sha).splitlines())
+    if changed != expected_changed:
+        raise StageError(f"Claimed {stage} has unexpected accompanying changes")
+    for path, blob in projection.items():
         if _git(repo, "ls-tree", sha, "--", path) != f"100644 blob {blob}\t{path}":
-            raise StageError(f"Claimed Community copy-limit recovery has non-approved bytes or mode: {path}")
+            raise StageError(f"Claimed {stage} has non-approved bytes or mode: {path}")
     if not re.fullmatch(r"100644 blob [0-9a-f]{40}\t" + re.escape(SELF),
                         _git(repo, "ls-tree", sha, "--", SELF)):
-        raise StageError("Claimed Community copy-limit recovery resolver is not a regular committed source file")
+        raise StageError(f"Claimed {stage} resolver is not a regular committed source file")
     if _git(repo, "status", "--porcelain", "--untracked-files=all"):
-        raise StageError("Claimed Community copy-limit recovery checkout contains uncommitted input")
+        raise StageError(f"Claimed {stage} checkout contains uncommitted input")
     return "code_only"
 
 

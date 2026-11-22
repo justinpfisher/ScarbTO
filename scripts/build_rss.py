@@ -3,7 +3,8 @@
 
 The feed contains observed DineSafe events only. It deliberately omits addresses
 and coordinates, and keeps source inspection dates distinct from first-observed
-times. No network requests or third-party packages are used.
+times. The default build uses only local files and the standard library. The
+publisher may opt in to fetching the previous public feed for date reuse only.
 """
 from __future__ import annotations
 
@@ -11,11 +12,12 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
 from datetime import date, datetime, timezone
-from email.utils import format_datetime
+from email.utils import format_datetime, parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -221,9 +223,36 @@ def build_feed(events: list[dict], *, built_at: datetime) -> bytes:
     return ET.tostring(root, encoding="utf-8", xml_declaration=True)
 
 
-def write_feed(history_dir: Path, output: Path, *, built_at: datetime | None = None) -> int:
+def _unchanged_feed_date(previous_feed: Path, events: list, now: datetime) -> datetime | None:
+    # Only the date can carry forward. The canonical new feed must reproduce all
+    # previous bytes at that date before keeping it. Read a bounded local input.
+    try:
+        with previous_feed.open("rb") as stream:
+            previous = stream.read(1_048_577)
+        if len(previous) > 1_048_576:
+            return None
+        matches = re.findall(rb"<lastBuildDate>([^<>]{1,64})</lastBuildDate>", previous)
+        if len(matches) != 1:
+            return None
+        prior_time = parsedate_to_datetime(matches[0].decode("ascii"))
+        if prior_time.tzinfo is None or prior_time > now:
+            return None
+        if build_feed(events, built_at=prior_time) == previous:
+            return prior_time
+    except (OSError, TypeError, ValueError, OverflowError):
+        # Prior publication is optional and never substitutes for archive validation.
+        return None
+    return None
+
+
+def write_feed(history_dir: Path, output: Path, *, built_at: datetime | None = None,
+               previous_feed: Path | None = None) -> int:
     events = load_events(history_dir)
-    xml = build_feed(events, built_at=built_at or datetime.now(timezone.utc))
+    now = built_at or datetime.now(timezone.utc)
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise FeedError("Feed build time must include a timezone")
+    stable_date = _unchanged_feed_date(previous_feed, events, now) if previous_feed is not None else None
+    xml = build_feed(events, built_at=stable_date or now)
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary_path: Path | None = None
     try:
@@ -241,14 +270,38 @@ def write_feed(history_dir: Path, output: Path, *, built_at: datetime | None = N
     return min(len(events), MAX_ITEMS)
 
 
+def _fetch_prior_feed(destination: Path) -> Path | None:
+    """Optionally fetch the fixed public feed without redirects or shell execution."""
+    try:
+        result = subprocess.run(
+            ["curl", "-q", "--silent", "--show-error", "--proto", "=https",
+             "--max-time", "12", "--max-filesize", "1048576", "--output", str(destination),
+             "--write-out", "%{http_code}", FEED_URL],
+            capture_output=True, timeout=15, check=False,
+        )
+        if result.returncode == 0 and result.stdout == b"200":
+            return destination
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     root = Path(__file__).resolve().parents[1]
     parser.add_argument("--history-dir", type=Path, default=root / "docs" / "data" / "history")
     parser.add_argument("--output", type=Path, default=root / "docs" / "feed.xml")
+    prior = parser.add_mutually_exclusive_group()
+    prior.add_argument("--previous-feed", type=Path, help="Optional prior published feed used only to retain the date of identical output")
+    prior.add_argument("--reuse-live-date", action="store_true", help="Try the public Scarb.TO feed as the prior copy; never use its content as source data")
     args = parser.parse_args(argv)
     try:
-        count = write_feed(args.history_dir, args.output)
+        if args.reuse_live_date:
+            with tempfile.TemporaryDirectory(prefix="scarb-rss-") as directory:
+                previous = _fetch_prior_feed(Path(directory) / "prior.xml")
+                count = write_feed(args.history_dir, args.output, previous_feed=previous)
+        else:
+            count = write_feed(args.history_dir, args.output, previous_feed=args.previous_feed)
     except FeedError as exc:
         print(f"RSS NOT BUILT: {exc}", file=sys.stderr)
         return 2

@@ -178,7 +178,7 @@ jobs:
         if: steps.release-mode.outputs.mode == 'code_only'
         run: python scripts/verify_code_only_release.py
       - name: Generate source-linked DineSafe RSS
-        run: python scripts/build_rss.py
+        run: python scripts/build_rss.py --reuse-live-date
       - name: Generate weekly source-linked DineSafe brief
         run: |
           if [ "${{ steps.release-mode.outputs.mode }}" = "code_only" ]; then

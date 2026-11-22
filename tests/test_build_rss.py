@@ -4,8 +4,10 @@ import unittest
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
+from subprocess import CompletedProcess, TimeoutExpired
+from unittest.mock import patch
 
-from scripts.build_rss import CITY_RECORD_URL_PREFIX, FEED_URL, LICENCE_URL, SOURCE_URL, FeedError, build_feed, load_events, write_feed, reader_date
+from scripts.build_rss import CITY_RECORD_URL_PREFIX, FEED_URL, LICENCE_URL, SOURCE_URL, FeedError, build_feed, load_events, main, write_feed, reader_date
 
 
 def make_event(event_id="0" * 20, *, month="2026-11", detected_at="2026-11-02T10:00:00+00:00", kind="status_changed", feed="dinesafe", **overrides):
@@ -183,6 +185,86 @@ class BuildRssTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             with self.assertRaises(FeedError):
                 load_events(Path(temp) / "missing")
+
+
+class PreviousPublicationTests(unittest.TestCase):
+    def test_publisher_cli_reuses_only_successful_canonical_public_copy(self):
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            history = root / "history"
+            history.mkdir()
+            write_archive(history, "2026-11", [make_event()])
+            original = build_feed(load_events(history), built_at=datetime(2026, 11, 3, tzinfo=timezone.utc))
+
+            for label, code, http in [("same", 0, b"200"), ("redirect", 0, b"302"),
+                                      ("too large", 63, b"200"), ("timeout", None, b"")]:
+                with self.subTest(label=label):
+                    output = root / f"{label}.xml"
+
+                    def fake_curl(args, *, capture_output, timeout, check):
+                        self.assertEqual(args[-1], FEED_URL)
+                        self.assertEqual(args[:2], ["curl", "-q"])
+                        self.assertNotIn("--location", args)
+                        self.assertEqual(args[args.index("--proto") + 1], "=https")
+                        self.assertEqual(args[args.index("--max-filesize") + 1], "1048576")
+                        self.assertEqual(timeout, 15)
+                        destination = Path(args[args.index("--output") + 1])
+                        self.assertNotEqual(destination, output)
+                        destination.write_bytes(original)
+                        if code is None:
+                            raise TimeoutExpired(args, timeout)
+                        return CompletedProcess(args, code, stdout=http)
+
+                    with patch("scripts.build_rss.subprocess.run", side_effect=fake_curl) as fetch:
+                        self.assertEqual(main(["--history-dir", str(history), "--output", str(output), "--reuse-live-date"]), 0)
+                        fetch.assert_called_once()
+                    self.assertEqual(output.read_bytes() == original, label == "same")
+                    self.assertEqual(ET.fromstring(output.read_bytes()).findtext("channel/item/guid"),
+                                     ET.fromstring(original).findtext("channel/item/guid"))
+
+    def test_separate_checkout_reuses_only_canonical_prior_date(self):
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            history = root / "history"
+            history.mkdir()
+            write_archive(history, "2026-11", [make_event()])
+            first = root / "published.xml"
+            output = root / "fresh" / "feed.xml"
+            before = datetime(2026, 11, 3, tzinfo=timezone.utc)
+            now = datetime(2026, 11, 5, tzinfo=timezone.utc)
+            write_feed(history, first, built_at=before)
+            original = first.read_bytes()
+            write_feed(history, output, built_at=now, previous_feed=first)
+            self.assertEqual(output.read_bytes(), original)
+            write_archive(history, "2026-11", [make_event(), make_event("1" * 20, detected_at="2026-11-04T10:00:00+00:00")])
+            write_feed(history, output, built_at=now, previous_feed=first)
+            before_item = ET.fromstring(original).find("channel/item")
+            result = ET.fromstring(output.read_bytes())
+            self.assertNotEqual(result.findtext("channel/lastBuildDate"), ET.fromstring(original).findtext("channel/lastBuildDate"))
+            retained = next(item for item in result.findall("channel/item") if item.findtext("guid") == before_item.findtext("guid"))
+            self.assertEqual(ET.tostring(retained), ET.tostring(before_item))
+            self.assertEqual(first.read_bytes(), original)
+
+    def test_optional_prior_input_cannot_block_or_supply_content(self):
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            history = root / "history"
+            history.mkdir()
+            write_archive(history, "2026-11", [make_event()])
+            prior = root / "prior.xml"
+            output = root / "fresh" / "feed.xml"
+            now = datetime(2026, 11, 5, tzinfo=timezone.utc)
+            future = datetime(2026, 11, 6, tzinfo=timezone.utc)
+            expected = build_feed(load_events(history), built_at=now)
+            future_bytes = build_feed(load_events(history), built_at=future)
+            prior_bytes = build_feed(load_events(history), built_at=datetime(2026, 11, 4, tzinfo=timezone.utc))
+            for kind, content in [("absent", None), ("broken", b"not xml"), ("overlarge", b"x"*1_048_577),
+                                  ("future", future_bytes), ("changed", prior_bytes.replace(b"DineSafe", b"DIFFERENT"))]:
+                with self.subTest(kind=kind):
+                    if content is not None:
+                        prior.write_bytes(content)
+                    write_feed(history, output, built_at=now, previous_feed=prior)
+                    self.assertEqual(output.read_bytes(), expected)
 
 
 if __name__ == "__main__":
