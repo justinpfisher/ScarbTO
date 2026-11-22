@@ -33,14 +33,16 @@ COMMUNITY15_BEFORE='83b88ec5cedd55f190ae2799558e83def6a465130bc06cbc71e90d1807c6
 COMMUNITY15_AFTER='fd0108592fc0ab941ccc978984bd143f9186cea305861cf5275215c1e80cc28b'
 COMMUNITY15_OLD=b'Boundary polygons are missing.'
 COMMUNITY15_NEW=b"Supply a non-empty list of boundary polygons within the publishing tool's polygon limit."
-def community15_context(pin,current,recorded):
+def community15_context(pin,current,recorded,*,source=None):
  bindings=COMMUNITY15_PINS.get(pin.get('manifest_sha256'))
  v.need(bindings is not None and pin.get('packet_bindings')==bindings,'Unlisted Community15 transition')
  v.need(set(current)==set(recorded)==set(bindings),'Community15 membership differs')
  from scripts.scarb_grouped_projection_seam import current_canonical_requests
  packets=current_canonical_requests()
  v.need(all(v.digest(packets[i])==h for i,h in bindings.items()),'Community15 canonical packet changed')
- path='docs/scarb-voice.mjs';raw=_source_bytes(pin,path)
+ path='docs/scarb-voice.mjs'
+ source=_source_bytes(pin,path) if source is None else source
+ raw=source
  if hashlib.sha256(raw).hexdigest()==COMMUNITY333637_AFTER:
   for old,new in COMMUNITY333637_EDITS:
    v.need(raw.count(new)==1 and old not in raw,'Community333637 exact literal differs')
@@ -51,7 +53,7 @@ def community15_context(pin,current,recorded):
  v.need(hashlib.sha256(restored).hexdigest()==COMMUNITY15_BEFORE and restored.count(COMMUNITY15_OLD)==1,'Community15 historical bytes changed')
  old=copy.deepcopy(current)
  for identity in bindings:
-  v.need(current[identity].get('source_sha256',{}).get(path)==hashlib.sha256(_source_bytes(pin,path)).hexdigest() and recorded[identity].get('source_sha256',{}).get(path)==COMMUNITY15_BEFORE,'Community15 exact digest transition differs')
+  v.need(current[identity].get('source_sha256',{}).get(path)==hashlib.sha256(source).hexdigest() and recorded[identity].get('source_sha256',{}).get(path)==COMMUNITY15_BEFORE,'Community15 exact digest transition differs')
   old[identity]['source_sha256'][path]=COMMUNITY15_BEFORE
  v.need(old==recorded,'Community15 unrelated context changed')
  return old
@@ -64,12 +66,12 @@ FINDING22_PINS={'04eabc865f01c39746bf2de0c2abb955fe63a0052e0763db56ccda3cd55f5bb
 FINDING22_TRANSITIONS={'docs/inspection-translations.mjs': ('9d61f617e2cfbe12bc286cd9e8d34be9fe682ef1394b8b10200417b8bd4b5719', '97730aba61ff9be8c6166327bd5107df7085720afaef6fe00ceeb130d58a0631'), 'docs/scarb-voice.mjs': ('1f62b579084f8093a5d653da291b9f322dc74270c04913f2f72e76815924424d', 'd8b587486c93ed0d1e910b9e66f0e120948b268cf0e4f6056559bb934ab5fdbb')}
 FINDING22_EDITS=[(b'A food handler was not following good personal hygiene practices.',b'The inspection found a failure to ensure that food handlers practised good personal hygiene.'),(b'A food handler was not taking the required precautions to keep hair from contaminating food.',b'The inspection found a failure to ensure that food handlers protected against contamination by hair.')]
 
-def _finding22_sources(pin):
+def _finding22_sources(pin,*,current_sources=None):
  bindings=FINDING22_PINS.get(pin.get('manifest_sha256'))
  v.need(bindings is not None and pin.get('packet_bindings')==bindings,'Unlisted finding22 transition')
  restored={}
  for path,(before,after) in FINDING22_TRANSITIONS.items():
-  raw=(ROOT/path).read_bytes()
+  raw=(ROOT/path).read_bytes() if current_sources is None else current_sources[path]
   v.need(hashlib.sha256(raw).hexdigest()==after,'Finding22 current source differs')
   for old,new in FINDING22_EDITS:
    v.need(raw.count(new)==1 and old not in raw,'Finding22 exact literal differs')
@@ -84,13 +86,9 @@ def _source_bytes(pin,path):
   return _finding22_sources(pin)[path]
  return raw
 
-def historical_context(pin,current,recorded):
- if current==recorded:return current
- path='docs/scarb-voice.mjs'
- if hashlib.sha256((ROOT/path).read_bytes()).hexdigest()!=FINDING22_TRANSITIONS[path][1]:
-  return _historical_context(pin,current,recorded)
+def _finding22_context(pin,current,recorded,*,current_sources=None):
  bindings=FINDING22_PINS.get(pin.get('manifest_sha256'))
- _finding22_sources(pin)
+ restored=_finding22_sources(pin,current_sources=current_sources)
  v.need(set(current)==set(recorded)==set(bindings),'Finding22 membership differs')
  from scripts.scarb_grouped_projection_seam import current_canonical_requests
  packets=current_canonical_requests()
@@ -101,7 +99,75 @@ def historical_context(pin,current,recorded):
    v.need(item.get('source_sha256',{}).get(path)==after,'Finding22 context digest differs')
    item['source_sha256'][path]=before
  # Existing exact older transitions remain responsible for their original scope.
+ if current_sources is not None:
+  return community15_context(pin,prior,recorded,source=restored['docs/scarb-voice.mjs'])
  return _historical_context(pin,prior,recorded)
+
+
+# PR #72 independent review 8d0e169078212748977d5c11e523e21585407fc37a9c3327f0fcce88c4e56b8c.
+# Only the nine existing Community15 finding manifests can use this directory
+# literal reversal. The current Community diagnostic text remains authoritative.
+COMMUNITY15_DIRECTORY_SOURCE_PAIRS={
+ 'docs/scarb-voice.mjs': (
+  '50e8d4812c4597980e987181a671de0f04ba6b1e8aef714486a7f55137d3022a',
+  '45b1644008a47109722a10c84f171641d326e779ed555b4144d6e46c332fa98e',
+ ),
+ 'docs/inspection-translations.mjs': (
+  'e133563b89197fedc757b9cbad49e58be67741419afd34f61a75668ddc5efae3',
+  FINDING22_TRANSITIONS['docs/inspection-translations.mjs'][1],
+ ),
+ 'config/scarb-finding-source-drafts.json': (
+  '12c749dd3cbdd52ecf14ea61da7fd31890b3d158f5b721a01010fe107a746ef8',
+  '18cff9dccc465710e9a71e8fb5d0e279cf30a000a5d1d9b4f16971aa34650ead',
+ ),
+}
+DIRECTORY_PREVIOUS_LF='b7ace198b48c725e0398ce254f28b2e5169c0ad76034545dedca7b5a4c80fcf9'
+DIRECTORY_OLD_LINE=b'  "directory-intro": "Pick a neighbourhood and follow its map. This directory has {{COUNT}} pages using names from the City of Toronto neighbourhood registry. This is Scarb.TO\'s retained map selection, not an official City membership list or a claim about current inspection conditions.",'
+DIRECTORY_NEW_LINE=b'  "directory-intro": "Malvern West is in the directory. So is Agincourt South-Malvern West. I know it\\u2019s only a name on a list, but now I want both maps open. There are {{COUNT}} pages here, with names from the City of Toronto\\u2019s neighbourhood registry. Scarb.TO chose which ones to include. It\\u2019s not the City\\u2019s official list of Scarborough neighbourhoods, and it doesn\\u2019t tell you what an inspection would find today.",'
+
+
+def _community15_directory_context(pin,current,recorded,voice):
+ voice_path='docs/scarb-voice.mjs'
+ bindings=COMMUNITY15_PINS.get(pin.get('manifest_sha256'))
+ v.need(bindings is not None and pin.get('packet_bindings')==bindings
+        and set(current)==set(recorded)==set(bindings),'Community15 directory transition scope differs')
+ observed={}
+ historical_sources={}
+ for path,(lf_sha,crlf_sha) in COMMUNITY15_DIRECTORY_SOURCE_PAIRS.items():
+  raw=voice if path==voice_path else (ROOT/path).read_bytes()
+  observed[path]=hashlib.sha256(raw).hexdigest()
+  lf=raw.replace(b'\r\n',b'\n')
+  crlf=lf.replace(b'\n',b'\r\n')
+  v.need(raw in (lf,crlf) and hashlib.sha256(lf).hexdigest()==lf_sha
+         and hashlib.sha256(crlf).hexdigest()==crlf_sha,'Community15 directory source differs: '+path)
+  historical_sources[path]=crlf
+ v.need(all(entry.get('source_sha256')==observed for entry in current.values()),
+        'Community15 directory current context source differs')
+ voice_lf=voice.replace(b'\r\n',b'\n')
+ v.need(voice_lf.count(DIRECTORY_NEW_LINE)==1 and DIRECTORY_OLD_LINE not in voice_lf,
+        'Community15 directory literal differs')
+ previous_lf=voice_lf.replace(DIRECTORY_NEW_LINE,DIRECTORY_OLD_LINE,1)
+ previous_crlf=previous_lf.replace(b'\n',b'\r\n')
+ v.need(hashlib.sha256(previous_lf).hexdigest()==DIRECTORY_PREVIOUS_LF
+        and hashlib.sha256(previous_crlf).hexdigest()==FINDING22_TRANSITIONS[voice_path][1],
+        'Community15 pre-directory bytes differ')
+ historical_sources[voice_path]=previous_crlf
+ prior={identity:{**entry,'source_sha256':{
+  path:hashlib.sha256(raw).hexdigest() for path,raw in historical_sources.items()
+ }} for identity,entry in current.items()}
+ return _finding22_context(pin,prior,recorded,current_sources=historical_sources)
+
+
+def historical_context(pin,current,recorded):
+ if current==recorded:return current
+ path='docs/scarb-voice.mjs'
+ voice=(ROOT/path).read_bytes()
+ digest=hashlib.sha256(voice).hexdigest()
+ if pin.get('manifest_sha256') in COMMUNITY15_PINS and digest in COMMUNITY15_DIRECTORY_SOURCE_PAIRS[path]:
+  return _community15_directory_context(pin,current,recorded,voice)
+ if digest==FINDING22_TRANSITIONS[path][1]:
+  return _finding22_context(pin,current,recorded)
+ return _historical_context(pin,current,recorded)
 
 
 # PR #72 directory-only builder transition. These digests bind the 11 admitted
