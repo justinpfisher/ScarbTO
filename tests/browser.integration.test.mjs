@@ -648,7 +648,11 @@ test('selected calls render only after explicit selection and clear after leavin
     assert.equal(await page.locator('.selected-call-row').count(),3);
     assert.equal(await page.locator('#map').getAttribute('aria-label'),'Map background only; selected calls are not mapped individually');
     assert.equal(await page.locator('#selected-calls-map-note').isVisible(),true);
+    assert.equal(await page.locator('#food-search').isVisible(),false);
+    assert.equal(await page.locator('#food-filters').isVisible(),false);
     await page.getByRole('button',{name:'All places'}).click();
+    assert.equal(await page.locator('#food-search').isVisible(),true);
+    assert.equal(await page.locator('#food-filters').isVisible(),true);
     assert.equal(await page.locator('.selected-call-row').count(),0,'leaving the view removes all counts');
     await page.getByRole('button',{name:'Police calls by division'}).click();
     assert.equal(await page.locator('.selected-call-row').count(),0,'a cooldown response cannot reveal old counts');
@@ -803,13 +807,29 @@ test('browse-mode tabs stay fully visible at desktop and narrow widths', {timeou
     if(width<=950){
       assert.equal(await filterToggle.getAttribute('aria-expanded'),'false');
       assert.equal(await page.locator('#filter-options').isVisible(),false);
-      const topics=await page.locator('.view-tabs').boundingBox();
-      const search=await page.locator('#search').boundingBox();
-      const map=await page.locator('.map-panel').boundingBox();
-      assert.ok(topics && search && map,'primary controls and map are visible at '+width+'px');
-      assert.ok(topics.y+topics.height<=map.y && search.y+search.height<=map.y,'primary controls precede the map at '+width+'px');
+    }
+    const checkLayout=async()=>{
+      const layout=await page.locator('.app-wrap').evaluate(app=>{
+        const rect=selector=>app.querySelector(selector).getBoundingClientRect().toJSON();
+        return {topics:rect('.view-tabs'),search:rect('#search'),filters:rect('.filters'),
+          map:rect('.map-panel'),results:rect('.results'),
+          pageWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth};
+      });
+      assert.ok(layout.pageWidth<=layout.viewportWidth+1,'page fits at '+width+'px');
+      assert.ok(layout.map.width>0 && layout.map.height>=300,'map retains its panel at '+width+'px');
+      if(width<=950){
+        assert.ok(layout.topics.height>0 && layout.search.height>0,'primary controls are visible at '+width+'px');
+        assert.ok(layout.topics.bottom<=layout.map.top && layout.search.bottom<=layout.map.top,'primary controls precede the map at '+width+'px');
+        assert.ok(layout.map.bottom<=layout.results.top,'map precedes its results at '+width+'px');
+      }else{
+        assert.ok(layout.filters.right<=layout.map.left && layout.map.right<=layout.results.left,'desktop retains the filter rail, map and results columns at '+width+'px');
+      }
+    };
+    await checkLayout();
+    if(width<=950){
       await filterToggle.click();
       assert.equal(await page.locator('#filter-options').isVisible(),true);
+      await checkLayout();
     }
     const metrics=await page.locator('.view-tabs').evaluate(tabs=>{
       const container=tabs.getBoundingClientRect();
@@ -1236,4 +1256,17 @@ test('public saved areas persist and recover across desktop and mobile without c
       assert.deepEqual(pageErrors,[]);
     } finally { await context.close(); }
   }
+  const noScript=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,javaScriptEnabled:false});
+  try {
+    const page=await noScript.newPage();
+    await installLocalRoutes(page,origin,{maplibreFailure:true});
+    await page.goto(origin,{waitUntil:'domcontentloaded'});
+    assert.equal(await page.locator('#filter-options').isVisible(),false);
+    assert.equal(await page.locator('.header-right a[href="/neighbourhoods/"]').isVisible(),true);
+    const directory=page.locator('noscript a[href="/neighbourhoods/"]');
+    assert.equal(await directory.isVisible(),true);
+    await directory.click();
+    assert.equal(new URL(page.url()).pathname,'/neighbourhoods/');
+    assert.equal(await page.getByRole('heading',{name:'Explore the neighbourhoods',exact:true}).isVisible(),true);
+  } finally { await noScript.close(); }
 });
