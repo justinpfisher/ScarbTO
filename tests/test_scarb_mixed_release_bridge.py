@@ -401,6 +401,67 @@ class CanonicalFixedWordingTests(unittest.TestCase):
   self.assertFalse((self.state/'generation.lock').exists())
 
 
+
+ def test_community_edition_scope_and_readers(self):
+  from scripts import stage_scarb_ai_inputs as stage
+  from scripts.scarb_accepted_copy import fixed_community_edition_pins
+  edition=fixed_community_edition_pins()
+  bundle,editorial,_,projection=self.community_layout_fixture()
+  bundle['fixed_records'].update({identity:{} for identity in edition})
+  editorial={identity:entry for identity,entry in editorial.items() if identity not in edition}
+  projection.update({identity:{**pin,'origin':'scarb-fixed-wording-review-1'}
+                     for identity,pin in edition.items()})
+  self.assertEqual((len(edition),len(projection)),(10,77))
+  identity='shell.shell-861ddc17-036'
+  outside='static.community-intro'
+  with self.assertRaisesRegex(c.v.VoiceError,'packet or review map'):
+   self.compile(editorial=editorial,bundle=bundle)
+  with self.assertRaisesRegex(c.v.VoiceError,'Complete disjoint'):
+   self.compile(editorial={**editorial,identity:editorial[outside]},bundle=bundle)
+  with self.assertRaisesRegex(c.v.VoiceError,'Complete disjoint'):
+   self.compile(editorial={key:item for key,item in editorial.items() if key!=outside},bundle=bundle)
+  widened={**bundle['fixed_records']}
+  widened[outside]=widened.pop(identity)
+  other_editorial={**editorial,identity:editorial[outside]}
+  del other_editorial[outside]
+  with self.assertRaisesRegex(c.v.VoiceError,'Exact current fixed wording scope'):
+   self.compile(editorial=other_editorial,bundle={**bundle,'fixed_records':widened})
+
+  # Only the private authentication return value is replaced for this full-catalogue fixture.
+  with patch.object(self.fixed,'verify_canonical_fixed_records',return_value=projection):
+   catalogue=self.compile(editorial=editorial,bundle=bundle)
+   candidate=self.state/'candidate.json'
+   candidate.write_bytes(c.v.encoded(catalogue))
+   path='docs/community/index.html'
+   with patch.object(c,'_collect_admitted_editorial_entries',return_value=editorial):
+    staged=stage.generator_inputs(list(self.current.values()),{},self.state,candidate,
+                                  shells={path:self.shells[path]},authoring_version='v3',mixed_bundle=bundle)
+  self.assertEqual(catalogue['version'],'scarb-ai-voice-mixed-5')
+  self.assertEqual(len(catalogue['entries']),736)
+  self.assertEqual({key for key,entry in catalogue['entries'].items()
+                    if entry['origin']=='scarb-fixed-wording-review-1'},set(projection))
+  self.assertEqual(staged[path],(c.ROOT/path).read_bytes().replace(b'\r\n',b'\n'))
+  self.assertEqual(json.loads(staged['accepted-copy.json']),catalogue)
+  resolver=accepted_resolver(catalogue,self.expected)
+  js=MixedReleaseBridgeTests.js(self,catalogue,self.expected)
+  self.assertEqual(js.returncode,0,js.stderr)
+  self.assertEqual(json.loads(js.stdout),{key:resolver(key) for key in self.expected})
+  self.assertEqual(resolver('shell.shell-861ddc17-012'),'Our neighbourhood')
+  self.assertTrue(resolver(identity).startswith(' '))
+  for issue in ('older-version','trimmed','receipt','malformed','extra-fixed'):
+   altered=copy.deepcopy(catalogue)
+   entry=altered['entries'][identity]
+   if issue=='older-version':altered['version']='scarb-ai-voice-mixed-4'
+   elif issue=='trimmed':entry['text']=entry['text'].strip()
+   elif issue=='receipt':entry['receipt_sha256']=edition['shell.shell-861ddc17-040']['receipt_sha256']
+   elif issue=='malformed':altered['entries'][identity]=None
+   else:altered['entries'][outside]['origin']='scarb-fixed-wording-review-1'
+   with self.subTest(issue=issue):
+    with self.assertRaises(ValueError):accepted_resolver(altered,self.expected)
+    self.assertEqual(MixedReleaseBridgeTests.js(self,altered,self.expected).returncode,2)
+  self.assertFalse((self.state/'generation.lock').exists())
+
+
 class ReviewedDirectoryAppendTests(unittest.TestCase):
  @classmethod
  def setUpClass(cls):

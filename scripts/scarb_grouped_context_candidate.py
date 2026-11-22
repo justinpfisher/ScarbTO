@@ -511,7 +511,7 @@ def compile_mixed_catalogue(bundle,config,*,state=None):
       {key:value for key,value in bundle.items() if key!='fixed_records'},config,current)
   fixed.require_complete_partition(set(current),set(editorial),set(fixed_records))
   verified_fixed=fixed.verify_canonical_fixed_records(state,current,fixed_records)
-  version={30:'scarb-ai-voice-mixed-2',58:'scarb-ai-voice-mixed-3',67:'scarb-ai-voice-mixed-4'}[len(verified_fixed)]
+  version={30:'scarb-ai-voice-mixed-2',58:'scarb-ai-voice-mixed-3',67:'scarb-ai-voice-mixed-4',77:'scarb-ai-voice-mixed-5'}[len(verified_fixed)]
   draft={'entries':{**editorial,**verified_fixed}}
  else:
   draft=compile_admitted_mixed_draft(bundle,config)

@@ -5220,8 +5220,20 @@
         "03c1e368325e21a84d163874cbbef9439c1f8c2a49490fe25cf3cf29b918a179"
       ],
       [
+        "fixed_community_edition_pins",
+        "scarb-fixed-community-edition-pins.mjs"
+      ],
+      [
+        "fixed_community_edition_pins",
+        "83e698249a92143d9341a7923d5c4f7670057620ec45ec70936ae3204b78cdbf"
+      ],
+      [
         "accepted_resolver",
         "version"
+      ],
+      [
+        "accepted_resolver",
+        "scarb-ai-voice-mixed-5"
       ],
       [
         "accepted_resolver",
