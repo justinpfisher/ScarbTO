@@ -138,6 +138,102 @@ class MixedReleaseBridgeTests(unittest.TestCase):
      with stage.private_grouped_registry(state,path,digest):self.fail('bad roster admitted')
     self.assertFalse(c.provenance.TRUSTED_GROUPED_RUNS)
 
+class CanonicalFixedWordingTests(unittest.TestCase):
+ @classmethod
+ def setUpClass(cls):
+  from scripts import scarb_fixed_wording_candidate as fixed
+  from scripts.scarb_accepted_copy import fixed_wording_pins
+  cls.fixed=fixed
+  cls.current=c.seam.current_canonical_requests()
+  cls.expected={identity:c.v.digest(packet) for identity,packet in cls.current.items()}
+  cls.pins=fixed_wording_pins()
+  cls.records={identity:{'version':'scarb-fixed-wording-review-1','decision':'verified-unchanged',
+                        'binding':fixed.exact_binding(cls.current[identity])} for identity in cls.pins}
+  all_shells=json.loads((c.ROOT/'config/scarb-static-shells.json').read_bytes())
+  cls.shells={path:all_shells[path] for path in ('docs/index.html','docs/community/index.html')}
+  drafts={slot['id']:slot['draft'] for record in cls.shells.values() for slot in record['slots']}
+  cls.editorial={identity:{'text':drafts.get(identity,packet['draft']),'packet_sha256':cls.expected[identity],
+                            'receipt_sha256':'a'*64,'origin':'openai-api-reviewed'}
+                 for identity,packet in cls.current.items() if identity not in cls.pins}
+
+ def setUp(self):
+  from scripts import scarb_packet_consumption_candidate as history
+  temp=tempfile.TemporaryDirectory()
+  self.addCleanup(temp.cleanup)
+  self.state=Path(temp.name).resolve()
+  self.enterContext(patch.object(history,'protected_root',return_value=self.state))
+  self.bundle={'solo_v1':{},'solo_v2':{},'grouped':[],'fixed_records':self.records}
+
+ def compile(self,*,editorial=None,bundle=None):
+  with patch.object(c,'_collect_admitted_editorial_entries',return_value=self.editorial if editorial is None else editorial):
+   return c.compile_mixed_catalogue(self.bundle if bundle is None else bundle,{},state=self.state)
+
+ def test_private_verifier_and_staging_preserve_both_fixed_shells(self):
+  from scripts import stage_scarb_ai_inputs as stage
+  catalogue=self.compile()
+  self.assertEqual(catalogue['version'],'scarb-ai-voice-mixed-2')
+  self.assertEqual(len(catalogue['entries']),736)
+  self.assertEqual({key for key,value in catalogue['entries'].items()
+                    if value['origin']=='scarb-fixed-wording-review-1'},set(self.pins))
+  candidate=self.state/'candidate.json'
+  candidate.write_bytes(c.v.encoded(catalogue))
+  with patch.object(c,'_collect_admitted_editorial_entries',return_value=self.editorial):
+   files=stage.generator_inputs(list(self.current.values()),{},self.state,candidate,shells=self.shells,
+                                authoring_version='v3',mixed_bundle=self.bundle)
+  self.assertEqual(json.loads(files['accepted-copy.json']),catalogue)
+  self.assertFalse((self.state/'generation.lock').exists())
+  for path,record in self.shells.items():
+   self.assertEqual(files[path],record['source'].encode())
+   self.assertEqual(files[path],(c.ROOT/path).read_bytes().replace(b'\r\n',b'\n'))
+  read=accepted_resolver(catalogue,self.expected)
+  js=MixedReleaseBridgeTests.js(self,catalogue,self.expected)
+  self.assertEqual(js.returncode,0,js.stderr)
+  self.assertEqual(json.loads(js.stdout),{key:read(key) for key in self.expected})
+
+ def test_incomplete_overlap_stale_and_widened_fixed_bundle_fails(self):
+  fixed_key=next(iter(self.pins))
+  outside=next(iter(self.editorial))
+  for case in ('incomplete','overlap','review-drift','off-scope'):
+   editorial=copy.deepcopy(self.editorial)
+   records=copy.deepcopy(self.records)
+   if case=='incomplete':editorial.pop(outside)
+   elif case=='overlap':editorial[fixed_key]=editorial[outside]
+   elif case=='review-drift':records[fixed_key]['binding']['text']+=' altered'
+   else:
+    # Total membership still matches the full manifest, but the fixed lane changed.
+    records[outside]=records.pop(fixed_key)
+    editorial[fixed_key]=editorial.pop(outside)
+   with self.subTest(case=case),self.assertRaises(c.v.VoiceError):
+    self.compile(editorial=editorial,bundle={**self.bundle,'fixed_records':records})
+  changed=copy.deepcopy(self.current)
+  changed[fixed_key]['draft']+=' drift'
+  with patch.object(c.seam,'current_canonical_requests',return_value=changed),self.assertRaisesRegex(c.v.VoiceError,'packet or review map'):
+   self.compile()
+  accepted=self.state/'accepted-v2'
+  accepted.mkdir()
+  (accepted/'already-consumed.json').write_bytes(c.v.encoded({'packet_sha256':self.expected[fixed_key]}))
+  with self.assertRaisesRegex(c.v.VoiceError,'prior attempt'):
+   self.compile()
+  self.assertFalse((self.state/'generation.lock').exists())
+
+ def test_both_readers_reject_forged_fixed_claims(self):
+  catalogue=self.compile()
+  identity=next(iter(self.pins))
+  outside=next(iter(self.editorial))
+  for issue in ('text','review','relabel','unknown','legacy-version','missing'):
+   altered=copy.deepcopy(catalogue)
+   entry=altered['entries'][identity]
+   if issue=='text':entry['text']+=' forged'
+   elif issue=='review':entry['receipt_sha256']='f'*64
+   elif issue=='relabel':entry['origin']='openai-api-reviewed'
+   elif issue=='unknown':altered['entries'][outside]['origin']='scarb-fixed-wording-review-1'
+   elif issue=='legacy-version':altered['version']='scarb-ai-voice-mixed-1'
+   else:altered['entries'].pop(identity)
+   with self.subTest(issue=issue):
+    with self.assertRaises(ValueError):accepted_resolver(altered,self.expected)
+    self.assertEqual(MixedReleaseBridgeTests.js(self,altered,self.expected).returncode,2)
+
+
 class ReviewedDirectoryAppendTests(unittest.TestCase):
  @classmethod
  def setUpClass(cls):

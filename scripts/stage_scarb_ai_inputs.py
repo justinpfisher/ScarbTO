@@ -109,8 +109,8 @@ def _generator_inputs(packets: list, config: dict, state: Path, candidate: Path,
         current = mixed.seam.current_canonical_requests()
         need(len(packets) == 736 and len({p["id"] for p in packets}) == 736 and
              {p["id"]: p for p in packets} == current, "Exact complete current mixed requests required")
-        mixed.verify_mixed_catalogue(mixed_bundle, config, candidate)
-        accepted = mixed.compile_mixed_catalogue(mixed_bundle, config)
+        mixed.verify_mixed_catalogue(mixed_bundle, config, candidate, state=state)
+        accepted = mixed.compile_mixed_catalogue(mixed_bundle, config, state=state)
     else:
         verify_private(packets, config, state, candidate)
         accepted = compile_private(packets, config, state)
@@ -217,7 +217,7 @@ def main() -> None:
     parser.add_argument("--static-shells", action="store_true", help="Stage the six exact current shells privately; never the weekly archive")
     parser.add_argument("--event-source", type=Path, help="Non-secret retained-release id and byte-hash descriptor")
     parser.add_argument("--authoring-version", choices=("v1", "v2", "v3"), default="v1")
-    parser.add_argument("--mixed-receipts", type=Path, help="Private admitted original receipt bundle for v3 only; not reader metadata")
+    parser.add_argument("--mixed-receipts", type=Path, help="Private admitted receipt bundle for v3, with optional exact fixed_records; not reader metadata")
     parser.add_argument("--private-registry",type=Path)
     parser.add_argument("--approved-registry-sha256",help="Coordinator-supplied expected digest, never taken from the candidate")
     args = parser.parse_args()

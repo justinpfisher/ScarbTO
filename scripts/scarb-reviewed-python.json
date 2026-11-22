@@ -5169,19 +5169,47 @@
     "strings": [
       [
         "<module>",
-        "Pure Python consumer matching the browser's accepted-output resolver.\n\nThis validates exact request membership, not the truth of a receipt claim.\nUse only bytes staged after private receipt verification and bound by release\nreview. No filesystem, model, settings, provider or credential access here.\n"
+        "Pure Python consumer matching the browser's accepted-output resolver.\n\nThis validates exact request membership, not the truth of a receipt claim.\nUse only bytes staged after private receipt verification and bound by release\nreview. Fixed wording uses the same checked-in pins as the browser.\n"
+      ],
+      [
+        "fixed_wording_pins",
+        "docs/scarb-fixed-wording-pins.mjs"
+      ],
+      [
+        "fixed_wording_pins",
+        "utf-8"
+      ],
+      [
+        "fixed_wording_pins",
+        "utf-8"
+      ],
+      [
+        "fixed_wording_pins",
+        "5d47bcbe680ce4a09ae9ec73d81d6e3d1bb18744fcbbb24a267ca04c72393b93"
+      ],
+      [
+        "fixed_wording_pins",
+        "Fixed wording pin module differs from the approved source"
+      ],
+      [
+        "fixed_wording_pins",
+        "export default "
+      ],
+      [
+        "fixed_wording_pins",
+        ";\n"
       ],
       [
         "accepted_resolver",
         "version"
+      ],
+      [
+        "accepted_resolver",
+        "scarb-ai-voice-mixed-2"
       ],
       [
         "accepted_resolver",
         "scarb-ai-voice-mixed-1"
-      ],
-      [
-        "accepted_resolver",
-        "version"
       ],
       [
         "accepted_resolver",
@@ -5189,15 +5217,15 @@
       ],
       [
         "accepted_resolver",
-        "scarb-ai-voice-mixed-1"
-      ],
-      [
-        "accepted_resolver",
         "entries"
       ],
       [
         "accepted_resolver",
         "entries"
+      ],
+      [
+        "accepted_resolver",
+        "AI copy catalogue does not match the qualified request manifest"
       ],
       [
         "accepted_resolver",
@@ -5277,6 +5305,38 @@
       ],
       [
         "accepted_resolver",
+        "scarb-fixed-wording-review-1"
+      ],
+      [
+        "accepted_resolver",
+        "packet_sha256"
+      ],
+      [
+        "accepted_resolver",
+        "receipt_sha256"
+      ],
+      [
+        "accepted_resolver",
+        "receipt_sha256"
+      ],
+      [
+        "accepted_resolver",
+        "text"
+      ],
+      [
+        "accepted_resolver",
+        "text"
+      ],
+      [
+        "accepted_resolver",
+        "openai-api-reviewed"
+      ],
+      [
+        "accepted_resolver",
+        "protected-verbatim"
+      ],
+      [
+        "accepted_resolver",
         "[a-f0-9]{64}"
       ],
       [
@@ -5302,18 +5362,6 @@
       [
         "accepted_resolver",
         "text"
-      ],
-      [
-        "accepted_resolver",
-        "origin"
-      ],
-      [
-        "accepted_resolver",
-        "openai-api-reviewed"
-      ],
-      [
-        "accepted_resolver",
-        "protected-verbatim"
       ],
       [
         "accepted_resolver",

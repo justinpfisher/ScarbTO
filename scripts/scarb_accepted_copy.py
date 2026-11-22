@@ -2,34 +2,56 @@
 
 This validates exact request membership, not the truth of a receipt claim.
 Use only bytes staged after private receipt verification and bound by release
-review. No filesystem, model, settings, provider or credential access here.
+review. Fixed wording uses the same checked-in pins as the browser.
 """
+import hashlib
+import json
 import re
 from copy import deepcopy
+from pathlib import Path
+
+
+def fixed_wording_pins():
+    path = Path(__file__).resolve().parents[1] / "docs/scarb-fixed-wording-pins.mjs"
+    module = path.read_text(encoding="utf-8")
+    if hashlib.sha256(module.encode("utf-8")).hexdigest() != "5d47bcbe680ce4a09ae9ec73d81d6e3d1bb18744fcbbb24a267ca04c72393b93":
+        raise ValueError("Fixed wording pin module differs from the approved source")
+    return json.loads(module.removeprefix("export default ").removesuffix(";\n"))
 
 
 def accepted_resolver(catalogue, expected):
-    mixed = isinstance(catalogue, dict) and catalogue.get("version") == "scarb-ai-voice-mixed-1"
-    if (not isinstance(catalogue, dict) or catalogue.get("version") not in ("scarb-ai-voice-1", "scarb-ai-voice-mixed-1")
+    version = catalogue.get("version") if isinstance(catalogue, dict) else None
+    fixed_version = version == "scarb-ai-voice-mixed-2"
+    mixed = fixed_version or version == "scarb-ai-voice-mixed-1"
+    if ((not mixed and version != "scarb-ai-voice-1")
             or not isinstance(catalogue.get("entries"), dict) or not isinstance(expected, dict)
             or set(catalogue["entries"]) != set(expected) or (mixed and len(expected) != 736)):
+        raise ValueError("AI copy catalogue does not match the qualified request manifest")
+    fixed_pins = fixed_wording_pins() if fixed_version else {}
+    if not fixed_pins.keys() <= expected.keys():
         raise ValueError("AI copy catalogue does not match the qualified request manifest")
     entries = {}
     for key, request_hash in expected.items():
         entry = catalogue["entries"][key]
-        grouped = isinstance(entry, dict) and entry.get("origin") == "scarb-grouped-projection-2"
+        origin = entry.get("origin") if isinstance(entry, dict) else None
+        grouped = origin == "scarb-grouped-projection-2"
         provenance = entry.get("provenance") if isinstance(entry, dict) else None
         group_ok = mixed and grouped and provenance == {
             "version": "scarb-grouped-run-envelope-2", "manifest_sha256": entry.get("receipt_sha256"), "packet_id": key}
         if mixed and isinstance(entry, dict) and entry.get("origin") == "scarb-grouped-projection-3":
             group_ok = provenance == {"version": "scarb-grouped-run-envelope-3",
                 "prompt_version": "numeric-citation-2", "manifest_sha256": entry.get("receipt_sha256"), "packet_id": key}
+        fixed = fixed_pins.get(key)
+        fixed_ok = fixed is not None and origin == "scarb-fixed-wording-review-1" and provenance is None and (
+            fixed["packet_sha256"] == request_hash and fixed["receipt_sha256"] == entry.get("receipt_sha256")
+            and fixed["text"] == entry.get("text"))
+        editorial_ok = group_ok or (origin in ("openai-api-reviewed", "protected-verbatim") and (not mixed or provenance is None))
         if (not isinstance(request_hash, str) or re.fullmatch(r"[a-f0-9]{64}", request_hash) is None
                 or not isinstance(entry, dict) or entry.get("packet_sha256") != request_hash
                 or not isinstance(entry.get("receipt_sha256"), str)
                 or re.fullmatch(r"[a-f0-9]{64}", entry["receipt_sha256"]) is None
                 or not isinstance(entry.get("text"), str) or not entry["text"]
-                or not (group_ok or (entry.get("origin") in ("openai-api-reviewed", "protected-verbatim") and (not mixed or provenance is None)))):
+                or not (fixed_ok if fixed is not None else editorial_ok)):
             raise ValueError("Unaccepted or stale AI copy: " + key)
         entries[key] = deepcopy(entry)
 

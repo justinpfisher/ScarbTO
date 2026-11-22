@@ -497,12 +497,22 @@ def compile_disabled_fixed_mixed_draft(bundle,config,state,fixed_records):
  return {'version':'scarb-disabled-fixed-mixed-proof-1','entries':entries}
 
 
-def compile_mixed_catalogue(bundle,config):
+def compile_mixed_catalogue(bundle,config,*,state=None):
  """Compile only privately admitted receipts; never promote a supplied draft.
  Public metadata identifies grouped provenance without exposing private records.
  """
- draft=compile_admitted_mixed_draft(bundle,config)
  current=seam.current_canonical_requests()
+ fixed_bundle=isinstance(bundle,dict) and 'fixed_records' in bundle
+ if fixed_bundle:
+  from scripts import scarb_fixed_wording_candidate as fixed
+  fixed_records=bundle['fixed_records']
+  v.need(isinstance(fixed_records,dict),'Fixed evidence must be keyed by canonical ID')
+  editorial=_collect_admitted_editorial_entries(
+      {key:value for key,value in bundle.items() if key!='fixed_records'},config,current)
+  fixed.require_complete_partition(set(current),set(editorial),set(fixed_records))
+  draft={'entries':{**editorial,**fixed.verify_canonical_fixed_records(state,current,fixed_records)}}
+ else:
+  draft=compile_admitted_mixed_draft(bundle,config)
  v.need(len(current)==736 and set(draft['entries'])==set(current),'Complete current 736-item catalogue required')
  entries={}
  for identity,item in draft['entries'].items():
@@ -510,16 +520,16 @@ def compile_mixed_catalogue(bundle,config):
   if entry['origin']=='scarb-grouped-projection-2':
    entry['provenance']={'version':'scarb-grouped-run-envelope-2','manifest_sha256':entry['receipt_sha256'],'packet_id':identity}
   entries[identity]=entry
- catalogue={'version':'scarb-ai-voice-mixed-1','entries':entries}
+ catalogue={'version':'scarb-ai-voice-mixed-2' if fixed_bundle else 'scarb-ai-voice-mixed-1','entries':entries}
  from scripts.scarb_accepted_copy import accepted_resolver
  accepted_resolver(catalogue,{i:v.digest(p) for i,p in current.items()})
  return catalogue
 
 
-def verify_mixed_catalogue(bundle,config,artifact):
+def verify_mixed_catalogue(bundle,config,artifact,*,state=None):
  """Recompile from original admitted evidence; no caller-provided trust claims."""
  path=Path(artifact)
  v.need(path.is_file() and path.stat().st_size<=10*1024*1024,'Mixed catalogue missing or oversized')
  actual=json.loads(path.read_text(encoding='utf8'))
- v.need(v.encoded(actual)==v.encoded(compile_mixed_catalogue(bundle,config)),'Mixed catalogue differs from admitted receipts')
+ v.need(v.encoded(actual)==v.encoded(compile_mixed_catalogue(bundle,config,state=state)),'Mixed catalogue differs from admitted receipts')
  return True

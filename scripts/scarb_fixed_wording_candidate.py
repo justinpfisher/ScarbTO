@@ -364,3 +364,28 @@ def verify_reviewed_private_record(state, packet, record):
     pin = TRUSTED_FIXED_REVIEWS.get((packet.get('id'), v.digest(packet)))
     v.need(isinstance(pin, str) and len(pin) == 64, 'No admitted independent fixed wording review')
     return verify_from_private_state(state, packet, record, pin)
+
+
+def verify_canonical_fixed_records(state, current, records):
+    """Verify the exact 30 approved fixed records under the existing private lock."""
+    from scripts.scarb_accepted_copy import fixed_wording_pins
+    from scripts.scarb_packet_consumption_candidate import protected_root
+
+    pins = fixed_wording_pins()
+    v.need(len(pins) == 30 and isinstance(records, dict) and set(records) == set(pins)
+           and len(current) == 736 and set(pins) <= set(current), 'Exact current 30-item fixed wording scope required')
+    packet_hashes = {identity: v.digest(current[identity]) for identity in pins}
+    review_hashes = {identity: v.digest(records[identity]) for identity in pins}
+    v.need(v.digest(packet_hashes) == '618e8af83f273dc2199e23b1a244e0d2dec19c6ff1bdcc455076f21849b5740d'
+           and v.digest(review_hashes) == '9d6f9a6dd2911bcc0b06b21b690b79382843de48d9dccce1b231a48c087524d5',
+           'Fixed wording packet or review map differs')
+    v.need(state is not None, 'Protected fixed wording state required')
+    root = Path(state)
+    v.need(root.is_dir() and not root.is_symlink() and root.resolve() == protected_root().resolve(),
+           'Protected fixed wording state required')
+    with v.exclusive(root):
+        entries = {identity: verify_reviewed_private_record(root, current[identity], records[identity])
+                   for identity in pins}
+    v.need(all(entry == {**pins[identity], 'origin': 'scarb-fixed-wording-review-1'}
+               for identity, entry in entries.items()), 'Fixed wording projection differs from approved pins')
+    return entries
