@@ -161,7 +161,7 @@ export function composeEdition({profile,registry,release,start,end,previous=null
   const footer=`Edition revision 1. Information cut-off: ${readerDate(cutoff)}.\nCity of Toronto DineSafe: ${SOURCE}\nOpen Government Licence - Toronto: ${LICENCE}\nInformation checked ${readerDate(release.checked_at)}. Evidence: https://scarb.to/community/evidence/?release=${release.id}\nPrepared with Scarb.TO. Keep the downloaded receipt with this edition.`;
   const paragraphs=[]; const included=[]; const omissions=[];
   const render=()=>[heading,period,...paragraphs,...warnings].join('\n\n');
-  if(!fits(render(),footer,profile.limits)) fail('This limit cannot fit the reporting dates and essential qualifications. Increase the space or copy limit.');
+  if(!fits(render(),footer,profile.limits)) fail('The copy limit is too tight to fit the reporting dates and essential qualifications. Please increase the space or copy limit.');
   for(const item of candidates) {
     paragraphs.push(eventCopy(item.record,item.coverage));
     if(fits(render(),footer,profile.limits)) included.push(item.record.id);
@@ -171,7 +171,7 @@ export function composeEdition({profile,registry,release,start,end,previous=null
   let snapshotIncluded=false;
   if(profile.include_snapshot){paragraphs.push(`For context: this selection contains ${snapshot.length} qualified DineSafe establishment records as checked on ${readerDate(release.checked_at)}. This is a dated snapshot, not a count of events during the reporting period or necessarily distinct businesses.`);if(fits(render(),footer,profile.limits))snapshotIncluded=true;else{paragraphs.pop();omissions.push({id:'snapshot',reason:'space'});}}
   if(!candidates.length) paragraphs.push('I found no new updates in the qualified records checked for this selection and period. That does not mean nothing happened.');
-  if(candidates.length&&!included.length) fail('This limit leaves no room for one complete update. Increase it rather than dropping the qualifications.');
+  if(candidates.length&&!included.length) fail('The copy limit is too tight for one complete update. Please increase it rather than dropping the qualifications.');
   if(!fits(render(),footer,profile.limits)) fail('The no-update explanation needs a larger copy limit.');
   const copy=render().normalize('NFC');
   return {schema_version:VERSION,state:'draft',revision:1,generated_at:generatedAt,profile:structuredClone(profile),boundaries:Object.fromEntries([...profile.core,...profile.nearby].map(id=>[id,structuredClone(registry[id])])),requested_period:{start,end,start_inclusive:firstAtBeginning},source_cutoffs:{dinesafe:cutoff},release_id:release.id,evidence:structuredClone(release),snapshot_record_ids:snapshotIncluded?snapshot.map(x=>x.record.id):[],previously_included_event_ids:[...priorIds],publication_included_event_ids:[...new Set([...priorIds,...(correctionOf?.publication_included_event_ids||[]),...included])],candidate_event_ids:candidates.map(x=>x.record.id),included_event_ids:included,omissions,copy,footer,counts:{editorial:counts(copy),sources:counts(footer),panel:counts(copy+'\n\n'+footer)},composition_version:VERSION};
