@@ -4,21 +4,24 @@
  * never from the catalogue being checked. Missing/new inputs hold publication.
  */
 import fixedPins from './scarb-fixed-wording-pins.mjs';
+import directoryPins from './scarb-fixed-directory-pins.mjs';
 
 export function createScarbAiResolver(catalogue, expected) {
-  const fixedVersion = catalogue?.version === 'scarb-ai-voice-mixed-2';
+  const directoryVersion = catalogue?.version === 'scarb-ai-voice-mixed-3';
+  const fixedVersion = directoryVersion || catalogue?.version === 'scarb-ai-voice-mixed-2';
   const mixed = fixedVersion || catalogue?.version === 'scarb-ai-voice-mixed-1';
+  const pins = directoryVersion ? {...fixedPins, ...directoryPins} : fixedVersion ? fixedPins : {};
   if ((!mixed && catalogue?.version !== 'scarb-ai-voice-1') || !catalogue.entries || !expected ||
       Object.keys(catalogue.entries).length !== Object.keys(expected).length ||
       (mixed && Object.keys(expected).length !== 736) ||
-      (fixedVersion && !Object.keys(fixedPins).every(id => Object.hasOwn(expected, id)))) {
+      !Object.keys(pins).every(id => Object.hasOwn(expected, id))) {
     throw new Error('AI copy catalogue does not match the qualified request manifest');
   }
   const entries = new Map();
   for (const [id, hash] of Object.entries(expected)) {
     const entry = catalogue.entries[id];
     const p = entry?.provenance;
-    const fixed = fixedVersion && Object.hasOwn(fixedPins, id) ? fixedPins[id] : null;
+    const fixed = Object.hasOwn(pins, id) ? pins[id] : null;
     const fixedOk = fixed && entry?.origin === 'scarb-fixed-wording-review-1' && p == null &&
       fixed.packet_sha256 === hash && fixed.receipt_sha256 === entry.receipt_sha256 &&
       fixed.text === entry.text;

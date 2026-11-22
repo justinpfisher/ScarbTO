@@ -222,9 +222,35 @@ def _directory_binding(packet):
                       dest: sorted(destination_pins)}}
 
 
+# PR #76 changed only the independently reviewed introduction. Recover the
+# former label-review source in memory and keep its original receipt pins.
+DIRECTORY_CURRENT_PINS = (
+    '5cc913d2fe1f41306180c9e6c1c166ec6c3d71df16c8bda20770688a80932760',
+    '5de0e175baa30eaa99db17d9d72cde22761ec3d75d021987a009dc2764e8ffb2',
+)
+DIRECTORY_PREVIOUS_LF = 'da63b3bb8c264cf515743bd696eab7069600883da19370e73f46d682c52af369'
+DIRECTORY_PRIOR_INTRO = b'<p data-scarb-voice="directory-intro">Pick a neighbourhood and follow its map. This directory has 30 pages using names from the City of Toronto neighbourhood registry. This is Scarb.TO\'s retained map selection, not an official City membership list or a claim about current inspection conditions.</p>'
+DIRECTORY_APPROVED_INTRO = b'<p data-scarb-voice="directory-intro">Malvern West is in the directory. So is Agincourt South-Malvern West. I know it\xe2\x80\x99s only a name on a list, but now I want both maps open. There are 30 pages here, with names from the City of Toronto\xe2\x80\x99s neighbourhood registry. Scarb.TO chose which ones to include. It\xe2\x80\x99s not the City\xe2\x80\x99s official list of Scarborough neighbourhoods, and it doesn\xe2\x80\x99t tell you what an inspection would find today.</p>'
+
+
+def _reviewed_directory_label_source(raw):
+    v.need(hashlib.sha256(raw).hexdigest() in DIRECTORY_CURRENT_PINS,
+           'Current reviewed directory source differs')
+    current = raw.replace(b'\r\n', b'\n')
+    v.need(current.count(DIRECTORY_APPROVED_INTRO) == 1 and DIRECTORY_PRIOR_INTRO not in current,
+           'Reviewed directory introduction differs')
+    previous = current.replace(DIRECTORY_APPROVED_INTRO, DIRECTORY_PRIOR_INTRO, 1)
+    v.need(hashlib.sha256(previous).hexdigest() == DIRECTORY_PREVIOUS_LF,
+           'Directory label-review source differs outside the introduction')
+    return previous
+
+
 def _source(path):
     raw = (ROOT / path).read_bytes()
-    v.need(hashlib.sha256(raw).hexdigest() in PINS[path], 'Fixed wording source changed')
+    digest = hashlib.sha256(raw).hexdigest()
+    if path == DIRECTORY and digest in DIRECTORY_CURRENT_PINS:
+        return _reviewed_directory_label_source(raw)
+    v.need(digest in PINS[path], 'Fixed wording source changed')
     return raw
 
 
@@ -366,24 +392,39 @@ def verify_reviewed_private_record(state, packet, record):
     return verify_from_private_state(state, packet, record, pin)
 
 
+def _verify_fixed_maps(current, records, scope, packet_pin, review_pin):
+    packet_hashes = {identity: v.digest(current[identity]) for identity in scope}
+    review_hashes = {identity: v.digest(records[identity]) for identity in scope}
+    v.need(v.digest(packet_hashes) == packet_pin and v.digest(review_hashes) == review_pin,
+           'Fixed wording packet or review map differs')
+
+
 def verify_canonical_fixed_records(state, current, records):
-    """Verify the exact 30 approved fixed records under the existing private lock."""
-    from scripts.scarb_accepted_copy import fixed_wording_pins
+    """Verify the existing fixed scope, optionally with its exact directory extension."""
+    from scripts.scarb_accepted_copy import fixed_directory_pins, fixed_wording_pins
     from scripts.scarb_packet_consumption_candidate import protected_root
 
-    pins = fixed_wording_pins()
-    v.need(len(pins) == 30 and isinstance(records, dict) and set(records) == set(pins)
-           and len(current) == 736 and set(pins) <= set(current), 'Exact current 30-item fixed wording scope required')
-    packet_hashes = {identity: v.digest(current[identity]) for identity in pins}
-    review_hashes = {identity: v.digest(records[identity]) for identity in pins}
-    v.need(v.digest(packet_hashes) == '618e8af83f273dc2199e23b1a244e0d2dec19c6ff1bdcc455076f21849b5740d'
-           and v.digest(review_hashes) == '9d6f9a6dd2911bcc0b06b21b690b79382843de48d9dccce1b231a48c087524d5',
-           'Fixed wording packet or review map differs')
+    v.need(isinstance(records, dict), 'Exact current fixed wording scope required')
+    approved = fixed_wording_pins()
+    directory = fixed_directory_pins() if len(records) == 58 else {}
+    pins = {**approved, **directory}
+    v.need(len(approved) == 30 and len(directory) in (0, 28) and approved.keys().isdisjoint(directory)
+           and set(records) == set(pins) and len(current) == 736 and set(pins) <= set(current),
+           'Exact current fixed wording scope required')
+    _verify_fixed_maps(current, records, approved,
+        '618e8af83f273dc2199e23b1a244e0d2dec19c6ff1bdcc455076f21849b5740d',
+        '9d6f9a6dd2911bcc0b06b21b690b79382843de48d9dccce1b231a48c087524d5')
+    if directory:
+        _verify_fixed_maps(current, records, directory,
+            'b22638ca3a028217d80d663b98be9c150fd27374c9a79b4dfa452c5652060ab7',
+            'b4812957c0f47cbf731789be4cf5e1d23bab3a5c174404b9d106ba770545a2a3')
     v.need(state is not None, 'Protected fixed wording state required')
     root = Path(state)
     v.need(root.is_dir() and not root.is_symlink() and root.resolve() == protected_root().resolve(),
            'Protected fixed wording state required')
     with v.exclusive(root):
+        if directory:
+            _reviewed_directory_label_source((ROOT / DIRECTORY).read_bytes())
         entries = {identity: verify_reviewed_private_record(root, current[identity], records[identity])
                    for identity in pins}
     v.need(all(entry == {**pins[identity], 'origin': 'scarb-fixed-wording-review-1'}

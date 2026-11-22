@@ -11,23 +11,36 @@ from copy import deepcopy
 from pathlib import Path
 
 
-def fixed_wording_pins():
-    path = Path(__file__).resolve().parents[1] / "docs/scarb-fixed-wording-pins.mjs"
+def _fixed_pins_from_module(filename, expected):
+    path = Path(__file__).resolve().parents[1] / "docs" / filename
     module = path.read_text(encoding="utf-8")
-    if hashlib.sha256(module.encode("utf-8")).hexdigest() != "5d47bcbe680ce4a09ae9ec73d81d6e3d1bb18744fcbbb24a267ca04c72393b93":
+    if hashlib.sha256(module.encode("utf-8")).hexdigest() != expected:
         raise ValueError("Fixed wording pin module differs from the approved source")
     return json.loads(module.removeprefix("export default ").removesuffix(";\n"))
 
 
+def fixed_wording_pins():
+    return _fixed_pins_from_module("scarb-fixed-wording-pins.mjs",
+                                   "5d47bcbe680ce4a09ae9ec73d81d6e3d1bb18744fcbbb24a267ca04c72393b93")
+
+
+def fixed_directory_pins():
+    return _fixed_pins_from_module("scarb-fixed-directory-pins.mjs",
+                                   "3417086eac16a6f6814489aae06d031e49186858288600ae50210d1baddb4aca")
+
+
 def accepted_resolver(catalogue, expected):
     version = catalogue.get("version") if isinstance(catalogue, dict) else None
-    fixed_version = version == "scarb-ai-voice-mixed-2"
+    directory_version = version == "scarb-ai-voice-mixed-3"
+    fixed_version = directory_version or version == "scarb-ai-voice-mixed-2"
     mixed = fixed_version or version == "scarb-ai-voice-mixed-1"
     if ((not mixed and version != "scarb-ai-voice-1")
             or not isinstance(catalogue.get("entries"), dict) or not isinstance(expected, dict)
             or set(catalogue["entries"]) != set(expected) or (mixed and len(expected) != 736)):
         raise ValueError("AI copy catalogue does not match the qualified request manifest")
     fixed_pins = fixed_wording_pins() if fixed_version else {}
+    if directory_version:
+        fixed_pins.update(fixed_directory_pins())
     if not fixed_pins.keys() <= expected.keys():
         raise ValueError("AI copy catalogue does not match the qualified request manifest")
     entries = {}

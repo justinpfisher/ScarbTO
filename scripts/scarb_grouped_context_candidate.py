@@ -502,15 +502,17 @@ def compile_mixed_catalogue(bundle,config,*,state=None):
  Public metadata identifies grouped provenance without exposing private records.
  """
  current=seam.current_canonical_requests()
- fixed_bundle=isinstance(bundle,dict) and 'fixed_records' in bundle
- if fixed_bundle:
+ version='scarb-ai-voice-mixed-1'
+ if isinstance(bundle,dict) and 'fixed_records' in bundle:
   from scripts import scarb_fixed_wording_candidate as fixed
   fixed_records=bundle['fixed_records']
   v.need(isinstance(fixed_records,dict),'Fixed evidence must be keyed by canonical ID')
   editorial=_collect_admitted_editorial_entries(
       {key:value for key,value in bundle.items() if key!='fixed_records'},config,current)
   fixed.require_complete_partition(set(current),set(editorial),set(fixed_records))
-  draft={'entries':{**editorial,**fixed.verify_canonical_fixed_records(state,current,fixed_records)}}
+  verified_fixed=fixed.verify_canonical_fixed_records(state,current,fixed_records)
+  version='scarb-ai-voice-mixed-3' if len(verified_fixed)==58 else 'scarb-ai-voice-mixed-2'
+  draft={'entries':{**editorial,**verified_fixed}}
  else:
   draft=compile_admitted_mixed_draft(bundle,config)
  v.need(len(current)==736 and set(draft['entries'])==set(current),'Complete current 736-item catalogue required')
@@ -520,7 +522,7 @@ def compile_mixed_catalogue(bundle,config,*,state=None):
   if entry['origin']=='scarb-grouped-projection-2':
    entry['provenance']={'version':'scarb-grouped-run-envelope-2','manifest_sha256':entry['receipt_sha256'],'packet_id':identity}
   entries[identity]=entry
- catalogue={'version':'scarb-ai-voice-mixed-2' if fixed_bundle else 'scarb-ai-voice-mixed-1','entries':entries}
+ catalogue={'version':version,'entries':entries}
  from scripts.scarb_accepted_copy import accepted_resolver
  accepted_resolver(catalogue,{i:v.digest(p) for i,p in current.items()})
  return catalogue

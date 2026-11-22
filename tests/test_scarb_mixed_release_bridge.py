@@ -234,6 +234,99 @@ class CanonicalFixedWordingTests(unittest.TestCase):
     self.assertEqual(MixedReleaseBridgeTests.js(self,altered,self.expected).returncode,2)
 
 
+ def directory_bundle(self):
+  from scripts.scarb_accepted_copy import fixed_directory_pins
+  directory_pins=fixed_directory_pins()
+  records={**self.records,**{
+   identity:{'version':'scarb-fixed-wording-review-1','decision':'verified-unchanged',
+             'binding':self.fixed.exact_binding(self.current[identity])}
+   for identity in directory_pins}}
+  directory=self.fixed.DIRECTORY
+  shell=json.loads((c.ROOT/'config/scarb-static-shells.json').read_bytes())[directory]
+  editorial={key:{**entry} for key,entry in self.editorial.items() if key not in directory_pins}
+  for slot in shell['slots']:
+   if slot['id'] in editorial:
+    editorial[slot['id']]['text']=slot['draft']
+  intro='static.directory-intro'
+  editorial[intro]['text']=self.current[intro]['evidence'][0]['fact']
+  return {**self.bundle,'fixed_records':records},editorial,shell,directory_pins
+
+ def test_directory_transition_stages_exact_current_source_in_both_readers(self):
+  from scripts import stage_scarb_ai_inputs as stage
+  bundle,editorial,shell,pins=self.directory_bundle()
+  self.assertEqual(set(pins),set(self.fixed.DIRECTORY_WORDING))
+  catalogue=self.compile(editorial=editorial,bundle=bundle)
+  self.assertEqual(catalogue['version'],'scarb-ai-voice-mixed-3')
+  self.assertEqual(len(catalogue['entries']),736)
+  self.assertEqual({key for key,value in catalogue['entries'].items()
+                    if value['origin']=='scarb-fixed-wording-review-1'},set(self.pins)|set(pins))
+  candidate=self.state/'candidate.json'
+  candidate.write_bytes(c.v.encoded(catalogue))
+  directory=self.fixed.DIRECTORY
+  with patch.object(c,'_collect_admitted_editorial_entries',return_value=editorial):
+   files=stage.generator_inputs(list(self.current.values()),{},self.state,candidate,shells={directory:shell},
+                                authoring_version='v3',mixed_bundle=bundle)
+  self.assertEqual(json.loads(files['accepted-copy.json']),catalogue)
+  self.assertEqual(files[directory],(c.ROOT/directory).read_bytes().replace(b'\r\n',b'\n'))
+  self.assertFalse((self.state/'generation.lock').exists())
+  read=accepted_resolver(catalogue,self.expected)
+  js=MixedReleaseBridgeTests.js(self,catalogue,self.expected)
+  self.assertEqual(js.returncode,0,js.stderr)
+  self.assertEqual(json.loads(js.stdout),{key:read(key) for key in self.expected})
+  self.assertEqual(catalogue['entries']['static.directory-intro']['origin'],'openai-api-reviewed')
+
+ def test_directory_transition_rejects_changed_evidence_overlap_and_version(self):
+  bundle,editorial,_,pins=self.directory_bundle()
+  identity=next(key for key in pins if key!=self.fixed.ITEM)
+  outside='static.directory-intro'
+  raw=(c.ROOT/self.fixed.DIRECTORY).read_bytes().replace(b'\r\n',b'\n')
+  old=self.fixed._reviewed_directory_label_source(raw)
+  self.assertEqual(self.fixed._reviewed_directory_label_source(raw.replace(b'\n',b'\r\n')),old)
+  changed_link=raw.replace(b'/agincourt-north/',b'/changed-destination/',1)
+  for name,rejected in [('historical',old),('extra-byte',raw+b'\n'),('changed-link',changed_link)]:
+   with self.subTest(source=name):
+    read_bytes=Path.read_bytes
+    def read_rejected(path):
+     return rejected if path==c.ROOT/self.fixed.DIRECTORY else read_bytes(path)
+    with patch.object(Path,'read_bytes',read_rejected),self.assertRaisesRegex(c.v.VoiceError,'Current reviewed directory source differs'):
+     self.compile(editorial=editorial,bundle=bundle)
+  destination=c.ROOT/self.fixed.DESTINATION
+  read_bytes=Path.read_bytes
+  def read_changed_destination(path):
+   raw=read_bytes(path)
+   return raw+b'\n' if path==destination else raw
+  with patch.object(Path,'read_bytes',read_changed_destination),self.assertRaisesRegex(c.v.VoiceError,'Fixed wording source changed'):
+   self.compile(editorial=editorial,bundle=bundle)
+  packets={**self.current,identity:{**self.current[identity],'draft':'Altered label'}}
+  with patch.object(c.seam,'current_canonical_requests',return_value=packets),self.assertRaisesRegex(c.v.VoiceError,'packet or review map'):
+   self.compile(editorial=editorial,bundle=bundle)
+  records=copy.deepcopy(bundle['fixed_records'])
+  records[identity]['binding']['text']+=' altered'
+  with self.assertRaisesRegex(c.v.VoiceError,'packet or review map'):
+   self.compile(editorial=editorial,bundle={**bundle,'fixed_records':records})
+  for incompatible in ({**editorial,identity:editorial[outside]},
+                       {key:entry for key,entry in editorial.items() if key!=outside}):
+   with self.assertRaises(c.v.VoiceError):
+    self.compile(editorial=incompatible,bundle=bundle)
+  records={**bundle['fixed_records']}
+  records[outside]=records.pop(identity)
+  out_of_scope={**editorial,identity:editorial[outside]}
+  del out_of_scope[outside]
+  with self.assertRaisesRegex(c.v.VoiceError,'Exact current fixed wording scope required'):
+   self.compile(editorial=out_of_scope,bundle={**bundle,'fixed_records':records})
+  catalogue=self.compile(editorial=editorial,bundle=bundle)
+  for change in ('older-version','foreign-review','changed-text','incomplete'):
+   altered=copy.deepcopy(catalogue)
+   if change=='older-version':altered['version']='scarb-ai-voice-mixed-2'
+   elif change=='foreign-review':altered['entries'][identity]['receipt_sha256']=pins[self.fixed.ITEM]['receipt_sha256']
+   elif change=='changed-text':altered['entries'][identity]['text']+=' altered'
+   else:del altered['entries'][outside]
+   with self.subTest(reader=change),self.assertRaises(ValueError):
+    accepted_resolver(altered,self.expected)
+   self.assertEqual(MixedReleaseBridgeTests.js(self,altered,self.expected).returncode,2)
+  self.assertFalse((self.state/'generation.lock').exists())
+
+
 class ReviewedDirectoryAppendTests(unittest.TestCase):
  @classmethod
  def setUpClass(cls):

@@ -5172,36 +5172,52 @@
         "Pure Python consumer matching the browser's accepted-output resolver.\n\nThis validates exact request membership, not the truth of a receipt claim.\nUse only bytes staged after private receipt verification and bound by release\nreview. Fixed wording uses the same checked-in pins as the browser.\n"
       ],
       [
-        "fixed_wording_pins",
-        "docs/scarb-fixed-wording-pins.mjs"
+        "_fixed_pins_from_module",
+        "docs"
       ],
       [
-        "fixed_wording_pins",
+        "_fixed_pins_from_module",
         "utf-8"
       ],
       [
-        "fixed_wording_pins",
+        "_fixed_pins_from_module",
         "utf-8"
+      ],
+      [
+        "_fixed_pins_from_module",
+        "Fixed wording pin module differs from the approved source"
+      ],
+      [
+        "_fixed_pins_from_module",
+        "export default "
+      ],
+      [
+        "_fixed_pins_from_module",
+        ";\n"
+      ],
+      [
+        "fixed_wording_pins",
+        "scarb-fixed-wording-pins.mjs"
       ],
       [
         "fixed_wording_pins",
         "5d47bcbe680ce4a09ae9ec73d81d6e3d1bb18744fcbbb24a267ca04c72393b93"
       ],
       [
-        "fixed_wording_pins",
-        "Fixed wording pin module differs from the approved source"
+        "fixed_directory_pins",
+        "scarb-fixed-directory-pins.mjs"
       ],
       [
-        "fixed_wording_pins",
-        "export default "
-      ],
-      [
-        "fixed_wording_pins",
-        ";\n"
+        "fixed_directory_pins",
+        "3417086eac16a6f6814489aae06d031e49186858288600ae50210d1baddb4aca"
       ],
       [
         "accepted_resolver",
         "version"
+      ],
+      [
+        "accepted_resolver",
+        "scarb-ai-voice-mixed-3"
       ],
       [
         "accepted_resolver",
