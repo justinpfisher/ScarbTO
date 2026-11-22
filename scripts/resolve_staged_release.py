@@ -8,9 +8,9 @@ import re
 import subprocess
 import sys
 
-BASE = "622a82fdf5c8b35f29cdd3e1831a25d8d15da048"
-CLAIM = "[scarb-stage:finding-wording-v2]"
-APPLICATION = "docs/inspection-translations.mjs"
+BASE = "92eeb6f8004770d2a14a56f5a9e3467f6337cabc"
+CLAIM = "[scarb-stage:community-copy-limits-v1]"
+APPLICATION = "docs/community-publishing.mjs"
 PROTECTED_TREES = {
     "docs/data": "650a9120c3c5a8a8495a9183669e5dbe2f959076",
     "docs/briefs": "39b3b3c95ff0eaf3271711f46e0e8a95f0158edd",
@@ -22,11 +22,13 @@ SELF = "scripts/resolve_staged_release.py"
 # not self-hashed. Its workflow and all separate production controls are pinned here.
 PROJECTION = {
     ".github/workflows/refresh-and-publish.yml": "8864aea26cbfc4b074d9bbaef9528d52095f1cad",
-    "docs/app.mjs": "f74f37883a38691745eea083f841bb6775c11a35",
-    "docs/inspection-findings.mjs": "1d90f1aa060efa2fffa8638d5e3bebab36232153",
-    "docs/inspection-translations.mjs": "897a8d887bf2733404cba3d9824d046ad250cb24",
-    "docs/neighbourhood-page.mjs": "13b26c60f614695b85e366062c6d2aed5c9b3b27",
+    "docs/community-editor.mjs": "a6af88ffb8d145ba43e821c725ce0ba7dad29f18",
+    "docs/community-publishing.mjs": "48c52d9c9960d0e4c870d8a39f84eac5c1db3d38",
+    "docs/community/index.html": "93804c11a87215179971c553587a3a4dad77eb01",
+    "docs/reader-date.mjs": "2d8aaf7251a2748cfcc500815da64da3e261b27a",
+    "scripts/build_community_publishing.py": "d60c3d50b07eb01c89dfc3e71687544bbdc98a12",
     "scripts/verify_code_only_release.py": "c26843e11e06cedfe83b247c15b05e3d40b0157a",
+    "tests/community-publishing.test.mjs": "62e26430b90817ac7e79b7f76b18a13652871a81",
     "tests/test_code_only_release.py": "502ffc7041e07f85a8db3f93e2aba227301171d4",
 }
 
@@ -71,18 +73,18 @@ def resolve(repo: Path, environ: dict[str, str]) -> str:
         or _git(repo, "rev-list", "--parents", "-n", "1", "HEAD") != f"{sha} {BASE}"
         or any(_git(repo, "rev-parse", f"HEAD:{path}") != tree for path, tree in PROTECTED_TREES.items())
     ):
-        raise StageError("Claimed finding wording stage does not match the required exact main push")
+        raise StageError("Claimed Community copy-limit stage does not match the required exact main push")
     changed = set(_git(repo, "diff", "--name-only", "--no-renames", BASE, sha).splitlines())
-    if changed != {SELF, APPLICATION, "docs/inspection-findings.mjs"}:
-        raise StageError("Claimed finding wording stage has unexpected accompanying changes")
+    if changed != {SELF, APPLICATION}:
+        raise StageError("Claimed Community copy-limit stage has unexpected accompanying changes")
     for path, blob in PROJECTION.items():
         if _git(repo, "ls-tree", sha, "--", path) != f"100644 blob {blob}\t{path}":
-            raise StageError(f"Claimed finding wording stage has non-approved bytes or mode: {path}")
+            raise StageError(f"Claimed Community copy-limit stage has non-approved bytes or mode: {path}")
     if not re.fullmatch(r"100644 blob [0-9a-f]{40}\t" + re.escape(SELF),
                         _git(repo, "ls-tree", sha, "--", SELF)):
-        raise StageError("Claimed finding wording stage resolver is not a regular committed source file")
+        raise StageError("Claimed Community copy-limit stage resolver is not a regular committed source file")
     if _git(repo, "status", "--porcelain", "--untracked-files=all"):
-        raise StageError("Claimed finding wording stage checkout contains uncommitted input")
+        raise StageError("Claimed Community copy-limit stage checkout contains uncommitted input")
     return "code_only"
 
 
