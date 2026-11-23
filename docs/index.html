@@ -30,27 +30,7 @@
     <div class="app-wrap">
       <aside class="filters" aria-label="Map filters">
         <div class="filter-topline"><span class="eyebrow">Explore the area</span><button class="mobile-filter-toggle" id="toggle-filters" type="button" aria-expanded="false" aria-controls="filter-options">Filters</button></div>
-        <div class="area-boundary-controls" role="group" aria-label="Optional map boundary overlays">
-          <span class="area-controls-label">Boundaries</span>
-          <div class="area-toggle-list">
-            <button type="button" class="area-toggle selected" data-area-overlay="off" aria-pressed="true">Off</button>
-            <button type="button" class="area-toggle" data-area-overlay="neighbourhood" aria-pressed="false">Neighbourhoods</button>
-            <button type="button" class="area-toggle" data-area-overlay="ward" aria-pressed="false">City wards</button>
-          </div>
-          <div class="area-choice-wrap" id="area-choice-wrap" hidden><label for="area-choice">Choose an area</label><select id="area-choice"><option value="">Choose an area</option></select></div>
-          <p class="area-overlay-note">Neighbourhoods and wards give you two ways to explore! Choose an area to narrow the food inspection map and list. Beach samples and police totals cover different areas.</p>
-        </div>
-        <section class="saved-public-areas" aria-labelledby="saved-areas-title">
-          <h2 id="saved-areas-title">Your saved areas</h2>
-          <p>Keep a few public areas handy on this browser. No account or alerts.</p>
-          <label for="saved-area-choice">Choose a public area to save</label>
-          <select id="saved-area-choice" disabled><option value="">Choose an area</option></select>
-          <button id="save-public-area" type="button" disabled>Save area</button>
-          <p id="saved-areas-status" role="status"></p>
-          <ul id="saved-areas-list"></ul>
-          <noscript>Saving areas needs JavaScript. You can still browse the <a href="/neighbourhoods/">neighbourhood directory</a>.</noscript>
-        </section>
-        <div id="filter-options" class="filter-options"><div class="view-tabs" role="group" aria-label="Browse mode">
+        <div class="view-tabs" role="group" aria-label="Browse mode">
           <button class="tab active" data-mode="recent" type="button" aria-pressed="true">Browse updates</button>
           <button class="tab" data-mode="all" type="button" aria-pressed="false">All places</button>
           <button class="tab" data-mode="beach" type="button" aria-pressed="false">Beach samples</button>
@@ -58,26 +38,51 @@
         </div>
         <p id="beach-filter-note" class="filter-note" hidden>These are historical beach samples, not today's swimming advice. Choose Browse updates or All places to search food inspection records.</p>
         <p id="selected-calls-filter-note" class="filter-note" hidden>When you open this view, I request totals from Toronto Police Service's Esri service. They stay only in this tab's memory until they expire. I don't request individual calls or their locations.</p>
-        <div id="food-filters">
-        <label for="search">Find a place</label>
-        <input id="search" type="search" placeholder="Name or address" autocomplete="off" spellcheck="false">
-        <div class="control-grid">
-          <div><label for="neighbourhood">Neighbourhood</label><select id="neighbourhood"><option value="">All Scarborough</option></select></div>
-          <div><label for="window">Time period</label><select id="window">
-            <option value="7">Past 7 days</option><option value="30" selected>Past 30 days</option>
-            <option value="90">Past 90 days</option><option value="all">Any date</option>
-          </select></div>
+        <div id="food-search">
+          <label for="search">Find a place</label>
+          <input id="search" type="search" placeholder="Name or address" autocomplete="off" spellcheck="false">
         </div>
-        <fieldset class="outcomes"><legend>Latest recorded outcome</legend>
-          <div class="outcome-group" role="group" aria-label="DineSafe outcome">
-            <button class="chip selected" data-status="all" aria-pressed="true" type="button">All</button>
-            <button class="chip" data-status="Pass" aria-pressed="false" type="button"><span class="dot pass"></span> Pass</button>
-            <button class="chip" data-status="Conditional Pass" aria-pressed="false" type="button"><span class="dot conditional"></span> Conditional</button>
-            <button class="chip" data-status="Closed" aria-pressed="false" type="button"><span class="dot closed"></span> Closed</button>
+        <div id="filter-options" class="filter-options">
+          <div class="area-boundary-controls" role="group" aria-label="Optional map boundary overlays">
+            <span class="area-controls-label">Boundaries</span>
+            <div class="area-toggle-list">
+              <button type="button" class="area-toggle selected" data-area-overlay="off" aria-pressed="true">Off</button>
+              <button type="button" class="area-toggle" data-area-overlay="neighbourhood" aria-pressed="false">Neighbourhoods</button>
+              <button type="button" class="area-toggle" data-area-overlay="ward" aria-pressed="false">City wards</button>
+            </div>
+            <div class="area-choice-wrap" id="area-choice-wrap" hidden><label for="area-choice">Choose an area</label><select id="area-choice"><option value="">Choose an area</option></select></div>
+            <p class="area-overlay-note">Neighbourhoods and wards give you two ways to explore! Choose an area to narrow the food inspection map and list. Beach samples and police totals cover different areas.</p>
           </div>
-        </fieldset>
-        <div class="mobile-hint">Your filters narrow both the map and the list.</div></div>
-        <div class="filter-footer"><button id="reset" class="text-action" type="button">Clear filters</button><span>Food inspection filters saved on this device</span></div></div>
+          <section class="saved-public-areas" aria-labelledby="saved-areas-title">
+            <h2 id="saved-areas-title">Your saved areas</h2>
+            <p>Keep a few public areas handy on this browser. No account or alerts.</p>
+            <label for="saved-area-choice">Choose a public area to save</label>
+            <select id="saved-area-choice" disabled><option value="">Choose an area</option></select>
+            <button id="save-public-area" type="button" disabled>Save area</button>
+            <p id="saved-areas-status" role="status"></p>
+            <ul id="saved-areas-list"></ul>
+          </section>
+          <div id="food-filters">
+            <div class="control-grid">
+              <div><label for="neighbourhood">Neighbourhood</label><select id="neighbourhood"><option value="">All Scarborough</option></select></div>
+              <div><label for="window">Time period</label><select id="window">
+                <option value="7">Past 7 days</option><option value="30" selected>Past 30 days</option>
+                <option value="90">Past 90 days</option><option value="all">Any date</option>
+              </select></div>
+            </div>
+            <fieldset class="outcomes"><legend>Latest recorded outcome</legend>
+              <div class="outcome-group" role="group" aria-label="DineSafe outcome">
+                <button class="chip selected" data-status="all" aria-pressed="true" type="button">All</button>
+                <button class="chip" data-status="Pass" aria-pressed="false" type="button"><span class="dot pass"></span> Pass</button>
+                <button class="chip" data-status="Conditional Pass" aria-pressed="false" type="button"><span class="dot conditional"></span> Conditional</button>
+                <button class="chip" data-status="Closed" aria-pressed="false" type="button"><span class="dot closed"></span> Closed</button>
+              </div>
+            </fieldset>
+            <div class="mobile-hint">Your filters narrow both the map and the list.</div>
+          </div>
+          <div class="filter-footer"><button id="reset" class="text-action" type="button">Clear filters</button><span>Food inspection filters saved on this device</span></div>
+        </div>
+        <noscript>Saving areas needs JavaScript. You can still browse the <a href="/neighbourhoods/">neighbourhood directory</a>.</noscript>
       </aside>
       <main class="map-results">
         <div class="map-panel">

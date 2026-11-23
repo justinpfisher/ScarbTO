@@ -273,6 +273,7 @@ async function exerciseViewport(browser, origin, {name, width, height, mobile}) 
   await page.screenshot({path:resolve(outputDir,`${name}-dinesafe-markers.png`),fullPage:true});
 
   await page.getByRole('button', {name: 'Beach samples'}).click();
+  assert.equal(await page.locator('#food-search').isVisible(),false,'food search is hidden on Beach samples');
   assert.equal(await page.locator('#food-filters').isVisible(),false,`${name}: irrelevant food controls are not shown on the beach topic`);
   assert.match(await page.locator('#beach-filter-note').textContent(), /Choose Browse updates or All places to search food inspection records/, `${name}: beach guidance explains how to return to food search`);
   assert.equal(await page.locator('.header-right a[href="/neighbourhoods/"]').isVisible(),true,`${name}: neighbourhood directory is discoverable`);
@@ -647,7 +648,11 @@ test('selected calls render only after explicit selection and clear after leavin
     assert.equal(await page.locator('.selected-call-row').count(),3);
     assert.equal(await page.locator('#map').getAttribute('aria-label'),'Map background only; selected calls are not mapped individually');
     assert.equal(await page.locator('#selected-calls-map-note').isVisible(),true);
+    assert.equal(await page.locator('#food-search').isVisible(),false);
+    assert.equal(await page.locator('#food-filters').isVisible(),false);
     await page.getByRole('button',{name:'All places'}).click();
+    assert.equal(await page.locator('#food-search').isVisible(),true);
+    assert.equal(await page.locator('#food-filters').isVisible(),true);
     assert.equal(await page.locator('.selected-call-row').count(),0,'leaving the view removes all counts');
     await page.getByRole('button',{name:'Police calls by division'}).click();
     assert.equal(await page.locator('.selected-call-row').count(),0,'a cooldown response cannot reveal old counts');
@@ -798,8 +803,34 @@ test('browse-mode tabs stay fully visible at desktop and narrow widths', {timeou
   for(const width of [1280,1024,960,950,800,390,320]){
     await page.setViewportSize({width,height:900});
     const filterToggle=page.locator('#toggle-filters');
-    if(width<=950&&await filterToggle.isVisible()&&await filterToggle.getAttribute('aria-expanded')!=='true')await filterToggle.click();
     await page.waitForTimeout(50);
+    if(width<=950){
+      assert.equal(await filterToggle.getAttribute('aria-expanded'),'false');
+      assert.equal(await page.locator('#filter-options').isVisible(),false);
+    }
+    const checkLayout=async()=>{
+      const layout=await page.locator('.app-wrap').evaluate(app=>{
+        const rect=selector=>app.querySelector(selector).getBoundingClientRect().toJSON();
+        return {topics:rect('.view-tabs'),search:rect('#search'),filters:rect('.filters'),
+          map:rect('.map-panel'),results:rect('.results'),
+          pageWidth:document.documentElement.scrollWidth,viewportWidth:innerWidth};
+      });
+      assert.ok(layout.pageWidth<=layout.viewportWidth+1,'page fits at '+width+'px');
+      assert.ok(layout.map.width>0 && layout.map.height>=300,'map retains its panel at '+width+'px');
+      if(width<=950){
+        assert.ok(layout.topics.height>0 && layout.search.height>0,'primary controls are visible at '+width+'px');
+        assert.ok(layout.topics.bottom<=layout.map.top && layout.search.bottom<=layout.map.top,'primary controls precede the map at '+width+'px');
+        assert.ok(layout.map.bottom<=layout.results.top,'map precedes its results at '+width+'px');
+      }else{
+        assert.ok(layout.filters.right<=layout.map.left && layout.map.right<=layout.results.left,'desktop retains the filter rail, map and results columns at '+width+'px');
+      }
+    };
+    await checkLayout();
+    if(width<=950){
+      await filterToggle.click();
+      assert.equal(await page.locator('#filter-options').isVisible(),true);
+      await checkLayout();
+    }
     const metrics=await page.locator('.view-tabs').evaluate(tabs=>{
       const container=tabs.getBoundingClientRect();
       return {
@@ -837,6 +868,7 @@ test('browse-mode tabs stay fully visible at desktop and narrow widths', {timeou
       assert.ok(button.scrollWidth<=button.clientWidth+1, `${button.label} text clips at ${width}px`);
       assert.ok(button.scrollHeight<=button.clientHeight+1, `${button.label} clips vertically at ${width}px`);
     }
+    if(width<=950)await filterToggle.click();
   }
   assert.deepEqual(errors,[]);
 });
@@ -1197,6 +1229,7 @@ test('public saved areas persist and recover across desktop and mobile without c
     await installLocalRoutes(page,origin,{maplibreFailure:true});
     await page.goto(origin,{waitUntil:'domcontentloaded'});
     try {
+      if(width<=950)await page.locator('#toggle-filters').click();
       await page.locator('#saved-area-choice:not([disabled])').waitFor();
       await page.evaluate(()=>localStorage.setItem('scarb-community-finalised','unchanged'));
       await page.locator('#saved-area-choice').selectOption('ward:20');
@@ -1206,7 +1239,9 @@ test('public saved areas persist and recover across desktop and mobile without c
       await page.locator('#save-public-area').click();
       assert.equal(await page.locator('#saved-areas-list li').count(),2);
       assert.match(await page.locator('#saved-areas-status').textContent(),/already saved/);
-      await page.reload();await page.locator('#saved-areas-list li').first().waitFor();
+      await page.reload();
+      if(width<=950)await page.locator('#toggle-filters').click();
+      await page.locator('#saved-areas-list li').first().waitFor();
       assert.equal(await page.locator('#saved-areas-list li').count(),2);
       assert.equal(await page.evaluate(()=>localStorage.getItem('scarb-community-finalised')),'unchanged');
       assert.equal(await page.locator('#saved-areas-list a').last().getAttribute('href'),'/?areaKind=neighbourhood&areaCode=143&mode=all&days=all');
@@ -1221,4 +1256,17 @@ test('public saved areas persist and recover across desktop and mobile without c
       assert.deepEqual(pageErrors,[]);
     } finally { await context.close(); }
   }
+  const noScript=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,javaScriptEnabled:false});
+  try {
+    const page=await noScript.newPage();
+    await installLocalRoutes(page,origin,{maplibreFailure:true});
+    await page.goto(origin,{waitUntil:'domcontentloaded'});
+    assert.equal(await page.locator('#filter-options').isVisible(),false);
+    assert.equal(await page.locator('.header-right a[href="/neighbourhoods/"]').isVisible(),true);
+    const directory=page.locator('noscript a[href="/neighbourhoods/"]');
+    assert.equal(await directory.isVisible(),true);
+    await directory.click();
+    assert.equal(new URL(page.url()).pathname,'/neighbourhoods/');
+    assert.equal(await page.getByRole('heading',{name:'Explore the neighbourhoods',exact:true}).isVisible(),true);
+  } finally { await noScript.close(); }
 });

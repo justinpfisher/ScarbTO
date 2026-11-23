@@ -25,10 +25,8 @@
 .beach-sample-preview-meta{color:#7a8880!important;font-size:11px!important}
 .beach-sample-preview a{font-size:12px;font-weight:700;width:max-content}
 @media(max-width:950px){
-  .map-results{display:contents}
-  .map-panel{order:0;flex:0 0 52vh}
-  .filters{order:1;flex:0 0 auto;border-right:0;border-bottom:1px solid var(--line)}
-  .results{order:2}
+  .map-panel{flex:0 0 52vh}
+  .filters{flex:0 0 auto;border-right:0;border-bottom:1px solid var(--line)}
   .mobile-filter-toggle{display:inline-flex;align-items:center;justify-content:center;background:#eff6f1;border:1px solid #afccba;border-radius:7px;padding:8px 11px;color:#205d48;font-weight:750;font-size:12px}
   .filters .filter-topline{gap:10px}
   .filters:not(.expanded) .filter-options{display:none}

@@ -46,6 +46,20 @@ RSS_PROJECTION = {
 RSS_CHANGED = {SELF, ".github/workflows/refresh-and-publish.yml", "scripts/build_rss.py", "tests/test_build_rss.py"}
 
 
+MOBILE_BASE = "13b67e0b5afb1a71842f1cf1ad042ba4e7cb4455"
+MOBILE_CLAIM = "[scarb-stage:mobile-search-topics-v1]"
+MOBILE_PROJECTION = {
+    ".github/workflows/refresh-and-publish.yml": "5476ff720dfd60ad3535b7564c75dfa583d764d1",
+    "docs/app.mjs": "871aa280aba39d80eba872d61f125c5ed0a45801",
+    "docs/index.html": "dbcf17e5fd77c771edbb4f9c976e0dc3e456d539",
+    "docs/styles.css": "ccbbb8102a830e1986b353c835898995ab88d789",
+    "scripts/verify_code_only_release.py": "c26843e11e06cedfe83b247c15b05e3d40b0157a",
+    "tests/browser.integration.test.mjs": "0d78c89922639c24bd38b0bc6dacd419cab6374c",
+    "tests/test_code_only_release.py": "502ffc7041e07f85a8db3f93e2aba227301171d4",
+}
+MOBILE_CHANGED = {SELF, BROWSER_TEST, "docs/app.mjs", "docs/index.html", "docs/styles.css"}
+
+
 class StageError(ValueError):
     pass
 
@@ -73,9 +87,13 @@ def resolve(repo: Path, environ: dict[str, str]) -> str:
         raise StageError("Cannot verify authenticated push event") from exc
     recovery_claimed = CLAIM in message
     rss_claimed = RSS_CLAIM in message
-    if recovery_claimed and rss_claimed:
+    mobile_claimed = MOBILE_CLAIM in message
+    if sum((recovery_claimed, rss_claimed, mobile_claimed)) > 1:
         raise StageError("Push contains conflicting staged release markers")
-    if rss_claimed:
+    if mobile_claimed:
+        base, projection, expected_changed = MOBILE_BASE, MOBILE_PROJECTION, MOBILE_CHANGED
+        stage = "Mobile search and topics stage"
+    elif rss_claimed:
         base, projection, expected_changed = RSS_BASE, RSS_PROJECTION, RSS_CHANGED
         stage = "RSS stage"
     elif recovery_claimed:

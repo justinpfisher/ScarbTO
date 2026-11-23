@@ -182,7 +182,9 @@ function syncControls() {
   document.querySelectorAll('.chip').forEach(b=>{let hit=b.dataset.status===state.status;b.classList.toggle('selected',hit);b.setAttribute('aria-pressed',String(hit));});
   const beachMode=state.mode==='beach';
   const selectedCallsMode=state.mode==='selected-calls';
-  if($('food-filters'))$('food-filters').hidden=beachMode||selectedCallsMode;
+  const hideFoodFilters=beachMode||selectedCallsMode;
+  if($('food-search'))$('food-search').hidden=hideFoodFilters;
+  if($('food-filters'))$('food-filters').hidden=hideFoodFilters;
   $('beach-filter-note').hidden=!beachMode;
   $('selected-calls-filter-note').hidden=!selectedCallsMode;
   $('selected-calls-map-note').hidden=!selectedCallsMode;
@@ -192,7 +194,7 @@ function syncControls() {
   });
   syncMapLegend();
   syncMapAccessibilityLabel();
-  document.querySelectorAll('#search,#neighbourhood,#window,.outcomes button').forEach(control=>{control.disabled=beachMode||selectedCallsMode;});
+  document.querySelectorAll('#search,#neighbourhood,#window,.outcomes button').forEach(control=>{control.disabled=hideFoodFilters;});
   syncDataStatus();
   areaExplorer?.updateMode();
 }
