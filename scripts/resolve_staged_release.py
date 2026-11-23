@@ -8,6 +8,14 @@ import re
 import subprocess
 import sys
 
+if __package__:
+    from . import scarb_notebook_release as notebook
+else:
+    import scarb_notebook_release as notebook
+
+# Enroll only an exact independently verified private stage and public projection.
+NOTEBOOK_APPROVAL = None
+
 BASE = "622a82fdf5c8b35f29cdd3e1831a25d8d15da048"
 CLAIM = "[scarb-stage:finding-wording-v2]"
 APPLICATION = "docs/inspection-translations.mjs"
@@ -42,7 +50,22 @@ def _git(repo, *args):
     return result.stdout.strip()
 
 
+def _approved_notebook(repo):
+    try:
+        return notebook.approved_output(repo, NOTEBOOK_APPROVAL, _git, PROTECTED_TREES)
+    except (notebook.NotebookError, json.JSONDecodeError, UnicodeError) as exc:
+        raise StageError(str(exc)) from exc
+
+
+def apply_notebook(repo):
+    approved = _approved_notebook(repo)
+    if approved is not None:
+        _, path, output = approved
+        path.write_bytes(output)
+
+
 def resolve(repo: Path, environ: dict[str, str]) -> str:
+    approved = _approved_notebook(repo)
     event = environ.get("GITHUB_EVENT_NAME")
     if event == "workflow_dispatch":
         return "code_only" if environ.get("MANUAL_RELEASE_MODE") == "code_only" else "refresh"
@@ -56,6 +79,28 @@ def resolve(repo: Path, environ: dict[str, str]) -> str:
             raise TypeError()
     except (AttributeError, KeyError, OSError, TypeError, ValueError) as exc:
         raise StageError("Cannot verify authenticated push event") from exc
+    if notebook.CLAIM in message:
+        if approved is None:
+            raise StageError("No independently approved Notebook release")
+        activation = approved[0]
+        if (
+            message.count("[scarb-stage:") != 1
+            or environ.get("GITHUB_REPOSITORY") != "justinpfisher/ScarbTO"
+            or environ.get("GITHUB_REF") != "refs/heads/main"
+            or payload.get("ref") != "refs/heads/main"
+            or payload.get("before") != NOTEBOOK_APPROVAL["base"]
+            or payload.get("after") != activation
+            or head_commit.get("id") != activation
+            or payload.get("forced") is not False
+            or environ.get("GITHUB_SHA") != activation
+            or _git(repo, "rev-parse", "HEAD") != activation
+            or _git(repo, "show", "-s", "--format=%s", activation) != message.splitlines()[0]
+            or _git(repo, "status", "--porcelain", "--untracked-files=all")
+        ):
+            raise StageError("Claimed Notebook stage does not match the exact main push")
+        return "code_only"
+    if approved is not None and _git(repo, "rev-parse", "HEAD") == approved[0]:
+        raise StageError("The activation push requires the exact Notebook marker")
     if CLAIM not in message:
         return "refresh"
     sha = environ.get("GITHUB_SHA", "")
@@ -88,7 +133,13 @@ def resolve(repo: Path, environ: dict[str, str]) -> str:
 
 def main() -> int:
     try:
-        mode = resolve(Path(__file__).resolve().parent.parent, dict(os.environ))
+        repo = Path(__file__).resolve().parent.parent
+        if sys.argv[1:] == ["--apply-notebook"]:
+            apply_notebook(repo)
+            return 0
+        if sys.argv[1:]:
+            raise StageError("Unknown release resolver option")
+        mode = resolve(repo, dict(os.environ))
         with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
             output.write(f"mode={mode}\n")
     except (StageError, KeyError, OSError) as exc:

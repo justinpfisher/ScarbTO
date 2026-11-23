@@ -210,6 +210,8 @@ jobs:
             fi
             git push origin HEAD:main
           fi
+      - name: Apply approved neighbourhood Notebook
+        run: python scripts/resolve_staged_release.py --apply-notebook
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
