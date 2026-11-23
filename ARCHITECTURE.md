@@ -227,6 +227,14 @@ Each page should show its neighbourhood map prominently near the top, framed to 
 
 The City lists West Rouge as neighbourhood **143**, which is present in the existing qualified overlay. City social-planning areas can differ from historical/community definitions; name the actual boundary used for each dataset and do not convert a broad source statistic into smaller-area precision. Source: [City neighbourhood definitions and list](https://www.toronto.ca/city-government/data-research-maps/neighbourhoods-communities/neighbourhood-profiles/about-toronto-neighbourhoods/), checked 1 November 2026. A page is an entry point into the same service, with consistent filter meanings, canonical links, accessible HTML content and a shareable area identity.
 
+#### Scarb’s neighbourhood notebook
+
+The owner approved this plan on 23 November 2026 at 02:18 UTC. Start on an existing canonical neighbourhood page with one optional Scarb’s notebook story. Keep the map, results, source links and local information in their existing order. Give the story a clear heading and source links in readable HTML. When no story qualifies, leave the page as it was.
+
+Start privately with Guildwood as the editorial benchmark and two other neighbourhoods with qualified evidence. Begin with a real observation and its relevance to residents. A useful source note or a decision to decline belongs in the pilot alongside stronger stories. The approved Guildwood, Bluffs and Bendale library pieces guide the writing. Use existing automatic sources and stable geography, with no recurring curation or story quota.
+
+Dot coordinates the existing staged release queue. An independently reviewed story needs exact evidence, geographic scope, source limits and admission before it can appear. Qualify one story on its own through the existing release checks. Preserve the sealed Voice Gateway inputs and receipts, the original generated pages as the base, and all issued archives. Qualify any richer source separately before it feeds a public page.
+
 ### Owner-approved UX follow-through and operating model (12 November 2026)
 
 After the desktop/mobile investigation, the owner clarified neighbourhood map prominence, separate branding and newspaper work, automatic freshness, no recurring human curation and multiple saved public areas, then instructed **“Let's action as recommended.”** This authorises dot to integrate the practical UX corrections and clarified product requirements into the existing release. It does not automatically qualify new sources or turn every aspirational idea in the investigation into a current-release completion condition.
