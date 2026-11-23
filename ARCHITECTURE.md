@@ -235,6 +235,13 @@ Start privately with Guildwood as the editorial benchmark and two other neighbou
 
 Dot coordinates the existing staged release queue. An independently reviewed story needs exact evidence, geographic scope, source limits and admission before it can appear. Qualify one story on its own through the existing release checks. Preserve the sealed Voice Gateway inputs and receipts, the original generated pages as the base, and all issued archives. Qualify any richer source separately before it feeds a public page.
 
+**Guildwood Notebook wording (23 November 2026).** The owner approved two dated substitutions for the `notebook.140` candidate, “I’d like a word about the doors.” Use the same title, all other wording, and the four original source links verbatim.
+
+- Replace “It’s in your southwest garden.” with “The City’s 2018 heritage report lists it in your southwest garden.” [Heritage report, page 22](https://www.toronto.ca/legdocs/mmis/2018/pb/bgrd/backgroundfile-115178.pdf#page=22)
+- Replace “The school’s main entrance, meanwhile, is still at Kingston and St. Clair.” with “The City’s 1998 designation records the school’s main arch at Kingston and St. Clair.” [By-law 896-1998, Schedule B](https://www.toronto.ca/legdocs/bylaws/1998/law0896.pdf#page=3)
+
+The approved body SHA-256 is `37a03c74e3948394c54a5d8af17f658dfd6fee4d5c7788bf7b767d69484de4b1`. The evidence packet SHA-256 is `088abb8871428a6af9f206add6da790cecf1040a9349c5dcee077f6c81c8241a`. The existing independent factual review and single-area admission still apply.
+
 ### Owner-approved UX follow-through and operating model (12 November 2026)
 
 After the desktop/mobile investigation, the owner clarified neighbourhood map prominence, separate branding and newspaper work, automatic freshness, no recurring human curation and multiple saved public areas, then instructed **“Let's action as recommended.”** This authorises dot to integrate the practical UX corrections and clarified product requirements into the existing release. It does not automatically qualify new sources or turn every aspirational idea in the investigation into a current-release completion condition.
