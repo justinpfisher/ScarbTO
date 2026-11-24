@@ -127,6 +127,13 @@
   </div>
   <script type="module" src="./saved-areas.mjs"></script>
   <script type="module">
+    // Keep the mobile tray usable while the optional map library loads.
+    const toggleFilters=document.getElementById('toggle-filters');
+    toggleFilters.addEventListener('click',()=>{
+      const expanded=document.querySelector('.filters').classList.toggle('expanded');
+      toggleFilters.setAttribute('aria-expanded',String(expanded));
+      toggleFilters.textContent=expanded?'Hide filters':'Filters';
+    });
     try {
       window.maplibregl = await import('https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs');
     } catch (error) {
