@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+run_log.jsonl
+worker-logs/
+receipts-private/
+.env
+*.token

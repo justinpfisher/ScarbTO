@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "pilot_id": "scarbto-openclaw-unattended-2026-11-24",
+  "scope": "synthetic pilot files only, no production changes",
+  "tasks": [
+    {
+      "id": "P1",
+      "name": "Exact known neighbourhood and alias resolution",
+      "depends_on": [],
+      "allowed_paths": [
+        "pilot/openclaw/src/areas.py"
+      ],
+      "test_command": "cd pilot/openclaw && python -m unittest tests.test_areas -v",
+      "done_when": "known names and West Rouge alias resolve, no invented area"
+    },
+    {
+      "id": "P2",
+      "name": "Preserve inspection date, not collection or publication date",
+      "depends_on": [],
+      "allowed_paths": [
+        "pilot/openclaw/src/dates.py"
+      ],
+      "test_command": "cd pilot/openclaw && python -m unittest tests.test_dates -v",
+      "done_when": "dates tests pass without invented dates"
+    },
+    {
+      "id": "P3",
+      "name": "Preserve exact source outcome, never guess Pass",
+      "depends_on": [],
+      "allowed_paths": [
+        "pilot/openclaw/src/outcomes.py"
+      ],
+      "test_command": "cd pilot/openclaw && python -m unittest tests.test_outcomes -v",
+      "done_when": "missing outcome visibly unavailable"
+    },
+    {
+      "id": "P4",
+      "name": "Investigate deliberate duplicate-event regression",
+      "depends_on": [],
+      "allowed_paths": [
+        "pilot/openclaw/src/changes.py"
+      ],
+      "test_command": "cd pilot/openclaw && python -m unittest tests.test_changes -v",
+      "done_when": "exact event deduped, changed outcomes retained"
+    },
+    {
+      "id": "P5",
+      "name": "Integrate provenance-safe synthetic cards",
+      "depends_on": [
+        "P1",
+        "P2",
+        "P3",
+        "P4"
+      ],
+      "allowed_paths": [
+        "pilot/openclaw/src/render.py"
+      ],
+      "test_command": "cd pilot/openclaw && python -m unittest tests.test_render -v",
+      "done_when": "all 12 synthetic unit tests pass"
+    },
+    {
+      "id": "P6",
+      "name": "Simulated owner-reserved decision",
+      "depends_on": [],
+      "decision_only": true,
+      "allowed_paths": [],
+      "test_command": null,
+      "done_when": "record a proposal as awaiting owner decision; no execution"
+    }
+  ]
+}
