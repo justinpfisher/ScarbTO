@@ -528,11 +528,6 @@ function bindControls(){
   $('search').addEventListener('input',e=>{state.search=e.target.value;performFilters();});
   $('reset').addEventListener('click',()=>{if(state.mode==='selected-calls')deactivateSelectedCalls();state={...DEFAULTS};selectedId=null;syncControls();fitAll();save();performFilters();});
   $('fit').addEventListener('click',fitAll);
-  $('toggle-filters').addEventListener('click',()=>{
-    const expanded=document.querySelector('.filters').classList.toggle('expanded');
-    $('toggle-filters').setAttribute('aria-expanded',String(expanded));
-    $('toggle-filters').textContent=expanded?'Hide filters':'Filters';
-  });
 }
 async function loadSelectedCalls(){
   const visible=state.mode==='selected-calls'&&document.visibilityState!=='hidden';
