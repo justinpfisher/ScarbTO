@@ -27,6 +27,20 @@
       "event_count": 39,
       "content_sha256": "b451765906aeb10a2e36e751770594cb4e1de014582b1286dcaa37ffe8719bd3",
       "html_sha256": "485b4cfa73b3e9aa3f15418b1f62df14fd4ce6f0824827ad7edc5d9281862d78"
+    },
+    {
+      "id": "dinesafe-weekly-2026-11-16",
+      "path": "briefs/2026-11-16/",
+      "period_start": "2026-11-16",
+      "period_end": "2026-11-22",
+      "revision": 1,
+      "render_version": 3,
+      "generated_at": "2026-11-24T20:43:51.869258+00:00",
+      "revised_at": null,
+      "correction_explanation": null,
+      "event_count": 81,
+      "content_sha256": "89efbb7ef95a0b4fcf540891fd19a9a77b12c89b19591bff86a5b9984fbb1745",
+      "html_sha256": "757ee710f949836e6ec7a0b4076b7e2aece5c6f229776f7a98465b2cd2257aad"
     }
   ]
 }
