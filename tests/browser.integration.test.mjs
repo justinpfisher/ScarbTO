@@ -457,6 +457,7 @@ test('independent feed failures do not suppress the other rendered view', {timeo
 
   const dineSafeSurvivesBeachError = await openScenario(browser, origin, {beachStatus: 503}, {initialMode: 'all'});
   t.after(() => dineSafeSurvivesBeachError.context.close());
+  await dineSafeSurvivesBeachError.page.getByRole('button', {name: 'All places'}).click();
   await dineSafeSurvivesBeachError.page.getByRole('button', {name: 'Fixture Cafe'}).waitFor();
   await dineSafeSurvivesBeachError.page.getByRole('button', {name: 'Fixture Bakery'}).waitFor();
   assert.deepEqual(dineSafeSurvivesBeachError.pageErrors, []);
