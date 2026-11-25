@@ -34,3 +34,13 @@ h1{font-size:clamp(2rem,5vw,3.2rem);line-height:1.08;margin:.15rem 0 .6rem}h2{fo
 /* Keep the visible name with the narrow Mosaic mark. */
 .brand-name{display:none}
 @media(max-width:420px){.site-header{flex-wrap:wrap;justify-content:flex-start}.site-header .brand{flex:1 1 100%;gap:8px}.brand-lockup{width:52px;max-height:58px}.brand-name{display:inline;color:var(--brand-cream);font-size:1.55rem;line-height:1.2;font-weight:800;white-space:nowrap}.header-link{margin-left:auto}}
+
+/* Optional boundary preview; the original Explore entry stays the only map action. */
+.explore-panel.has-neighbourhood-map{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,.55fr);align-items:start}
+.has-neighbourhood-map>div:first-child{grid-column:1;grid-row:1}
+.neighbourhood-map{grid-column:1;grid-row:2;width:100%;min-width:0;height:360px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.has-neighbourhood-map>#map-link{grid-column:2;grid-row:1 / 3;align-self:center}
+.neighbourhood-map .maplibregl-ctrl-attrib{max-width:100%;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+.neighbourhood-map .maplibregl-ctrl-attrib a{color:#174d43}
+@media(max-width:720px){.explore-panel.has-neighbourhood-map{display:flex}.neighbourhood-map{height:260px}}
+@media print{.neighbourhood-map{display:none!important}.explore-panel.has-neighbourhood-map{display:block}}
