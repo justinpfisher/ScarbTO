@@ -27,6 +27,13 @@ REQUIRED_PUBLISH_STEPS = {
     "Deploy last validated snapshot",
     "Verify Scarb.TO production HTTP response and official boundary assets",
 }
+# Keep the legacy action-generated upload step name: old receipts use it too.
+UPLOAD_STEP = "Run actions/upload-pages-artifact@v3"
+DEPLOY_STEPS = {
+    "Deploy last validated snapshot",
+    "Verify Scarb.TO production HTTP response and official boundary assets",
+}
+PRODUCER_STEPS = (REQUIRED_PUBLISH_STEPS - DEPLOY_STEPS) | {UPLOAD_STEP}
 MAX_API_BYTES = 1_000_000
 # Exact last-good baseline independently verified for this code-only rollout.
 # Update only alongside a separately verified successful publisher run.
@@ -136,28 +143,49 @@ def _verify_successful_publisher_run(parent_sha: str, commit_time: datetime) -> 
     if type(run_id) is not int or type(attempt) is not int or attempt < 1:
         raise ReleaseError("Successful publisher workflow identity is malformed")
     jobs_response = _github_api_json(
-        f"/repos/justinpfisher/ScarbTO/actions/runs/{run_id}/jobs?{urlencode({'per_page': 100})}"
+        f"/repos/justinpfisher/ScarbTO/actions/runs/{run_id}/attempts/{attempt}/jobs?{urlencode({'per_page': 100})}"
     )
     jobs = jobs_response.get("jobs")
     job_total = jobs_response.get("total_count")
     if not isinstance(jobs, list) or type(job_total) is not int or job_total != len(jobs):
         raise ReleaseError("GitHub workflow job evidence is incomplete")
-    publishers = [job for job in jobs if isinstance(job, dict) and job.get("name") == "publish"]
-    if len(publishers) != 1:
-        raise ReleaseError("Successful refresh run has no unique publisher job")
-    publisher = publishers[0]
-    if publisher.get("status") != "completed" or publisher.get("conclusion") != "success":
-        raise ReleaseError("Last-good publisher job did not complete successfully")
-    steps = publisher.get("steps")
-    if not isinstance(steps, list):
-        raise ReleaseError("Publisher workflow step evidence is missing")
-    successful_steps = {
-        step.get("name")
-        for step in steps
-        if isinstance(step, dict) and step.get("status") == "completed" and step.get("conclusion") == "success"
-    }
-    if not REQUIRED_PUBLISH_STEPS.issubset(successful_steps):
-        raise ReleaseError("Publisher run lacks successful retrieval, validation, persistence, or deployment evidence")
+    # Attempt-scoped endpoint plus explicit identity checks prevents assembling
+    # a successful receipt from different retries or unrelated workflow jobs.
+    for job in jobs:
+        if not isinstance(job, dict) or (
+            job.get("run_id") != run_id
+            or job.get("run_attempt") != attempt
+            or job.get("head_sha") != parent_sha
+        ):
+            raise ReleaseError("Workflow job evidence has unrelated or mixed-attempt identity")
+    publishers = [job for job in jobs if job.get("name") == "publish"]
+    consumers = [job for job in jobs if job.get("name") == "deploy"]
+    if len(publishers) != 1 or len(consumers) > 1:
+        raise ReleaseError("Successful refresh run has ambiguous publisher/deployer jobs")
+
+    def require_steps(job: dict, required: set[str], forbidden: set[str]) -> None:
+        if job.get("status") != "completed" or job.get("conclusion") != "success":
+            raise ReleaseError("Last-good publisher/deployer job did not complete successfully")
+        steps = job.get("steps")
+        if not isinstance(steps, list) or any(not isinstance(step, dict) for step in steps):
+            raise ReleaseError("Publisher workflow step evidence is missing or malformed")
+        names = [step.get("name") for step in steps]
+        if any(name in names for name in forbidden):
+            raise ReleaseError("Publisher receipt mixes legacy and split job steps")
+        for name in required:
+            matching_steps = [step for step in steps if step.get("name") == name]
+            if len(matching_steps) != 1 or any(
+                step.get("status") != "completed" or step.get("conclusion") != "success"
+                for step in matching_steps
+            ):
+                raise ReleaseError("Publisher run lacks unique successful required step evidence")
+
+    if consumers:
+        require_steps(publishers[0], PRODUCER_STEPS, DEPLOY_STEPS)
+        require_steps(consumers[0], DEPLOY_STEPS, PRODUCER_STEPS)
+    else:
+        # Genuine old receipts retain all operations in the single publish job.
+        require_steps(publishers[0], PRODUCER_STEPS | DEPLOY_STEPS, set())
     return run_id
 
 

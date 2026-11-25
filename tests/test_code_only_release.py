@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 import os
 import shutil
 import subprocess
@@ -17,6 +18,9 @@ from scripts.snapshot_integrity import (
 )
 from scripts.verify_code_only_release import (
     PINNED_BASELINE,
+    PRODUCER_STEPS,
+    DEPLOY_STEPS,
+    _verify_successful_publisher_run,
     ReleaseError,
     validate_dispatch_environment,
     validate_publisher_tree,
@@ -105,6 +109,9 @@ class CodeOnlyReleaseTests(unittest.TestCase):
                 "updated_at": (timestamp + timedelta(minutes=1)).isoformat(),
             }
             job = {
+                "run_id": 123,
+                "run_attempt": 1,
+                "head_sha": parent,
                 "name": "publish",
                 "status": "completed",
                 "conclusion": "success",
@@ -114,6 +121,7 @@ class CodeOnlyReleaseTests(unittest.TestCase):
                         "Retrieve and validate official Toronto data",
                         "Validate output is public and usable",
                         "Persist only validated data and recoverable release baseline",
+                        "Run actions/upload-pages-artifact@v3",
                         "Deploy last validated snapshot",
                         "Verify Scarb.TO production HTTP response and official boundary assets",
                     )
@@ -229,6 +237,120 @@ class CodeOnlyReleaseTests(unittest.TestCase):
             invalid[key] = value
             with self.subTest(key=key), self.assertRaises(ReleaseError):
                 validate_dispatch_environment(invalid)
+
+    def test_legacy_and_split_receipts_are_attempt_scoped_and_fail_closed(self) -> None:
+        parent = "a" * 40
+        timestamp = datetime(2026, 11, 25, 12, tzinfo=timezone.utc)
+        run = {
+            "id": 123, "run_attempt": 2, "head_sha": parent,
+            "path": ".github/workflows/refresh-and-publish.yml",
+            "head_branch": "main", "event": "schedule",
+            "status": "completed", "conclusion": "success",
+            "run_started_at": (timestamp - timedelta(minutes=1)).isoformat(),
+            "updated_at": (timestamp + timedelta(minutes=1)).isoformat(),
+        }
+
+        def job(name: str, names: set[str]) -> dict:
+            return {
+                "name": name, "run_id": 123, "run_attempt": 2, "head_sha": parent,
+                "status": "completed", "conclusion": "success",
+                "steps": [{"name": name, "status": "completed", "conclusion": "success"}
+                          for name in sorted(names)],
+            }
+
+        legacy = [job("publish", PRODUCER_STEPS | DEPLOY_STEPS)]
+        split = [job("publish", PRODUCER_STEPS), job("deploy", DEPLOY_STEPS)]
+
+        def verify(jobs: list[dict], total: int | None = None) -> int:
+            def api(path: str) -> dict:
+                if "/workflows/" in path:
+                    return {"total_count": 1, "workflow_runs": [run]}
+                self.assertEqual(path, "/repos/justinpfisher/ScarbTO/actions/runs/123/attempts/2/jobs?per_page=100")
+                return {"total_count": len(jobs) if total is None else total, "jobs": jobs}
+            with patch("scripts.verify_code_only_release._github_api_json", side_effect=api):
+                return _verify_successful_publisher_run(parent, timestamp)
+
+        for label, receipt in (("legacy", legacy), ("split", split)):
+            with self.subTest(layout=label, case="valid"):
+                self.assertEqual(verify(deepcopy(receipt)), 123)
+            # Each required operation must occur exactly once, successfully,
+            # in its own named job, not merely somewhere in the run.
+            for index, original in enumerate(receipt):
+                for step_index, step in enumerate(original["steps"]):
+                    for failure in ("absent", "skipped", "failure", "duplicate", "unrelated"):
+                        bad = deepcopy(receipt)
+                        steps = bad[index]["steps"]
+                        if failure == "absent":
+                            del steps[step_index]
+                        elif failure == "duplicate":
+                            steps.append(deepcopy(steps[step_index]))
+                        elif failure == "unrelated":
+                            removed = steps.pop(step_index)
+                            bad.append(job("unrelated", set()))
+                            bad[-1]["steps"] = [removed]
+                        else:
+                            steps[step_index]["conclusion"] = failure
+                        with self.subTest(layout=label, step=step["name"], failure=failure):
+                            with self.assertRaises(ReleaseError):
+                                verify(bad)
+                for field, value in (("run_id", 456), ("run_attempt", 1),
+                                     ("head_sha", "b" * 40), ("status", "in_progress"),
+                                     ("conclusion", "skipped"), ("name", "unrelated")):
+                    bad = deepcopy(receipt)
+                    bad[index][field] = value
+                    with self.subTest(layout=label, job=index, field=field):
+                        with self.assertRaises(ReleaseError):
+                            verify(bad)
+                bad = deepcopy(receipt)
+                bad.append(deepcopy(bad[index]))
+                with self.subTest(layout=label, duplicate_job=index):
+                    with self.assertRaises(ReleaseError):
+                        verify(bad)
+            with self.subTest(layout=label, case="incomplete_page"):
+                with self.assertRaises(ReleaseError):
+                    verify(receipt, len(receipt) + 1)
+        for bad in ([], [split[0]], [split[1]], legacy + [split[1]],
+                    [split[0], job("deploy", PRODUCER_STEPS | DEPLOY_STEPS)]):
+            with self.subTest(case="missing_or_mixed_layout", receipt=bad):
+                with self.assertRaises(ReleaseError):
+                    verify(bad)
+
+    def test_split_workflow_preserves_protected_persistence_and_exact_consumer(self) -> None:
+        workflow = (ROOT / ".github/workflows/refresh-and-publish.yml").read_text(encoding="utf-8")
+        before, consumer = workflow.split("\n  deploy:\n")
+        test, producer = before.split("\n  publish:\n")
+        self.assertIn("needs: test", producer)
+        self.assertIn("needs: publish", consumer)
+        self.assertIn("      - scarbto-gmktec", test)
+        self.assertIn("      - Windows", test)
+        self.assertEqual(workflow.count("group: scarbto-pages"), 1)
+        self.assertIn("cancel-in-progress: false", workflow)
+        for block in (producer, consumer):
+            self.assertIn("github.event_name != 'pull_request' && github.ref == 'refs/heads/main'", block)
+            self.assertIn("    environment:\n      name: github-pages\n", block)
+        self.assertIn("      deployment: false", producer)
+        self.assertNotIn("      url:", producer)
+        self.assertNotIn("deployment: false", consumer)
+        self.assertIn("      url: ${{ steps.deployment.outputs.page_url }}", consumer)
+        self.assertIn("      contents: write", producer)
+        self.assertNotIn("pages: write", producer)
+        self.assertNotIn("id-token: write", producer)
+        self.assertIn("    permissions:\n      contents: read\n      pages: write\n      id-token: write\n", consumer)
+        self.assertIn("          ref: ${{ github.sha }}\n          persist-credentials: false", consumer)
+        self.assertIn("uses: actions/setup-python@v5", consumer)
+        self.assertIn("python-version: '3.12'", consumer)
+        upload = "      - uses: actions/upload-pages-artifact@v3\n        with:\n          path: docs\n"
+        self.assertEqual(workflow.count(upload), 1)
+        self.assertIn(upload, producer)
+        self.assertIn("git push origin HEAD:main", producer)
+        self.assertNotIn("git push", consumer)
+        self.assertLess(producer.index("git push origin HEAD:main"), producer.index(upload))
+        for action in ("actions/configure-pages@v5", "actions/deploy-pages@v4"):
+            self.assertEqual(workflow.count(action), 1)
+            self.assertIn(action, consumer)
+        self.assertLess(consumer.index("actions/configure-pages@v5"), consumer.index("actions/deploy-pages@v4"))
+        self.assertIn('run: python scripts/verify_live_overlay.py "${{ github.sha }}"', consumer)
+        self.assertNotIn("verify_live_overlay.py", producer)
 
     def test_workflow_keeps_tests_and_normal_refresh_path(self) -> None:
         workflow = (ROOT / ".github/workflows/refresh-and-publish.yml").read_text(encoding="utf-8")
