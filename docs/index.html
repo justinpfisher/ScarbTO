@@ -134,11 +134,10 @@
       toggleFilters.setAttribute('aria-expanded',String(expanded));
       toggleFilters.textContent=expanded?'Hide filters':'Filters';
     });
-    try {
-      window.maplibregl = await import('https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs');
-    } catch (error) {
-      console.warn('Map library unavailable:', error?.message || error);
-    }
+    // Only map initialization waits for this optional dependency, not the local app.
+    window.scarbMapLibraryReady = import('https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs')
+      .then(library => { window.maplibregl = library; })
+      .catch(error => { console.warn('Map library unavailable:', error?.message || error); });
     await import('./app.mjs');
   </script>
 </body>

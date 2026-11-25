@@ -103,7 +103,7 @@ function waitForSelectedCallsRequest(page) {
 }
 
 
-async function installLocalRoutes(page, origin, {snapshotStatus = 200, snapshotBody = snapshot, beachStatus = 200, beachDelayMs = 0, neighbourhoodGeometry = null, neighbourhoodDelayMs = 0, onNeighbourhoodGeometryRequest = () => {}, selectedCalls = false, selectedCallsDelayMs = 0, selectedCallsSourceAgeMs = 60_000, maplibreFailure = false, onSelectedCallsRequest = () => {}} = {}) {
+async function installLocalRoutes(page, origin, {snapshotStatus = 200, snapshotBody = snapshot, beachStatus = 200, beachDelayMs = 0, neighbourhoodGeometry = null, neighbourhoodDelayMs = 0, onNeighbourhoodGeometryRequest = () => {}, selectedCalls = false, selectedCallsDelayMs = 0, selectedCallsSourceAgeMs = 60_000, maplibreFailure = false, maplibreGate = null, onSelectedCallsRequest = () => {}} = {}) {
   let beachResponseSent = false;
   let selectedCallsRequestIndex=0;
   const selectedCallsEditDate=Date.now()-selectedCallsSourceAgeMs;
@@ -166,6 +166,7 @@ async function installLocalRoutes(page, origin, {snapshotStatus = 200, snapshotB
       return;
     }
     if (url === 'https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs') {
+      if (maplibreGate) await maplibreGate;
       if (maplibreFailure) {
         await route.fulfill({status: 503, contentType: 'text/plain', body: 'fixture CDN failure'});
         return;
@@ -598,6 +599,55 @@ test('DineSafe and beach lists remain usable when WebGL is unavailable', {timeou
   assert.equal(await invalid.page.locator('.record-item').count(), 0, 'mode switching cannot reveal rejected data');
   assert.equal(await invalid.page.locator('[data-id="must-not-render"]').count(), 0);
   assert.deepEqual(invalid.pageErrors, []);
+});
+
+test('held MapLibre leaves list, search and saved areas usable, then settles without stranding the map', {timeout:120_000}, async t => {
+  const {server, origin} = await startStaticServer();
+  const browser = await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+  t.after(async()=>{await browser.close();await new Promise(done=>server.close(done));});
+  for (const width of [1280,390]) for (const maplibreFailure of [false,true]) {
+    const context = await browser.newContext({viewport:{width,height:900}});
+    const page = await context.newPage(), errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    let releaseMap;
+    const maplibreGate = new Promise(resolveGate => {releaseMap=resolveGate;});
+    await installLocalRoutes(page,origin,{maplibreGate,maplibreFailure});
+    try {
+      // Commit does not wait for the deliberately held module or network idle.
+      const requested = page.waitForRequest('https://cdn.jsdelivr.net/npm/maplibre-gl@6.4.1/dist/maplibre-gl.mjs');
+      await page.goto(`${origin}/?mode=all&days=all`,{waitUntil:'commit'});
+      await requested;
+      await page.getByRole('button',{name:'Fixture Cafe'}).waitFor();
+      if(width===390)await page.locator('#toggle-filters').click();
+      await page.locator('#search').fill('Fixture Bakery');
+      await page.waitForFunction(()=>document.querySelectorAll('#record-list .record-item').length===1);
+      await page.getByRole('button',{name:'Fixture Bakery'}).waitFor();
+      assert.equal(await page.getByRole('button',{name:'Fixture Cafe'}).count(),0);
+      await page.locator('#saved-area-choice:not([disabled])').selectOption('ward:20');
+      await page.locator('#save-public-area').click();
+      assert.equal(await page.locator('#saved-areas-list a').getAttribute('href'),'/?areaKind=ward&areaCode=20&mode=all&days=all');
+      assert.equal(await page.evaluate(()=>Boolean(window.__scarbMap)),false,'no map is constructed before the module settles');
+      assert.equal(await page.locator('#map-fallback').isVisible(),false,'pending is not a terminal map failure');
+      releaseMap();
+      if(maplibreFailure){
+        await page.locator('#map-fallback:not([hidden])').waitFor();
+        assert.equal(await page.evaluate(()=>Boolean(window.__scarbMap)),false);
+      }else{
+        await waitForMap(page);
+        await page.waitForFunction(async()=>{
+          const data=await window.__scarbMap.getSource('places').getData();
+          return data.features.length===1 && data.features[0].properties.id==='fixture-b';
+        });
+        assert.equal(await page.locator('#map-fallback').isVisible(),false);
+      }
+      assert.equal(await page.locator('#search').inputValue(),'Fixture Bakery');
+      await page.getByRole('button',{name:'Fixture Bakery'}).waitFor();
+      await page.locator('#search').fill('Fixture Cafe');
+      await page.getByRole('button',{name:'Fixture Cafe'}).waitFor();
+      assert.equal(await page.locator('#saved-areas-list li').count(),1);
+      assert.deepEqual(errors,[]);
+    } finally {releaseMap();await context.close();}
+  }
 });
 
 test('MapLibre module failure still boots accessible DineSafe and beach views', {timeout: 60_000}, async t => {

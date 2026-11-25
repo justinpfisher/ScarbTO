@@ -437,6 +437,8 @@ function setMapUnavailable(error) {
   performFilters();
 }
 async function initMap() {
+  // A pending CDN must not trigger a terminal fallback or hold resident controls/feeds.
+  await globalThis.scarbMapLibraryReady;
   if(typeof maplibregl==='undefined'){
     setMapUnavailable();
     return;
