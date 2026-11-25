@@ -123,6 +123,115 @@ class IngestionTests(unittest.TestCase):
         request.assert_called_once()
         response.read.assert_called_once_with(100 * 1024 * 1024 + 1)
 
+    def test_ward_503_then_success_reuses_exact_request(self):
+        url = collector.WARDS + '?' + collector.urlencode(collector.MAP_QUERY)
+        failure = HTTPError(url, 503, 'private', {}, None)
+        good = MagicMock(status=200)
+        good.__enter__.return_value = good
+        good.read.return_value = b'original ward bytes'
+        with patch.object(collector, 'urlopen', side_effect=[failure, good]) as fetch:
+            self.assertEqual(download(url, 'official ward geography'), b'original ward bytes')
+        self.assertEqual(fetch.call_count, 2)
+        self.assertEqual(fetch.call_args_list[0], fetch.call_args_list[1])
+        self.assertEqual(fetch.call_args.args[0].full_url, url)
+        self.assertEqual(dict(fetch.call_args.args[0].header_items()),
+                         dict(collector.Request(url, headers=collector.HEADERS).header_items()))
+        self.assertEqual(fetch.call_args.kwargs, {'timeout': 120})
+        good.read.assert_called_once_with(collector.MAX_DOWNLOAD + 1)
+
+    def test_ward_repeated_503_retains_normal_sanitized_failure(self):
+        url = collector.WARDS + '?' + collector.urlencode(collector.MAP_QUERY)
+        with patch.object(collector, 'urlopen', side_effect=HTTPError(url, 503, 'private', {}, None)) as fetch:
+            with self.assertRaises(DataError) as caught:
+                download(url, 'official ward geography')
+        self.assertEqual(fetch.call_count, 2)
+        self.assertEqual(str(caught.exception),
+                         f'HTTP 503 retrieving official ward geography from {collector.WARDS}')
+        self.assertTrue(caught.exception.__suppress_context__)
+
+    def test_ward_other_failures_do_not_retry(self):
+        url = collector.WARDS + '?' + collector.urlencode(collector.MAP_QUERY)
+        failures = [HTTPError(url, code, 'private', {}, None) for code in (400, 401, 403, 404, 429, 500, 502, 504)]
+        for reason in (TimeoutError('private'), ConnectionResetError('private'),
+                       socket.gaierror(-2, 'private'), ssl.SSLError('private'),
+                       ssl.SSLCertVerificationError('private'), PermissionError('private'),
+                       ConnectionRefusedError('private'), OSError('private'), 'timeout'):
+            failures.append(URLError(reason))
+            if isinstance(reason, OSError):
+                failures.append(reason)
+        for failure in failures:
+            for after_503 in (False, True):
+                with self.subTest(failure=repr(failure), after_503=after_503):
+                    effects = [HTTPError(url, 503, 'private', {}, None), failure] if after_503 else [failure]
+                    with patch.object(collector, 'urlopen', side_effect=effects) as fetch:
+                        with self.assertRaises(DataError):
+                            download(url, 'official ward geography')
+                    self.assertEqual(fetch.call_count, len(effects))
+
+    def test_ward_503_retry_does_not_extend_to_other_urls_or_stages(self):
+        url = collector.WARDS + '?' + collector.urlencode(collector.MAP_QUERY)
+        for target, stage in ((collector.CKAN, 'CKAN package metadata'),
+                              ('https://example.invalid/feed.csv', 'DineSafe CSV'),
+                              (collector.NEIGHBOURHOODS + '?' + collector.urlencode(collector.MAP_QUERY),
+                               'official neighbourhood geography'),
+                              (url + '&extra=1', 'official ward geography'),
+                              (url, 'another stage')):
+            with self.subTest(target=target), patch.object(collector, 'urlopen',
+                    side_effect=HTTPError(target, 503, 'private', {}, None)) as fetch:
+                with self.assertRaises(DataError):
+                    download(target, stage)
+                fetch.assert_called_once()
+
+    def test_ward_content_and_validation_failures_do_not_retry(self):
+        url = collector.WARDS + '?' + collector.urlencode(collector.MAP_QUERY)
+        for status, body, limit in ((403, b'', collector.MAX_DOWNLOAD),
+                                    (200, b'not JSON', collector.MAX_DOWNLOAD),
+                                    (200, b'{}', collector.MAX_DOWNLOAD),
+                                    (200, b'too big', 1)):
+            with self.subTest(status=status, body=body):
+                response = MagicMock(status=status)
+                response.__enter__.return_value = response
+                response.read.return_value = body
+                with patch.object(collector, 'urlopen', return_value=response) as fetch, patch.object(
+                        collector, 'MAX_DOWNLOAD', limit):
+                    with self.assertRaises(DataError):
+                        raw = download(url, 'official ward geography')
+                        data = collector.json_bytes(raw, 'wards')
+                        qualified_area_features(data, AREA_WARDS)
+                fetch.assert_called_once()
+
+    def test_ward_exhaustion_leaves_all_last_good_output_bytes_intact(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            files = ['snapshot.json', 'establishments.csv', 'scarborough-wards.geojson',
+                     'scarborough-overlay-neighbourhoods.geojson', 'scarborough-neighbourhoods.geojson',
+                     'history/2026-11.json']
+            for filename in files:
+                path = root / filename
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b'last-good:' + filename.encode())
+            before = {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+            metadata = MagicMock(status=200)
+            metadata.__enter__.return_value = metadata
+            metadata.read.return_value = json.dumps({'success': True, 'result': {'resources': [
+                {'format': 'CSV', 'name': 'dinesafe.csv', 'url': 'https://example.invalid/feed.csv'}]}}).encode()
+            csv_response = MagicMock(status=200)
+            csv_response.__enter__.return_value = csv_response
+            csv_response.read.return_value = b'fixture CSV'
+            stdout = io.StringIO()
+            with patch.object(sys, 'argv', ['collector', '--output', folder]), patch.object(
+                    collector, 'urlopen', side_effect=[metadata, csv_response,
+                        HTTPError(collector.WARDS, 503, 'private', {}, None),
+                        HTTPError(collector.WARDS, 503, 'private', {}, None)]) as fetch, patch.object(
+                    collector, 'atomic_write') as write, contextlib.redirect_stdout(stdout):
+                with self.assertRaisesRegex(DataError, 'HTTP 503 retrieving official ward geography'):
+                    collector.main()
+            self.assertEqual(fetch.call_count, 4)
+            self.assertEqual(fetch.call_args_list[2], fetch.call_args_list[3])
+            write.assert_not_called()
+            self.assertEqual(stdout.getvalue(), '')
+            self.assertEqual(before, {p.relative_to(root): p.read_bytes() for p in root.rglob('*') if p.is_file()})
+
     def test_latest_inspection_and_exclusion_and_names(self):
         csv_data=rows_as_csv([item('10','Northern Café','Pass','2026-10-01'),item('10','Northern Café','Conditional Pass','2026-10-18'),item('11','East, Diner','Closed','2026-10-20',43.84,-79.2),item('99','Outside','Pass','2026-10-15',43.60,-79.6)])
         items,stats,neighbourhoods_geo=normalise(csv_data,wards(),neighbourhoods(),minimum=1)

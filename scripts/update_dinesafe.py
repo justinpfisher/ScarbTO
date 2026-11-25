@@ -132,19 +132,27 @@ def download(url: str, stage: str) -> bytes:
     req = Request(url, headers=HEADERS)
     parsed = urlsplit(url)
     endpoint = f'{parsed.scheme}://{parsed.hostname}{parsed.path}'
-    try:
-        with urlopen(req, timeout=120) as response:
-            if response.status != 200:
-                raise DataError(f'HTTP {response.status} retrieving {stage} from {endpoint}')
-            blob = response.read(MAX_DOWNLOAD + 1)
-            if len(blob) > MAX_DOWNLOAD:
-                raise DataError('Resource exceeds 100 MiB safety limit')
-            return blob
-    except HTTPError as exc:
-        raise DataError(f'HTTP {exc.code} retrieving {stage} from {endpoint}') from None
-    except (URLError, TimeoutError, OSError) as exc:
-        kind = transport_failure_kind(exc)
-        raise DataError(f'Network failure ({kind}) retrieving {stage} from {endpoint}') from None
+    # Run 45514476764 attempt 1 failed on this ward query with HTTP 503.
+    # Retry it once only; all other callers and failures remain fail-closed.
+    ward_query = (stage == 'official ward geography'
+                  and url == WARDS + '?' + urlencode(MAP_QUERY))
+    for attempt in range(2 if ward_query else 1):
+        try:
+            with urlopen(req, timeout=120) as response:
+                if response.status != 200:
+                    raise DataError(f'HTTP {response.status} retrieving {stage} from {endpoint}')
+                blob = response.read(MAX_DOWNLOAD + 1)
+                if len(blob) > MAX_DOWNLOAD:
+                    raise DataError('Resource exceeds 100 MiB safety limit')
+                return blob
+        except HTTPError as exc:
+            if ward_query and attempt == 0 and exc.code == 503:
+                exc.close()
+                continue
+            raise DataError(f'HTTP {exc.code} retrieving {stage} from {endpoint}') from None
+        except (URLError, TimeoutError, OSError) as exc:
+            kind = transport_failure_kind(exc)
+            raise DataError(f'Network failure ({kind}) retrieving {stage} from {endpoint}') from None
 
 
 def json_bytes(raw: bytes, label: str) -> dict:
