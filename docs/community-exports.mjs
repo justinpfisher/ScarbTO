@@ -1,32 +1,82 @@
 /** One measured layout feeds vector PDF and 300-dpi PNG. No HTML conversion. */
 import {digest} from './community-publishing.mjs';
+import {TEXT_PROOF_ONLY} from './community-latest.mjs';
+
+export function canExportPrint(edition) {
+ return Boolean(edition && (edition.view !== 'latest' || edition.print_measured === true));
+}
 let fontBytes=null;
 async function loadFont(){if(!fontBytes){const r=await fetch('/assets/community/DMSans.ttf');if(!r.ok)throw new Error('The licensed export font could not load. Try again before exporting.');fontBytes=new Uint8Array(await r.arrayBuffer());}return fontBytes;}
-export async function prepareOutputs(edition){
- if(!window.jspdf?.jsPDF)throw new Error('The PDF tools could not load. Your text and receipt remain available.');
- const bytes=await loadFont();let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);
- const {width_mm:w,height_mm:h,margin_mm:m,grayscale}=edition.profile.layout;
+class PageOverflow extends Error {}
+
+function printDocument(profile, bytes) {
+ let binary='';for(const b of bytes)binary+=String.fromCharCode(b);
+ const {width_mm:w,height_mm:h,margin_mm:m,grayscale}=profile.layout;
  const pdf=new window.jspdf.jsPDF({orientation:w>h?'landscape':'portrait',unit:'mm',format:[w,h],compress:true,putOnlyUsedFonts:true});
  pdf.addFileToVFS('DMSans.ttf',binary);pdf.addFont('DMSans.ttf','DMSans','normal');pdf.setFont('DMSans');
- const all=edition.copy+'\n\n'+edition.footer;
- const metadata=pdf.getFont().metadata;
- for(const char of all){if(!/\s/u.test(char)&&(!metadata.characterToGlyph||!metadata.characterToGlyph(char.codePointAt(0))))throw new Error(`The export font cannot represent ${char}. Do not publish substituted glyphs; retain the text and choose a font-qualified output.`);}
+ return {pdf,w,h,m,grayscale};
+}
+
+function printLines(layout, edition, emit) {
+ const {pdf,w,h,m}=layout;
  const lines=[];let y=m+5;
+ const sourceLinks=new Map(edition.view==='latest' ? edition.rows.map(row=>['See the City record: '+row.sourceUrl,row.sourceUrl]) : []);
  for(const [text,size] of [[edition.copy,11],[edition.footer,8]]){
    pdf.setFontSize(size);const step=size*0.352778*1.4;
    for(const paragraph of text.split('\n')){
      const wrapped=paragraph?pdf.splitTextToSize(paragraph,w-2*m):[''];
-     for(const line of wrapped){if(y+size*0.352778*.3>h-m)throw new Error('This copy does not fit the chosen physical page at readable size. Choose less copy or a larger layout.');lines.push({text:line,size,y});pdf.text(line,m,y);y+=step;}
+     for(const text of wrapped){
+       if(y+size*0.352778*.3>h-m)throw new PageOverflow('This copy does not fit the chosen physical page at readable size. Choose less copy or a larger layout.');
+       const line={text,size,y};
+       lines.push(line);
+       if(emit)emit(line,step,sourceLinks.get(paragraph));
+       y+=step;
+     }
    }
    y+=3;
  }
+ return lines;
+}
+
+export async function measurePrintProof(profile) {
+ if(!window.jspdf?.jsPDF)return null;
+ let layout;
+ try {layout=printDocument(profile,await loadFont());}
+ catch {return null;}
+ return edition=>{
+   try{printLines(layout,edition);return true;}
+   catch(error){if(error instanceof PageOverflow)return false;throw error;}
+ };
+}
+
+export async function preparePdf(edition){
+ if(!canExportPrint(edition))throw new Error(TEXT_PROOF_ONLY);
+ if(!window.jspdf?.jsPDF){
+   if(edition.view==='latest')throw new Error(TEXT_PROOF_ONLY);
+   throw new Error('The PDF tools could not load. Your text and receipt remain available.');
+ }
+ const bytes=await loadFont();
+ const layout=printDocument(edition.profile,bytes);
+ const {pdf,w,h,m,grayscale}=layout;
+ const all=edition.copy+'\n\n'+edition.footer;
+ const metadata=pdf.getFont().metadata;
+ for(const char of all){if(!/\s/u.test(char)&&(!metadata.characterToGlyph||!metadata.characterToGlyph(char.codePointAt(0))))throw new Error(`The export font cannot represent ${char}. Do not publish substituted glyphs; retain the text and choose a font-qualified output.`);}
+ const lines=printLines(layout,edition,(line,step,url)=>{
+   pdf.text(line.text,m,line.y);
+   if(url)pdf.link(m,line.y-line.size*0.352778,w-2*m,step,{url});
+ });
  pdf.setCreationDate('D:'+new Date(edition.generated_at).toISOString().replace(/\D/g,'').slice(0,14)+"+00'00'");pdf.setFileId((await digest(all+JSON.stringify(edition.profile.layout))).slice(0,32));pdf.setProperties({title:edition.profile.name,subject:'Frozen, source-linked community edition',creator:'Scarb.TO'});
+ return {pdf:pdf.output('blob'),bytes,w,h,m,grayscale,lines};
+}
+
+export async function prepareOutputs(edition){
+ const {pdf,bytes,w,h,m,grayscale,lines}=await preparePdf(edition);
  const face=new FontFace('ScarbExport',bytes.buffer);await face.load();document.fonts.add(face);
  const scale=300/25.4,canvas=document.createElement('canvas');canvas.width=Math.round(w*scale);canvas.height=Math.round(h*scale);const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Image export is unavailable in this browser.');
  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=grayscale?'#000000':'#18382b';ctx.textBaseline='alphabetic';
  for(const line of lines){ctx.font=`${line.size*300/72}px ScarbExport`;if(ctx.measureText(line.text).width>(w-2*m)*scale+1)throw new Error('The image font wraps differently at this size. Choose a wider layout before exporting.');ctx.fillText(line.text,m*scale,line.y*scale);}
  const png=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!png)throw new Error('The high-resolution image could not be created.');
- return {pdf:pdf.output('blob'),png:await pngDensity(png),width_mm:w,height_mm:h,pixels:[canvas.width,canvas.height],dpi:300,lines};
+ return {pdf,png:await pngDensity(png),width_mm:w,height_mm:h,pixels:[canvas.width,canvas.height],dpi:300,lines};
 }
 export function downloadBlob(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 
