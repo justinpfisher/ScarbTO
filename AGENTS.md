@@ -2,6 +2,8 @@
 
 These rules apply to automated agents, contributors and development workflows. Read [CURRENT_STATE.md](CURRENT_STATE.md), this file, [ARCHITECTURE.md](ARCHITECTURE.md) and the actual current repository/Actions state before changing production. A plan, old handoff, or successful test is not evidence of a live release.
 
+Operational checklist: [OpenClaw runbook](OPENCLAW_RUNBOOK.md).
+
 ## Product and scope
 
 - Build the Scarborough-first, source-linked, map-first neighbourhood change service. The opening view emphasises useful recent changes, with an accessible matching list, compact filters, mobile usability and official source links.
