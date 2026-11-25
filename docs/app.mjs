@@ -612,7 +612,8 @@ function boot() {
     restoringHistory=true;
     try{
       if(state.mode==='selected-calls')deactivateSelectedCalls();
-      const view=viewFromSearch(location.search);state=view.state;selectedId=null;
+      const knownNeighbourhoods=dineSafeLoadState==='ready'?Array.from($('neighbourhood').options,option=>option.value):undefined;
+      const view=viewFromSearch(location.search,knownNeighbourhoods);state=view.state;selectedId=null;
       state.search=typeof event.state?.scarbSearch==='string'?event.state.scarbSearch:'';
       const requestedState=JSON.stringify(state);
       await areaExplorer.setOverlay(view.overlay,{restore:true});
