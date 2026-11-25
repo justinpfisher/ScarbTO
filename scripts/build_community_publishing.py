@@ -8,6 +8,9 @@ import argparse
 import hashlib
 import json
 import math
+import os
+import stat
+import uuid
 import sys
 import subprocess
 from pathlib import Path
@@ -28,6 +31,25 @@ def retain(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
         path.write_bytes(data)
+
+
+def publish_latest(path, value):
+    """Keep the last-good selector until its complete replacement is staged."""
+    content = encoded(value)
+    temporary = path.with_name(f'.{path.name}.{uuid.uuid4().hex}.tmp')
+    # Exclusive creation keeps normal write_bytes permissions (0666 & umask)
+    # for a first publication, unlike a private NamedTemporaryFile's 0600.
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)
+    try:
+        with os.fdopen(descriptor, 'wb') as stream:
+            stream.write(content)
+            stream.flush()
+            if path.exists():
+                os.chmod(temporary, stat.S_IMODE(path.stat().st_mode))
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def point_in_geometry(point, geometry):
@@ -165,7 +187,7 @@ def build(root=ROOT):
         projection = {**release, 'boundaries': {key: area}, 'records': [r for r in release['records'] if point_in_geometry([r['longitude'],r['latitude']],area['geometry'])], 'events': [e for e in events if point_in_geometry([e['longitude'], e['latitude']], area['geometry'])]}
         retain(output / 'releases' / release_id / f'{key}.json', projection)
     output.mkdir(parents=True, exist_ok=True)
-    (output / 'latest.json').write_bytes(encoded({'schema_version': 1, 'release_id': release_id, 'boundary_version': registry_hash, 'checked_at': release['checked_at'], 'areas': [{k: a[k] for k in ('id', 'name', 'city_code', 'kind', 'purpose', 'coverage_note') if k in a} for a in registry.values()]}))
+    publish_latest(output / 'latest.json', {'schema_version': 1, 'release_id': release_id, 'boundary_version': registry_hash, 'checked_at': release['checked_at'], 'areas': [{k: a[k] for k in ('id', 'name', 'city_code', 'kind', 'purpose', 'coverage_note') if k in a} for a in registry.values()]})
     return release_id
 
 
