@@ -1270,3 +1270,91 @@ test('public saved areas persist and recover across desktop and mobile without c
     assert.equal(await page.getByRole('heading',{name:'Explore the neighbourhoods',exact:true}).isVisible(),true);
   } finally { await noScript.close(); }
 });
+
+
+test('optional neighbourhood preview fits only its qualified boundary and preserves the list and fallback', {timeout:90_000}, async t=>{
+  await stat(maplibreRoot);
+  const {server,origin}=await startStaticServer();
+  const browser=await chromium.launch({args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+  t.after(async()=>{await browser.close();await new Promise(resolveClose=>server.close(resolveClose));});
+  const geometry=JSON.parse(await readFile(resolve(root,'data/scarborough-overlay-neighbourhoods.geojson'),'utf8'));
+  const expected=geometry.features.find(feature=>feature.properties.AREA_SHORT_CODE==='143');
+  const freshAt=new Date().toISOString();
+  const areaSnapshot={...snapshot,published_at:freshAt,establishments:[{...snapshot.establishments[0],neighbourhood:'West Rouge'}]};
+  for(const scenario of ['desktop','phone','malformed','missing','library','stylesheet','unsupported']){
+    const context=await browser.newContext({viewport:{width:scenario==='phone'?320:1280,height:900}});
+    try{
+      const page=await context.newPage(),errors=[];
+      page.on('pageerror',error=>errors.push(error.message));
+      await installLocalRoutes(page,origin,{snapshotBody:areaSnapshot,maplibreFailure:scenario==='library'});
+      await page.route('**/neighbourhood-map.mjs',async route=>{
+        const response=await route.fetch();
+        const source=await response.text();
+        assert.ok(source.includes('map=new maplibregl.Map('));
+        await route.fulfill({response,body:source.replace('map=new maplibregl.Map(','window.__areaMap=map=new maplibregl.Map(')});
+      });
+      let releaseGeometry;
+      const geometryGate=new Promise(resolve=>{releaseGeometry=resolve;});
+      let geometryStarted;
+      const requested=new Promise(resolve=>{geometryStarted=resolve;});
+      await page.route('**/data/scarborough-overlay-neighbourhoods.geojson',async route=>{
+        geometryStarted();await geometryGate;
+        const body=scenario==='malformed'?{...geometry,features:geometry.features.map(feature=>feature===expected?{...feature,geometry:{type:'Polygon',coordinates:[]}}:feature)}:geometry;
+        await route.fulfill({status:scenario==='missing'?404:200,contentType:'application/geo+json',body:JSON.stringify(body)});
+      });
+      if(scenario==='stylesheet')await page.route('**/maplibre-gl.css',route=>route.abort());
+      if(scenario==='unsupported')await page.addInitScript(()=>{
+        const original=HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext=function(kind,...args){return kind==='webgl2'?null:original.call(this,kind,...args);};
+      });
+      await page.goto(`${origin}/west-rouge/`,{waitUntil:'domcontentloaded'});
+      await page.locator('#inspection-list .record-item').waitFor();
+      assert.equal(await page.locator('#map-link').count(),1);
+      assert.equal(await page.locator('#map-link').getAttribute('href'),'/?areaKind=neighbourhood&areaCode=143&mode=all&days=all');
+      if(scenario!=='unsupported')await requested;
+      assert.equal(await page.locator('.neighbourhood-map').count(),0,'inspection results do not wait for geometry');
+      releaseGeometry();
+      if(['desktop','phone'].includes(scenario)){
+        await page.locator('.neighbourhood-map').waitFor({state:'visible'});
+        const rendered=await page.evaluate(()=>window.__areaMap.getSource('neighbourhood-boundary').serialize().data);
+        assert.deepEqual(rendered,{type:'FeatureCollection',features:[expected]});
+        const points=expected.geometry.type==='Polygon'?expected.geometry.coordinates.flat():expected.geometry.coordinates.flat(2);
+        const fitted=await page.evaluate(points=>{
+          const map=window.__areaMap,box=map.getContainer().getBoundingClientRect();
+          return points.every(point=>{const p=map.project(point);return p.x>=0&&p.x<=box.width&&p.y>=0&&p.y<=box.height;});
+        },points);
+        assert.equal(fitted,true,'the entire matching boundary is framed');
+        await page.setViewportSize({width:scenario==='phone'?390:1024,height:900});
+        await page.waitForFunction(points=>{
+          const map=window.__areaMap,box=map.getContainer().getBoundingClientRect();
+          return points.every(point=>{const p=map.project(point);return p.x>=0&&p.x<=box.width&&p.y>=0&&p.y<=box.height;});
+        },points);
+        assert.equal(await page.locator('.neighbourhood-map canvas').getAttribute('tabindex'),'-1');
+        assert.equal(await page.locator('.neighbourhood-map button').count(),0,'no extra preview controls');
+        assert.equal(await page.locator('.maplibregl-ctrl-attrib').count(),1);
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+        await page.emulateMedia({media:'print'});
+        assert.equal(await page.locator('.neighbourhood-map').isVisible(),false);
+        assert.equal(await page.locator('#inspection-list .record-item').isVisible(),true);
+        await page.emulateMedia({media:'screen'});
+        await page.evaluate(()=>window.__areaMap.getCanvas().dispatchEvent(new Event('webglcontextlost',{cancelable:true})));
+        await page.waitForFunction(()=>!document.querySelector('.neighbourhood-map'));
+      }else{
+        // Let the bounded asynchronous failure path settle before checking fallback.
+        await page.waitForLoadState('networkidle');
+        assert.equal(await page.locator('.neighbourhood-map').count(),0);
+      }
+      assert.equal(await page.locator('#map-link').isVisible(),true);
+      assert.equal(await page.locator('#inspection-list .record-item').count(),1);
+      assert.deepEqual(errors,[]);
+    }finally{await context.close();}
+  }
+  const noScript=await browser.newContext({javaScriptEnabled:false});
+  try{
+    const page=await noScript.newPage();
+    await page.goto(`${origin}/west-rouge/`);
+    assert.equal(await page.locator('.neighbourhood-map').count(),0);
+    assert.equal(await page.locator('#map-link').isVisible(),true);
+    assert.equal(await page.locator('#inspection-title').isVisible(),true);
+  }finally{await noScript.close();}
+});

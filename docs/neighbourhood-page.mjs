@@ -96,6 +96,8 @@ async function loadPage(){
   byId('page-title').textContent=area.name;
   byId('map-link').href=`/?areaKind=neighbourhood&areaCode=${encodeURIComponent(area.code)}&mode=all&days=all`;
   renderWards(area);
+  // Optional map startup must never gate the inspection request or list.
+  void import('./neighbourhood-map.mjs').then(({mountNeighbourhoodMap})=>mountNeighbourhoodMap(root)).catch(()=>{});
   try{
     const response=await fetch('../data/snapshot.json',{cache:'no-cache'});
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
