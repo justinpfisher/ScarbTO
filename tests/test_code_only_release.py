@@ -34,9 +34,9 @@ class CodeOnlyReleaseTests(unittest.TestCase):
         self.assertEqual(
             PINNED_BASELINE,
             {
-                "commit": "08af44cd8ba935a9752bf665d2100ad898668e61",
-                "tree": "650a9120c3c5a8a8495a9183669e5dbe2f959076",
-                "run_id": 44593838514,
+                "commit": "278a4da309932bc96481f647b206b6f6a90445b3",
+                "tree": "b1a41ca26235dab25c74b57d02ce5f719f135159",
+                "run_id": 45625119708,
             },
         )
 
@@ -133,10 +133,20 @@ class CodeOnlyReleaseTests(unittest.TestCase):
                     return {"total_count": 1, "workflow_runs": [run]}
                 return {"total_count": 1, "jobs": [job]}
 
-            with patch("scripts.verify_code_only_release._github_api_json", side_effect=api_response):
-                result = validate_publisher_tree(repo, expected={"commit": commit, "tree": tree, "run_id": 123})
-            self.assertEqual(result["commit"], commit)
-            self.assertEqual(result["run_id"], 123)
+            checkpoint = {"commit": commit, "tree": tree, "run_id": 123}
+            with patch("scripts.verify_code_only_release._github_api_json", side_effect=api_response) as api:
+                self.assertEqual(validate_publisher_tree(repo, expected=checkpoint), checkpoint)
+                with self.subTest(case="stale baseline commit"):
+                    api.reset_mock()
+                    with self.assertRaisesRegex(ReleaseError, "not the independently verified release baseline"):
+                        validate_publisher_tree(repo, expected=checkpoint | {"commit": parent})
+                    api.assert_not_called()
+                with self.subTest(case="mismatched published data tree"):
+                    api.reset_mock()
+                    with self.assertRaisesRegex(ReleaseError, "Last-good data tree does not match"):
+                        validate_publisher_tree(repo, expected=checkpoint | {"tree": "a" * 40})
+                    self.assertEqual(api.call_count, 2)
+
             (data / "untracked.json").write_text("{}", encoding="utf-8")
             with patch("scripts.verify_code_only_release._github_api_json", side_effect=api_response):
                 with self.assertRaises(ReleaseError):

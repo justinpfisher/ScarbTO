@@ -60,6 +60,32 @@ MOBILE_PROJECTION = {
 MOBILE_CHANGED = {SELF, BROWSER_TEST, "docs/app.mjs", "docs/index.html", "docs/styles.css"}
 
 
+LATEST_INSPECTION_BASE = "60e19cee52f64f8860f9ab7c31c678bf24df9445"
+LATEST_INSPECTION_CLAIM = "[scarb-stage:latest-inspection-widget-print-v1]"
+LATEST_INSPECTION_PROTECTED_TREES = {
+    "docs/data": "b1a41ca26235dab25c74b57d02ce5f719f135159",
+    "docs/briefs": "956f4729ce6a9e3aa84cc77d647b3d1143f8720a",
+    "docs/community-data": "e0344eb810e69c6463779c0d3221ce66a9e2ceaa",
+}
+LATEST_INSPECTION_PROJECTION = {
+    ".github/workflows/refresh-and-publish.yml": "1ff19728c6f038dac66c9649e121f3c00f5f8a96",
+    "COMMUNITY_PUBLISHING.md": "8a16d83e8466d3f3265f359ea94e07a74081a97f",
+    "docs/community-editor.mjs": "b3b64b09a84b10d0da25451060c7a07b5e3fa506",
+    "docs/community-embed.mjs": "16c04dc06797d65cddd387b032bc48698a3e0965",
+    "docs/community-exports.mjs": "015ff066c6c8f5f7034f86dde840934c2d9a46a9",
+    "docs/community-latest.mjs": "cff5e2f3ed360fb5c957d038e20aa086115eea50",
+    "docs/community/index.html": "e0661be7585989268f63dc882fa88fb400cca7b0",
+    "docs/embed/index.html": "06073840b6e949d56880e6bfb119e4ed7ac07988",
+    "scripts/verify_code_only_release.py": "47784c9ac62ae711b1bddfca51c8bbac8d14fa32",
+    "tests/community-browser.mjs": "5156b91f0503e7a9ea92d427928a4e17b4c20e18",
+    "tests/community-publishing.test.mjs": "f224c2040fcb51aaafa65a3064ea9d128d0588cb",
+    "tests/test_code_only_release.py": "f5e31ad0ee6fbed6fc1e8338ec8ed00ce8fde52f",
+}
+LATEST_INSPECTION_CHANGED = {SELF, *LATEST_INSPECTION_PROJECTION} - {
+    ".github/workflows/refresh-and-publish.yml",
+}
+
+
 class StageError(ValueError):
     pass
 
@@ -88,9 +114,17 @@ def resolve(repo: Path, environ: dict[str, str]) -> str:
     recovery_claimed = CLAIM in message
     rss_claimed = RSS_CLAIM in message
     mobile_claimed = MOBILE_CLAIM in message
-    if sum((recovery_claimed, rss_claimed, mobile_claimed)) > 1:
+    latest_inspection_claimed = LATEST_INSPECTION_CLAIM in message
+    if sum((recovery_claimed, rss_claimed, mobile_claimed, latest_inspection_claimed)) > 1:
         raise StageError("Push contains conflicting staged release markers")
-    if mobile_claimed:
+    protected_trees = PROTECTED_TREES
+    if latest_inspection_claimed:
+        base = LATEST_INSPECTION_BASE
+        projection = LATEST_INSPECTION_PROJECTION
+        expected_changed = LATEST_INSPECTION_CHANGED
+        protected_trees = LATEST_INSPECTION_PROTECTED_TREES
+        stage = "Latest inspection widget and print stage"
+    elif mobile_claimed:
         base, projection, expected_changed = MOBILE_BASE, MOBILE_PROJECTION, MOBILE_CHANGED
         stage = "Mobile search and topics stage"
     elif rss_claimed:
@@ -112,7 +146,7 @@ def resolve(repo: Path, environ: dict[str, str]) -> str:
         or payload.get("forced") is not False
         or not re.fullmatch(r"[0-9a-f]{40}", sha)
         or _git(repo, "rev-list", "--parents", "-n", "1", "HEAD") != f"{sha} {base}"
-        or any(_git(repo, "rev-parse", f"HEAD:{path}") != tree for path, tree in PROTECTED_TREES.items())
+        or any(_git(repo, "rev-parse", f"HEAD:{path}") != tree for path, tree in protected_trees.items())
     ):
         raise StageError(f"Claimed {stage} does not match the required exact main push")
     changed = set(_git(repo, "diff", "--name-only", "--no-renames", base, sha).splitlines())

@@ -62,15 +62,19 @@ A profile retains coverage references/versions, core/nearby choices, topics, out
 
 Named, source-verified organisation definitions may be small repository files reused by any profile. Do not create a public write endpoint or put a GitHub token in the browser. A public link is neither authenticated organisation ownership nor a trusted approval credential. Browser-local storage is not cross-device synchronisation; make that limitation visible. No required sign-in, central approval database or publisher account system in the first release.
 
-## 4. Default print workflow: changes since the last edition
+## 4. Print proofs and recent-changes editions
 
-The primary journey is:
+**Owner decision, November 24, 2026.** Default new print proofs and new widget configurations to **Latest inspection on record**. Keep **Recent changes** available. Existing widget links, saved settings and finalised editions retain their selected or original behaviour. The weekly changes roundup and RSS keep their existing source and archive rules.
+
+Latest uses the existing qualified snapshot. Show one row per covered City establishment ID, with the source outcome, actual inspection date and official establishment record link, regardless of inspection age. Show the last successful Scarb.TO snapshot check and the City source timestamp separately. Distinguish empty qualified coverage, a stale last-good snapshot and an unavailable source.
+
+The Recent changes journey is:
 
 **Choose saved coverage → choose topics → choose previous edition or dates → set words/characters and output size → generate and preview → publisher approves the proof → download and retain the next-edition receipt.**
 
 Start from “Download for a community newspaper” on a neighbourhood page, preselected to that area, or from a central Community Publishing entry. The main resident map may link to this function without crowding its primary controls. Organisations without print editions choose an embed from the same interface.
 
-### 4.1 Reporting dates and reliable continuity
+### 4.1 Recent changes reporting dates and reliable continuity
 
 Keep the previous issue's print/publication date separate from its information cut-off. Default the next reporting interval to **after the previous finalised information cut-off through the requested end**, normally today in America/Toronto. Maintain precise cut-offs/watermarks internally so consecutive editions do not overlap or skip records. Explain the default in ordinary date language.
 
@@ -84,7 +88,9 @@ For each finalised package, retain the candidate event IDs, included event IDs, 
 
 Previously included events are excluded unless a genuine later change, explicit follow-up or correction warrants inclusion. Omitted older events must not automatically reappear as new news. If topics or geography change, explain the changed selection and any catch-up context instead of claiming an equivalent comparison. The publisher may mark a proof finalised in their own saved state; this does not prove actual newspaper publication or organisational approval to Scarb.TO.
 
-### 4.2 Snapshots and quiet periods
+### 4.2 Latest inspection proofs, snapshots and quiet periods
+
+Snapshot proofs use the retained inspection records independently of the changes watermark. Show the qualified total and how many rows are included or left out for space. Keep each included row intact with its inspection date and source. Preparing or downloading a snapshot proof leaves the preceding finalised changes cut-off and receipts intact.
 
 Keep a dated neighbourhood snapshot separate from changes over the reporting interval. Use compatible coverage/definitions before calculating comparisons or percentages. A latest snapshot at the end of a period is not a period total.
 
@@ -140,7 +146,7 @@ The initial no-account implementation may retain a publisher's finalised copy an
 
 Provide a dedicated, list-first responsive iframe route rather than embedding the entire homepage. A compact update/snapshot widget is included in the first complete Community Publishing delivery. Map-heavy variants can follow demonstrated need; the main neighbourhood pages still require prominent maps.
 
-An organisation chooses approved coverage, available topics, suitable length/layout and a rolling period, then previews and copies the embed code. Ordinary updates use the latest successfully validated public release; installing the live widget is not a request to approve every subsequent change. A frozen edition view, when offered, must be clearly distinct from the live widget.
+An organisation chooses approved coverage and display options, then previews and copies the embed code. Default a new configuration to Latest inspection on record, with accessible pagination. Recent changes uses the rolling period. Existing embed URLs retain their original changes selection. Ordinary updates use the latest successfully validated public release; installing the live widget is not a request to approve every subsequent change. A frozen edition view, when offered, must be clearly distinct from the live widget.
 
 Preserve source links, actual source-check/period labels, stale/unavailable/empty states and last-good retention. Changing the date alone must not keep old material looking new. Define whether an already-open widget refreshes or refreshes on load; do not claim continuous monitoring without the tested behaviour.
 
