@@ -60,6 +60,22 @@ MOBILE_PROJECTION = {
 MOBILE_CHANGED = {SELF, BROWSER_TEST, "docs/app.mjs", "docs/index.html", "docs/styles.css"}
 
 
+HOME_ABOUT_BASE = "60e19cee52f64f8860f9ab7c31c678bf24df9445"
+HOME_ABOUT_CLAIM = "[scarb-stage:homepage-about-v1]"
+HOME_ABOUT_PROTECTED_TREES = {
+    "docs/data": "b1a41ca26235dab25c74b57d02ce5f719f135159",
+    "docs/briefs": "956f4729ce6a9e3aa84cc77d647b3d1143f8720a",
+    "docs/community-data": "e0344eb810e69c6463779c0d3221ce66a9e2ceaa",
+}
+HOME_ABOUT_PROJECTION = {
+    ".github/workflows/refresh-and-publish.yml": "1ff19728c6f038dac66c9649e121f3c00f5f8a96",
+    "scripts/verify_code_only_release.py": "47784c9ac62ae711b1bddfca51c8bbac8d14fa32",
+    "tests/test_code_only_release.py": "f5e31ad0ee6fbed6fc1e8338ec8ed00ce8fde52f",
+    "docs/index.html": "a9da03403c905ca4eb816d3c448ece849d969e03",
+}
+HOME_ABOUT_CHANGED = {SELF, *HOME_ABOUT_PROJECTION} - {".github/workflows/refresh-and-publish.yml"}
+
+
 class StageError(ValueError):
     pass
 
@@ -88,9 +104,15 @@ def resolve(repo: Path, environ: dict[str, str]) -> str:
     recovery_claimed = CLAIM in message
     rss_claimed = RSS_CLAIM in message
     mobile_claimed = MOBILE_CLAIM in message
-    if sum((recovery_claimed, rss_claimed, mobile_claimed)) > 1:
+    home_about_claimed = HOME_ABOUT_CLAIM in message
+    if sum((recovery_claimed, rss_claimed, mobile_claimed, home_about_claimed)) > 1:
         raise StageError("Push contains conflicting staged release markers")
-    if mobile_claimed:
+    protected_trees = PROTECTED_TREES
+    if home_about_claimed:
+        base, projection, expected_changed = HOME_ABOUT_BASE, HOME_ABOUT_PROJECTION, HOME_ABOUT_CHANGED
+        protected_trees = HOME_ABOUT_PROTECTED_TREES
+        stage = "Homepage About stage"
+    elif mobile_claimed:
         base, projection, expected_changed = MOBILE_BASE, MOBILE_PROJECTION, MOBILE_CHANGED
         stage = "Mobile search and topics stage"
     elif rss_claimed:
@@ -112,7 +134,7 @@ def resolve(repo: Path, environ: dict[str, str]) -> str:
         or payload.get("forced") is not False
         or not re.fullmatch(r"[0-9a-f]{40}", sha)
         or _git(repo, "rev-list", "--parents", "-n", "1", "HEAD") != f"{sha} {base}"
-        or any(_git(repo, "rev-parse", f"HEAD:{path}") != tree for path, tree in PROTECTED_TREES.items())
+        or any(_git(repo, "rev-parse", f"HEAD:{path}") != tree for path, tree in protected_trees.items())
     ):
         raise StageError(f"Claimed {stage} does not match the required exact main push")
     changed = set(_git(repo, "diff", "--name-only", "--no-renames", base, sha).splitlines())
